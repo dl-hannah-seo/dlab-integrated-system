@@ -1,26 +1,100 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ── Pretendard 로컬 폰트 ── */
+@font-face {
+  font-family: 'Pretendard';
+  src: url('/fonts/Pretendard-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Pretendard';
+  src: url('/fonts/Pretendard-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Pretendard';
+  src: url('/fonts/Pretendard-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Pretendard';
+  src: url('/fonts/Pretendard-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
 }
 
+/* ── 관리자 웹 디자인 토큰 ── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg:             #FFFFFF;
+  --color-sidebar:        #F7F7F5;
+  --color-text:           #37352F;
+  --color-text-secondary: #787774;
+  --color-border:         #E9E9E7;
+  --color-primary:        #FF6C37;
+  --color-primary-hover:  #E85A27;
+  --color-primary-light:  #FFF1EC;
+  --color-danger:         #EB5757;
+  --color-success:        #0F7B6C;
+  --color-row-hover:      #F7F7F5;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── 키오스크 전용 토큰 (/kiosk 스코프) ── */
+.kiosk-scope {
+  --kiosk-bg:      #0F0F14;
+  --kiosk-surface: #1A1A24;
+  --kiosk-card:    #22222E;
+  --kiosk-orange:  #FF6C37;
+  --kiosk-orange2: #FF8C5A;
+  --kiosk-text:    #F0F0F0;
+  --kiosk-muted:   #888899;
+  --kiosk-border:  #2E2E3A;
+  --kiosk-gold:    #F5C842;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 400;
+  color: #37352F;
+  background: #FFFFFF;
+  -webkit-font-smoothing: antialiased;
 }
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 배지 클래스 ── */
+.badge-submitted    { background: #FFF1EC; color: #FF6C37; }
+.badge-reviewing    { background: #FFF8E6; color: #D9A80A; }
+.badge-confirmed    { background: #EDF7F5; color: #0F7B6C; }
+.badge-admin-reviewed { background: #E3F2E6; color: #0B6E1A; }
+.badge-completed    { background: #F1F1EF; color: #787774; }
+.badge-paid         { background: #E8F0FE; color: #1A73E8; }
+.badge-danger       { background: #FDECEA; color: #EB5757; }
+.badge-warn         { background: #FFF8E6; color: #D9A80A; }
+
+/* ── 출결 상태 배지 ── */
+.badge-attend  { background: #EDF7F5; color: #0F7B6C; }
+.badge-absent  { background: #FDECEA; color: #EB5757; }
+.badge-pending { background: #F1F1EF; color: #787774; }
+.badge-makeup  { background: #FFF8E6; color: #D9A80A; }
+
+/* ── 스크롤바 ── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #E9E9E7; border-radius: 3px; }
