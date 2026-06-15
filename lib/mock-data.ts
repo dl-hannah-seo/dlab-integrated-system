@@ -130,6 +130,23 @@ export const classes: Class[] = [
     schedule: '화·목 18:00', payment_method: '일시', payment_due_day: 1,
     tuition_fee: 200000, material_fee: 50000, content_fee: 30000, enrolled_count: 4,
   },
+  // ── 2025 봄 (종강) — 과거 수강 이력용 ──
+  {
+    id: 'cl-07', campus_id: 'campus-001', class_group_id: 'cg-07', semester_id: 'sem-02',
+    course: '파이썬 기초', name: '2025봄토0900/파이썬기초/씨드',
+    teacher: '씨드', team_lead: '케이', capacity: 15,
+    start_date: '2025-03-08', end_date: '2025-06-28', weeks: 16,
+    schedule: '토 09:00', payment_method: '매월', payment_due_day: 1,
+    tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 0,
+  },
+  {
+    id: 'cl-08', campus_id: 'campus-001', class_group_id: 'cg-08', semester_id: 'sem-02',
+    course: '맞춤수업', name: '2025봄토1000/맞춤수업/루스',
+    teacher: '루스', team_lead: '케이', capacity: 15,
+    start_date: '2025-03-08', end_date: '2025-06-28', weeks: 16,
+    schedule: '토 10:00', payment_method: '매월', payment_due_day: 1,
+    tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 0,
+  },
 ];
 
 // ── 학생 ──────────────────────────────────────────────────────
@@ -334,9 +351,9 @@ students.forEach(s => {
     enrollments.push({
       id: `enr-${s.id}-prev`,
       student_id: s.id,
-      class_id: s.class_id,
+      class_id: 'cl-07',   // 2025 봄 (종강) — 과거 수강 이력
       started_at: s.first_enrolled_at,
-      ended_at: '2026-02-28',
+      ended_at: '2025-06-28',
       end_reason: '학기 종료',
     });
   }

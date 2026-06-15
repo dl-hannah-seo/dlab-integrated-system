@@ -5,7 +5,6 @@ import {
   students as initialStudents,
   classes,
   enrollments as initialEnrollments,
-  getCurrentEnrollment,
   getInvoiceByStudent,
   payments,
   Student,
@@ -33,7 +32,7 @@ const MSG_TARGETS = [
   { value: '부', label: '아버지 (부)' },
   { value: '본인', label: '학생 본인' },
 ];
-const DETAIL_TABS = ['기본정보', '가족/보호자', '수강이력', '수납이력'] as const;
+const DETAIL_TABS = ['기본정보', '수강이력', '수납이력'] as const;
 type DetailTab = (typeof DETAIL_TABS)[number];
 
 const TEACHERS = Array.from(new Set(classes.map(c => c.teacher)));
@@ -67,16 +66,23 @@ export default function StudentsPage() {
     if (names.length === 0) return '미배정';
     return names.length === 1 ? names[0] : `${names[0]} 외 ${names.length - 1}`;
   };
+  // 종강 여부는 저장하지 않고 end_date 로 파생 표시만. 수강반 선택은 전체 반 + 검색.
+  const today = new Date().toISOString().slice(0, 10);
+  const matchClass = (c: (typeof classes)[number], q: string) => {
+    const t = q.trim();
+    if (!t) return true;
+    return c.name.includes(t) || c.course.includes(t) || c.teacher.includes(t) || c.schedule.includes(t);
+  };
 
   // 필터
   const [filterName, setFilterName] = useState('');
   const [filterDivision, setFilterDivision] = useState('전체');
+  const [filterSchool, setFilterSchool] = useState('');
   const [filterGrade, setFilterGrade] = useState('전체');
   const [filterStatus, setFilterStatus] = useState('재원');
   const [filterClass, setFilterClass] = useState('전체');
   const [filterTeacher, setFilterTeacher] = useState('전체');
-  const [enrollFrom, setEnrollFrom] = useState('');
-  const [enrollTo, setEnrollTo] = useState('');
+  const [filterSource, setFilterSource] = useState('전체');
   const [firstFrom, setFirstFrom] = useState('');
   const [firstTo, setFirstTo] = useState('');
 
@@ -88,11 +94,34 @@ export default function StudentsPage() {
   const [regSourceSel, setRegSourceSel] = useState(SOURCES[0]);
   const [regSourceEtc, setRegSourceEtc] = useState('');
   const [regClasses, setRegClasses] = useState<Set<string>>(new Set());
+  const [regClassSearch, setRegClassSearch] = useState('');
+  const [includeEndedReg, setIncludeEndedReg] = useState(false);
+  // 등록 필수값 (이름 + 모/부 연락처 중 1개 이상)
+  const [regName, setRegName] = useState('');
+  const [regMotherPhone, setRegMotherPhone] = useState('');
+  const [regFatherPhone, setRegFatherPhone] = useState('');
+  const canRegister = regName.trim() !== '' && (regMotherPhone.trim() !== '' || regFatherPhone.trim() !== '');
+  function closeRegister() {
+    setShowRegister(false);
+    setRegName(''); setRegMotherPhone(''); setRegFatherPhone('');
+    setRegClasses(new Set()); setRegClassSearch(''); setIncludeEndedReg(false);
+    setRegSourceSel(SOURCES[0]); setRegSourceEtc('');
+  }
 
   // 편집 시 수강 반(복수) 작업 집합
   const [editClasses, setEditClasses] = useState<Set<string>>(new Set());
+  const [editClassSearch, setEditClassSearch] = useState('');
+  const [includeEndedEdit, setIncludeEndedEdit] = useState(false);
+  const [siblingSearch, setSiblingSearch] = useState('');
   function toggleEditClass(cid: string) {
     setEditClasses(prev => { const n = new Set(prev); n.has(cid) ? n.delete(cid) : n.add(cid); return n; });
+  }
+  function addSibling(id: string) {
+    setEditForm(f => (f ? { ...f, sibling_ids: [...(f.sibling_ids ?? []), id] } : f));
+    setSiblingSearch('');
+  }
+  function removeSibling(id: string) {
+    setEditForm(f => (f ? { ...f, sibling_ids: (f.sibling_ids ?? []).filter(x => x !== id) } : f));
   }
   function toggleRegClass(cid: string) {
     setRegClasses(prev => { const n = new Set(prev); n.has(cid) ? n.delete(cid) : n.add(cid); return n; });
@@ -119,11 +148,13 @@ export default function StudentsPage() {
     { value: '전체', label: '전체 반' },
     ...classes.map(c => ({ value: c.id, label: c.name })),
   ];
+  const schoolOptions = Array.from(new Set(localStudents.map(s => s.school).filter(Boolean))).sort();
 
   const filtered = useMemo(() => {
     return localStudents.filter(s => {
       if (filterName && !s.name.includes(filterName)) return false;
       if (filterDivision !== '전체' && (s.division ?? '') !== filterDivision) return false;
+      if (filterSchool.trim() && !s.school.includes(filterSchool.trim())) return false;
       if (filterGrade !== '전체' && s.grade !== filterGrade) return false;
       if (filterStatus !== '전체' && s.status !== filterStatus) return false;
       const myClassIds = activeClassIds(s.id);
@@ -132,19 +163,20 @@ export default function StudentsPage() {
         const myTeachers = myClassIds.map(id => classes.find(c => c.id === id)?.teacher);
         if (!myTeachers.includes(filterTeacher)) return false;
       }
-      const enrollStart = getCurrentEnrollment(s.id)?.started_at ?? s.first_enrolled_at;
-      if (enrollFrom && enrollStart < enrollFrom) return false;
-      if (enrollTo && enrollStart > enrollTo) return false;
+      if (filterSource !== '전체') {
+        if (filterSource === '기타') { if (SOURCES.includes(s.source)) return false; }
+        else if (s.source !== filterSource) return false;
+      }
       if (firstFrom && s.first_enrolled_at < firstFrom) return false;
       if (firstTo && s.first_enrolled_at > firstTo) return false;
       return true;
     });
-  }, [localStudents, localEnrollments, filterName, filterDivision, filterGrade, filterStatus, filterClass, filterTeacher, enrollFrom, enrollTo, firstFrom, firstTo]);
+  }, [localStudents, localEnrollments, filterName, filterDivision, filterSchool, filterGrade, filterStatus, filterClass, filterTeacher, filterSource, firstFrom, firstTo]);
 
   function resetFilters() {
-    setFilterName(''); setFilterDivision('전체'); setFilterGrade('전체');
-    setFilterStatus('재원'); setFilterClass('전체'); setFilterTeacher('전체');
-    setEnrollFrom(''); setEnrollTo(''); setFirstFrom(''); setFirstTo('');
+    setFilterName(''); setFilterDivision('전체'); setFilterSchool(''); setFilterGrade('전체');
+    setFilterStatus('재원'); setFilterClass('전체'); setFilterTeacher('전체'); setFilterSource('전체');
+    setFirstFrom(''); setFirstTo('');
   }
 
   function toggleSelect(id: string) {
@@ -176,6 +208,9 @@ export default function StudentsPage() {
     if (!detailStudent) return;
     setEditForm({ ...detailStudent });
     setEditClasses(new Set(activeClassIds(detailStudent.id)));
+    setEditClassSearch('');
+    setIncludeEndedEdit(false);
+    setSiblingSearch('');
     setEditMode(true);
   }
   function cancelEdit() {
@@ -235,7 +270,7 @@ export default function StudentsPage() {
         return <span className="text-xs whitespace-nowrap" title={names.join('\n')}>{classLabel(r.id)}</span>;
       },
     },
-    { key: 'enroll_start', header: '등록시작일', render: (r: Student) => <span className="tabular-nums text-xs whitespace-nowrap">{getCurrentEnrollment(r.id)?.started_at ?? r.first_enrolled_at}</span> },
+    { key: 'first_enrolled_at', header: '최초 입학일', render: (r: Student) => <span className="tabular-nums text-xs whitespace-nowrap">{r.first_enrolled_at}</span> },
     {
       key: 'status', header: '등록구분',
       render: (r: Student) => <Badge variant={r.status === '재원' ? 'active' : 'withdrawn'}>{r.status}</Badge>,
@@ -249,8 +284,9 @@ export default function StudentsPage() {
     const s = detailStudent;
     const f = editForm;
 
-    // 기본정보 (학생 본인 속성)
+    // 기본정보 (학생 본인 속성 + 가족/보호자 통합)
     if (detailTab === '기본정보') {
+      const siblings = (s.sibling_ids ?? []).map(id => localStudents.find(st => st.id === id)).filter(Boolean) as Student[];
       return (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-x-8 gap-y-3">
@@ -272,6 +308,12 @@ export default function StudentsPage() {
             </Field>
             <Field label="원생 연락처">
               {editMode && f ? <Input value={f.student_phone} placeholder="미등록" onChange={e => updateField('student_phone', e.target.value)} /> : <ViewText>{s.student_phone || '미등록'}</ViewText>}
+            </Field>
+            <Field label="모 연락처">
+              {editMode && f ? <Input value={f.parent_phone} onChange={e => updateField('parent_phone', e.target.value)} /> : <ViewText>{s.parent_phone}</ViewText>}
+            </Field>
+            <Field label="부 연락처">
+              {editMode && f ? <Input value={f.father_phone ?? ''} placeholder="미등록" onChange={e => updateField('father_phone', e.target.value)} /> : <ViewText>{s.father_phone || '미등록'}</ViewText>}
             </Field>
             <Field label="등록구분">
               {editMode && f
@@ -295,55 +337,43 @@ export default function StudentsPage() {
             <Field label="최초 입학일"><ViewText>{s.first_enrolled_at}</ViewText></Field>
             <Field label="포인트"><ViewText>{s.points.toLocaleString()}DP</ViewText></Field>
             <Field label="칭호"><ViewText>{s.title || '없음'}</ViewText></Field>
-            <Field label="특이사항">
-              {editMode && f ? <Input value={f.special_note ?? ''} placeholder="없음" onChange={e => updateField('special_note', e.target.value)} /> : <ViewText>{s.special_note || '없음'}</ViewText>}
-            </Field>
           </div>
-          <Field label="메모">
-            {editMode && f
-              ? <textarea value={f.memo ?? ''} rows={3} placeholder="메모 입력" onChange={e => updateField('memo', e.target.value)}
-                  className="w-full border border-[#E9E9E7] rounded-md px-3 py-2 text-sm text-[#37352F] placeholder:text-[#BEBDBA] focus:outline-none focus:border-[#FF6C37] resize-y" />
-              : <span className="text-sm font-medium text-[#37352F] whitespace-pre-line">{s.memo || '없음'}</span>}
-          </Field>
-          <div className="bg-[#F7F7F5] rounded-lg p-3">
-            <p className="text-xs font-semibold text-[#787774] mb-2">수강 반 {editMode && <span className="font-normal">(복수 선택 가능)</span>}</p>
-            {editMode && f ? (
-              <div className="space-y-1.5">
-                {classes.map(c => (
-                  <label key={c.id} className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={editClasses.has(c.id)} onChange={() => toggleEditClass(c.id)} className="w-4 h-4 accent-[#FF6C37]" />
-                    <span className="text-sm text-[#37352F]">{c.name}</span>
-                  </label>
-                ))}
-              </div>
-            ) : activeClassNames(s.id).length === 0 ? (
-              <p className="text-sm text-[#787774]">미배정</p>
-            ) : (
-              <div className="space-y-1">
-                {activeClassNames(s.id).map(n => <p key={n} className="text-sm text-[#37352F]">{n}</p>)}
-              </div>
-            )}
-          </div>
-        </div>
-      );
-    }
-
-    // 가족/보호자 (부모 연락처 모/부 + 재원형제)
-    if (detailTab === '가족/보호자') {
-      const siblings = (s.sibling_ids ?? []).map(id => localStudents.find(st => st.id === id)).filter(Boolean) as Student[];
-      return (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-x-8 gap-y-3">
-            <Field label="부모 연락처 (모)">
-              {editMode && f ? <Input value={f.parent_phone} onChange={e => updateField('parent_phone', e.target.value)} /> : <ViewText>{s.parent_phone}</ViewText>}
-            </Field>
-            <Field label="부모 연락처 (부)">
-              {editMode && f ? <Input value={f.father_phone ?? ''} placeholder="미등록" onChange={e => updateField('father_phone', e.target.value)} /> : <ViewText>{s.father_phone || '미등록'}</ViewText>}
-            </Field>
-          </div>
+          {/* 재원형제 (편집 가능) */}
           <div>
-            <p className="text-xs font-semibold text-[#787774] mb-2">재원형제</p>
-            {siblings.length === 0 ? (
+            <p className="text-xs text-[#787774] mb-2">재원형제</p>
+            {editMode && f ? (
+              <div className="space-y-2">
+                {(f.sibling_ids ?? []).map(id => {
+                  const sib = localStudents.find(st => st.id === id);
+                  if (!sib) return null;
+                  return (
+                    <div key={id} className="flex items-center justify-between border border-[#E9E9E7] rounded-lg px-4 py-2.5">
+                      <div>
+                        <span className="text-sm font-medium text-[#37352F]">{sib.name}</span>
+                        <span className="text-xs text-[#787774] ml-2">{sib.grade} · {classes.find(c => c.id === sib.class_id)?.schedule ?? '-'}</span>
+                      </div>
+                      <button onClick={() => removeSibling(id)} className="text-xs text-[#EB5757] hover:underline">제거</button>
+                    </div>
+                  );
+                })}
+                <input value={siblingSearch} onChange={e => setSiblingSearch(e.target.value)} placeholder="형제 이름 검색 후 추가"
+                  className="w-full border border-[#E9E9E7] rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-[#FF6C37]" />
+                {siblingSearch.trim() && (() => {
+                  const matches = localStudents.filter(st => st.id !== s.id && !(f.sibling_ids ?? []).includes(st.id) && st.name.includes(siblingSearch.trim())).slice(0, 6);
+                  return (
+                    <div className="border border-[#E9E9E7] rounded-md divide-y divide-[#E9E9E7] max-h-32 overflow-y-auto">
+                      {matches.map(st => (
+                        <button key={st.id} onClick={() => addSibling(st.id)} className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-[#F7F7F5]">
+                          <span className="text-sm text-[#37352F]">{st.name} <span className="text-xs text-[#787774]">{st.grade}</span></span>
+                          <span className="text-xs text-[#FF6C37]">추가</span>
+                        </button>
+                      ))}
+                      {matches.length === 0 && <p className="px-3 py-2 text-xs text-[#787774]">검색 결과가 없습니다.</p>}
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : siblings.length === 0 ? (
               <p className="text-sm text-[#787774]">등록된 재원형제가 없습니다.</p>
             ) : (
               <div className="space-y-2">
@@ -359,6 +389,54 @@ export default function StudentsPage() {
               </div>
             )}
           </div>
+
+          {/* 수강 반 */}
+          <div className="bg-[#F7F7F5] rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-[#787774]">수강 반 {editMode && <span>(복수 선택 가능)</span>}</p>
+              {editMode && f && (
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" checked={includeEndedEdit} onChange={() => setIncludeEndedEdit(v => !v)} className="w-3.5 h-3.5 accent-[#FF6C37]" />
+                  <span className="text-xs text-[#787774]">종강반 포함</span>
+                </label>
+              )}
+            </div>
+            {editMode && f ? (
+              <div>
+                <input value={editClassSearch} onChange={e => setEditClassSearch(e.target.value)} placeholder="반 검색 (반명·과정·담임)"
+                  className="w-full border border-[#E9E9E7] rounded-md px-3 py-2 text-sm bg-white mb-2 focus:outline-none focus:border-[#FF6C37]" />
+                <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+                  {classes.filter(c => matchClass(c, editClassSearch) && (includeEndedEdit || c.end_date >= today || editClasses.has(c.id))).map(c => (
+                    <label key={c.id} className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={editClasses.has(c.id)} onChange={() => toggleEditClass(c.id)} className="w-4 h-4 accent-[#FF6C37]" />
+                      <span className="text-sm text-[#37352F]">{c.name}</span>
+                      {c.end_date < today && <span className="text-xs text-[#787774]">(종강)</span>}
+                    </label>
+                  ))}
+                  {classes.filter(c => matchClass(c, editClassSearch) && (includeEndedEdit || c.end_date >= today || editClasses.has(c.id))).length === 0 && (
+                    <p className="text-xs text-[#787774] py-2">검색 결과가 없습니다.</p>
+                  )}
+                </div>
+              </div>
+            ) : activeClassNames(s.id).length === 0 ? (
+              <p className="text-sm text-[#787774]">미배정</p>
+            ) : (
+              <div className="space-y-1">
+                {activeClassNames(s.id).map(n => <p key={n} className="text-sm text-[#37352F]">{n}</p>)}
+              </div>
+            )}
+          </div>
+
+          {/* 특이사항 · 메모 */}
+          <Field label="특이사항">
+            {editMode && f ? <Input value={f.special_note ?? ''} placeholder="없음" onChange={e => updateField('special_note', e.target.value)} /> : <ViewText>{s.special_note || '없음'}</ViewText>}
+          </Field>
+          <Field label="메모">
+            {editMode && f
+              ? <textarea value={f.memo ?? ''} rows={3} placeholder="메모 입력" onChange={e => updateField('memo', e.target.value)}
+                  className="w-full border border-[#E9E9E7] rounded-md px-3 py-2 text-sm text-[#37352F] placeholder:text-[#BEBDBA] focus:outline-none focus:border-[#FF6C37] resize-y" />
+              : <span className="text-sm font-medium text-[#37352F] whitespace-pre-line">{s.memo || '없음'}</span>}
+          </Field>
         </div>
       );
     }
@@ -441,18 +519,19 @@ export default function StudentsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <Input label="원생명" placeholder="이름 검색" value={filterName} onChange={e => setFilterName(e.target.value)} />
           <Select label="학부" value={filterDivision} onChange={e => setFilterDivision(e.target.value)} options={DIVISIONS.map(d => ({ value: d, label: d }))} />
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-[#37352F]">학교</span>
+            <input list="filter-school-options" value={filterSchool} onChange={e => setFilterSchool(e.target.value)} placeholder="전체 (검색)"
+              className="w-full border border-[#E9E9E7] rounded-md px-3 py-2 text-sm text-[#37352F] placeholder:text-[#BEBDBA] focus:outline-none focus:border-[#FF6C37] bg-white" />
+            <datalist id="filter-school-options">
+              {schoolOptions.map(sc => <option key={sc} value={sc} />)}
+            </datalist>
+          </div>
           <Select label="학년" value={filterGrade} onChange={e => setFilterGrade(e.target.value)} options={GRADES.map(g => ({ value: g, label: g }))} />
           <Select label="등록구분" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} options={STATUSES.map(v => ({ value: v, label: v }))} />
           <Select label="반" value={filterClass} onChange={e => setFilterClass(e.target.value)} options={classOptions} />
           <Select label="담임" value={filterTeacher} onChange={e => setFilterTeacher(e.target.value)} options={[{ value: '전체', label: '전체 담임' }, ...TEACHERS.map(t => ({ value: t, label: t }))]} />
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-[#37352F]">등록기간</span>
-            <div className="flex items-center gap-1">
-              <input type="date" value={enrollFrom} onChange={e => setEnrollFrom(e.target.value)} className="w-full border border-[#E9E9E7] rounded-md px-2 py-2 text-sm text-[#37352F] focus:outline-none focus:border-[#FF6C37]" />
-              <span className="text-[#787774]">~</span>
-              <input type="date" value={enrollTo} onChange={e => setEnrollTo(e.target.value)} className="w-full border border-[#E9E9E7] rounded-md px-2 py-2 text-sm text-[#37352F] focus:outline-none focus:border-[#FF6C37]" />
-            </div>
-          </div>
+          <Select label="유입경로" value={filterSource} onChange={e => setFilterSource(e.target.value)} options={[{ value: '전체', label: '전체' }, ...SOURCES.map(s => ({ value: s, label: s })), { value: '기타', label: '기타' }]} />
           <div className="flex flex-col gap-1">
             <span className="text-sm font-medium text-[#37352F]">최초입학일</span>
             <div className="flex items-center gap-1">
@@ -535,11 +614,6 @@ export default function StudentsPage() {
                 </button>
               ))}
             </div>
-            {editMode && (
-              <div className="bg-[#FFF1EC] border border-[#FF6C37]/20 rounded-md px-3 py-2">
-                <p className="text-xs text-[#FF6C37] font-medium">편집 모드 · 기본정보·가족 탭의 값을 수정한 뒤 저장하세요.</p>
-              </div>
-            )}
             {renderDetailBody()}
           </div>
         </Modal>
@@ -567,28 +641,34 @@ export default function StudentsPage() {
       {/* 신규 원생 등록 모달 */}
       <Modal
         open={showRegister}
-        onClose={() => setShowRegister(false)}
+        onClose={closeRegister}
         title="신규 원생 등록"
         size="lg"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setShowRegister(false)}>취소</Button>
-            <Button onClick={() => setShowRegister(false)}>등록 완료</Button>
+            <Button variant="secondary" onClick={closeRegister}>취소</Button>
+            <Button onClick={closeRegister} disabled={!canRegister}>등록 완료</Button>
           </>
         }
       >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <Input label="이름" placeholder="홍길동" />
+            <Input label={<>이름 <span className="text-[#EB5757]">*</span></>} placeholder="홍길동" value={regName} onChange={e => setRegName(e.target.value)} />
             <Select label="학부" options={DIVISIONS.slice(1).map(d => ({ value: d, label: d }))} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Select label="학년" options={GRADES.slice(1).map(g => ({ value: g, label: g }))} />
             <Input label="학교" placeholder="판교초" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="부모 연락처 (모)" placeholder="010-0000-0000" />
-            <Input label="부모 연락처 (부)" placeholder="010-0000-0000" />
+          <div>
+            <p className="text-sm font-medium text-[#37352F] mb-1">부모 연락처 <span className="text-xs font-normal text-[#787774]">(모·부 중 1개 이상 필수)</span></p>
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="모 연락처" placeholder="010-0000-0000" value={regMotherPhone} onChange={e => setRegMotherPhone(e.target.value)} />
+              <Input label="부 연락처" placeholder="010-0000-0000" value={regFatherPhone} onChange={e => setRegFatherPhone(e.target.value)} />
+            </div>
+            {regName.trim() !== '' && !regMotherPhone.trim() && !regFatherPhone.trim() && (
+              <p className="text-xs text-[#EB5757] mt-1">모 또는 부 연락처 중 최소 1개는 필수입니다.</p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Input label="원생 연락처 (선택)" placeholder="010-0000-0000" />
@@ -604,14 +684,26 @@ export default function StudentsPage() {
             <Input label="유입경로 직접 입력" placeholder="예: 당근마켓, 지역 맘카페" value={regSourceEtc} onChange={e => setRegSourceEtc(e.target.value)} />
           )}
           <div>
-            <label className="text-sm font-medium text-[#37352F]">입반할 반 <span className="text-xs font-normal text-[#787774]">(복수 선택 가능)</span></label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-[#37352F]">입반할 반 <span className="text-xs font-normal text-[#787774]">(복수 선택 가능)</span></label>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" checked={includeEndedReg} onChange={() => setIncludeEndedReg(v => !v)} className="w-3.5 h-3.5 accent-[#FF6C37]" />
+                <span className="text-xs text-[#787774]">종강반 포함</span>
+              </label>
+            </div>
+            <input value={regClassSearch} onChange={e => setRegClassSearch(e.target.value)} placeholder="반 검색 (반명·과정·담임)"
+              className="w-full border border-[#E9E9E7] rounded-md px-3 py-2 text-sm bg-white mt-1.5 focus:outline-none focus:border-[#FF6C37]" />
             <div className="mt-1.5 border border-[#E9E9E7] rounded-md divide-y divide-[#E9E9E7] max-h-40 overflow-y-auto">
-              {classes.map(c => (
+              {classes.filter(c => matchClass(c, regClassSearch) && (includeEndedReg || c.end_date >= today || regClasses.has(c.id))).map(c => (
                 <label key={c.id} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[#F7F7F5]">
                   <input type="checkbox" checked={regClasses.has(c.id)} onChange={() => toggleRegClass(c.id)} className="w-4 h-4 accent-[#FF6C37]" />
                   <span className="text-sm text-[#37352F]">{c.name}</span>
+                  {c.end_date < today && <span className="text-xs text-[#787774]">(종강)</span>}
                 </label>
               ))}
+              {classes.filter(c => matchClass(c, regClassSearch) && (includeEndedReg || c.end_date >= today || regClasses.has(c.id))).length === 0 && (
+                <p className="px-3 py-2 text-xs text-[#787774]">검색 결과가 없습니다.</p>
+              )}
             </div>
             <p className="text-xs text-[#787774] mt-1">선택하지 않으면 미배정으로 등록됩니다.</p>
           </div>
