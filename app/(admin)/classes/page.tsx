@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { classes, classGroups, semesters as mockSemesters, Class, Semester } from '@/lib/mock-data';
+import { classes, classGroups, semesters as mockSemesters, students, enrollments, Class, Semester, Enrollment } from '@/lib/mock-data';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
@@ -81,7 +81,60 @@ export default function ClassesPage() {
   const [cloneTo, setCloneTo]       = useState(localSemesters[1]?.id ?? '');
   const [cloneStart, setCloneStart] = useState('');
 
+  const [localEnrollments, setLocalEnrollments] = useState<Enrollment[]>(enrollments);
+  const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [enrollSearch, setEnrollSearch] = useState('');
+  const [pendingEnroll, setPendingEnroll] = useState<{ id: string; name: string } | null>(null);
+  const [pendingUnenroll, setPendingUnenroll] = useState<{ id: string; name: string } | null>(null);
+
   const today = new Date().toISOString().slice(0, 10);
+
+  const enrolledStudents = selectedClass
+    ? localEnrollments
+        .filter(e => e.class_id === selectedClass.id && e.ended_at === null)
+        .map(e => students.find(s => s.id === e.student_id))
+        .filter(Boolean)
+    : [];
+
+  const enrollableStudents = selectedClass
+    ? students.filter(s => {
+        const alreadyIn = localEnrollments.some(e => e.student_id === s.id && e.class_id === selectedClass.id && e.ended_at === null);
+        const q = enrollSearch.trim();
+        const matches = !q || s.name.includes(q) || s.grade.includes(q) || s.school.includes(q);
+        return !alreadyIn && s.status !== '퇴원' && matches;
+      })
+    : [];
+
+  function handleEnroll(studentId: string) {
+    if (!selectedClass) return;
+    const prev = localEnrollments.find(e => e.student_id === studentId && e.class_id === selectedClass.id && e.ended_at !== null);
+    if (prev) {
+      setLocalEnrollments(p => p.map(e => e.id === prev.id ? { ...e, ended_at: null, end_reason: null } : e));
+    } else {
+      const newEnrollment: Enrollment = {
+        id: `enr-${Date.now()}`,
+        student_id: studentId,
+        class_id: selectedClass.id,
+        started_at: today,
+        ended_at: null,
+        end_reason: null,
+      };
+      setLocalEnrollments(p => [...p, newEnrollment]);
+    }
+    setLocalClasses(p => p.map(c => c.id === selectedClass.id ? { ...c, enrolled_count: c.enrolled_count + 1 } : c));
+    setSelectedClass(prev => prev ? { ...prev, enrolled_count: prev.enrolled_count + 1 } : prev);
+  }
+
+  function handleUnenroll(studentId: string) {
+    if (!selectedClass) return;
+    setLocalEnrollments(p => p.map(e =>
+      e.student_id === studentId && e.class_id === selectedClass.id && e.ended_at === null
+        ? { ...e, ended_at: today, end_reason: '퇴반' }
+        : e
+    ));
+    setLocalClasses(p => p.map(c => c.id === selectedClass.id ? { ...c, enrolled_count: Math.max(0, c.enrolled_count - 1) } : c));
+    setSelectedClass(prev => prev ? { ...prev, enrolled_count: Math.max(0, prev.enrolled_count - 1) } : prev);
+  }
 
   const allSemesterTree = localSemesters.map(sem => {
     const semGroups  = classGroups.filter(g => g.semester_id === sem.id);
@@ -235,7 +288,7 @@ export default function ClassesPage() {
       <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold text-[#37352F]">반 관리</h1>
-          <p className="text-sm text-[#787774] mt-1">학기별 반 생성/삭제 · 편집 · 수강료 설정 · 이전 학기 복제</p>
+          <p className="text-sm text-[#787774] mt-1">학기별 반 생성/삭제 · 편집 · 수강료 설정 · 이전 학기 복제 · 입반 등록</p>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" size="sm" onClick={() => setShowClone(true)}>이전 학기 복제</Button>
@@ -363,6 +416,54 @@ export default function ClassesPage() {
                   <div className="text-xs text-[#787774] mt-1">월 수강료 합계</div>
                 </div>
               </div>
+            </Card>
+
+            <Card>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold text-[#37352F]">
+                  수강 학생
+                  <span className="ml-1.5 text-[#787774] font-normal">
+                    {enrolledStudents.length}/{selectedClass.capacity}
+                  </span>
+                </span>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => { setEnrollSearch(''); setShowEnrollModal(true); }}
+                  disabled={enrolledStudents.length >= selectedClass.capacity}
+                >
+                  + 입반
+                </Button>
+              </div>
+              {enrolledStudents.length === 0 ? (
+                <p className="text-sm text-[#787774] py-2">등록된 학생이 없습니다.</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-x-4">
+                  {enrolledStudents.map(student => (
+                    <div key={student!.id} className="py-2 border-b border-[#E9E9E7]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-[#37352F]">{student!.name}</span>
+                        <button
+                          onClick={() => setPendingUnenroll({ id: student!.id, name: student!.name })}
+                          className="text-xs text-[#787774] hover:text-[#DC2626] transition-colors px-2 py-0.5 rounded hover:bg-[#FEF2F2] flex-shrink-0"
+                        >
+                          퇴반
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className="text-xs text-[#787774]">{student!.grade} · {student!.school}</span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
+                          student!.status === '재원' ? 'bg-[#F0FDF4] text-[#0F7B6C]' :
+                          student!.status === '휴원' ? 'bg-[#FFF8E1] text-[#B45309]' :
+                          'bg-[#FEF2F2] text-[#DC2626]'
+                        }`}>
+                          {student!.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Card>
 
             <Card title="수강료 세부내역">
@@ -754,6 +855,91 @@ export default function ClassesPage() {
             </div>
           )}
           <p className="text-xs text-[#787774] mt-2">이 작업은 되돌릴 수 없습니다.</p>
+        </Modal>
+      )}
+
+      {/* ── 입반 확인 모달 ── */}
+      {pendingEnroll && selectedClass && (
+        <Modal
+          open={!!pendingEnroll}
+          onClose={() => setPendingEnroll(null)}
+          title="입반 확인"
+          size="sm"
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setPendingEnroll(null)}>취소</Button>
+              <Button onClick={() => { handleEnroll(pendingEnroll.id); setPendingEnroll(null); setShowEnrollModal(false); }}>
+                입반
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm text-[#37352F]">
+            <span className="font-semibold">{pendingEnroll.name}</span> 학생을{' '}
+            <span className="font-semibold">{selectedClass.schedule} · {selectedClass.course}</span>에 입반하시겠습니까?
+          </p>
+        </Modal>
+      )}
+
+      {/* ── 퇴반 확인 모달 ── */}
+      {pendingUnenroll && selectedClass && (
+        <Modal
+          open={!!pendingUnenroll}
+          onClose={() => setPendingUnenroll(null)}
+          title="퇴반 확인"
+          size="sm"
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setPendingUnenroll(null)}>취소</Button>
+              <Button variant="danger" onClick={() => { handleUnenroll(pendingUnenroll.id); setPendingUnenroll(null); }}>
+                퇴반
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm text-[#37352F]">
+            <span className="font-semibold">{pendingUnenroll.name}</span> 학생을 이 반에서 퇴반 처리하시겠습니까?
+          </p>
+          <p className="text-xs text-[#787774] mt-2">퇴반 후에도 원생 관리에서 다시 입반할 수 있습니다.</p>
+        </Modal>
+      )}
+
+      {/* ── 입반 모달 ── */}
+      {showEnrollModal && selectedClass && (
+        <Modal
+          open={showEnrollModal}
+          onClose={() => setShowEnrollModal(false)}
+          title={`입반 — ${selectedClass.schedule} · ${selectedClass.course}`}
+          size="sm"
+          footer={<Button variant="secondary" onClick={() => setShowEnrollModal(false)}>닫기</Button>}
+        >
+          <Input
+            placeholder="이름·학년·학교로 검색"
+            value={enrollSearch}
+            onChange={e => setEnrollSearch(e.target.value)}
+          />
+          <div className="mt-3 max-h-72 overflow-y-auto divide-y divide-[#E9E9E7]">
+            {enrollableStudents.length === 0 ? (
+              <p className="text-sm text-[#787774] py-4 text-center">
+                {enrollSearch ? '검색 결과가 없습니다.' : '입반 가능한 학생이 없습니다.'}
+              </p>
+            ) : (
+              enrollableStudents.map(s => (
+                <div key={s.id} className="flex items-center justify-between py-2.5">
+                  <div>
+                    <span className="text-sm font-medium text-[#37352F]">{s.name}</span>
+                    <span className="text-xs text-[#787774] ml-2">{s.grade} · {s.school}</span>
+                  </div>
+                  <button
+                    onClick={() => setPendingEnroll({ id: s.id, name: s.name })}
+                    className="text-xs font-medium text-[#FF6C37] hover:bg-[#FFF1EC] px-2 py-1 rounded transition-colors"
+                  >
+                    입반
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
         </Modal>
       )}
     </div>
