@@ -27,7 +27,7 @@ export default function DashboardPage() {
     <div>
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-[#37352F]">매출 대시보드</h1>
+          <h1 className="text-xl font-bold text-[#37352F]">손익 대시보드</h1>
           <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 2026년 6월</p>
         </div>
         <Select
@@ -36,12 +36,12 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* 핵심 KPI */}
+      {/* 핵심 KPI — 총수입 / 총비용 / 순이익 */}
       <div className="grid grid-cols-3 gap-5 mb-6">
         <Card className="text-center !p-0">
           <div className="px-6 py-5">
-            <p className="text-sm text-[#787774] mb-1">이번 달 총 매출</p>
-            <p className="text-3xl font-bold text-[#37352F] tabular-nums">{d.total_revenue.toLocaleString()}원</p>
+            <p className="text-sm text-[#787774] mb-1">이번 달 총수입</p>
+            <p className="text-3xl font-bold text-[#0F7B6C] tabular-nums">{d.total_revenue.toLocaleString()}원</p>
             <p className={`text-sm mt-1 tabular-nums ${diffColor}`}>
               {diffSign}{d.revenue_diff.toLocaleString()}원 vs 지난달
             </p>
@@ -49,34 +49,53 @@ export default function DashboardPage() {
         </Card>
         <Card className="text-center !p-0">
           <div className="px-6 py-5">
-            <p className="text-sm text-[#787774] mb-1">결제 완료율</p>
-            <p className="text-3xl font-bold text-[#37352F] tabular-nums">{paymentRate}%</p>
-            <p className="text-sm text-[#787774] mt-1">{d.paid_students}명 / {d.total_students}명</p>
+            <p className="text-sm text-[#787774] mb-1">이번 달 총비용</p>
+            <p className="text-3xl font-bold text-[#EB5757] tabular-nums">{d.total_cost.toLocaleString()}원</p>
+            <p className="text-sm text-[#787774] mt-1">
+              {d.royalty_is_billing_month ? '분기 로열티 포함' : '본사 로열티 비청구월'}
+            </p>
           </div>
         </Card>
-        <Card className="text-center !p-0">
+        <Card className="text-center !p-0 ring-2 ring-[#37352F]">
           <div className="px-6 py-5">
-            <p className="text-sm text-[#787774] mb-1">미납 인원</p>
-            <p className="text-3xl font-bold text-[#EB5757] tabular-nums">{d.unpaid_students}명</p>
-            <p className="text-sm text-[#787774] mt-1">결제 대기 중</p>
+            <p className="text-sm text-[#787774] mb-1">이번 달 순이익</p>
+            <p className="text-3xl font-bold text-[#37352F] tabular-nums">{d.net_profit.toLocaleString()}원</p>
+            <p className="text-sm text-[#787774] mt-1">총수입 − 총비용</p>
           </div>
         </Card>
       </div>
 
+      {/* 분기 로열티 안내 (청구월에만) */}
+      {d.royalty_is_billing_month && (
+        <div className="mb-6 flex items-start gap-2 bg-[#FFF1EC] border border-[#FF6C37]/20 rounded-lg px-4 py-3">
+          <span className="text-sm">📌</span>
+          <p className="text-sm text-[#37352F]">
+            이번 달은 <span className="font-semibold">분기 정산월</span>입니다. 본사 로열티 {d.hq_royalty.toLocaleString()}원이 일시 반영되어 순이익이 평소보다 낮게 보입니다.
+          </p>
+        </div>
+      )}
+
+      {/* 수입 / 비용 항목 분해 */}
       <div className="grid grid-cols-2 gap-5 mb-6">
-        {/* 항목별 매출 분해 */}
-        <Card title="항목별 매출">
+        {/* 수입 항목 */}
+        <Card title="수입 항목">
           <div className="space-y-4">
             {[
-              { label: '교육비', amount: d.tuition_revenue, color: '#FF6C37' },
-              { label: '교구 대여비', amount: d.material_revenue, color: '#1A73E8' },
-              { label: '콘텐츠 사용비', amount: d.content_revenue, color: '#0F7B6C' },
+              { label: '교육비', amount: d.tuition_revenue, color: '#FF6C37', isNew: false },
+              { label: '교구 대여비', amount: d.material_revenue, color: '#1A73E8', isNew: false },
+              { label: '콘텐츠 사용비', amount: d.content_revenue, color: '#0F7B6C', isNew: false },
+              { label: '교안 마켓 수익', amount: d.marketplace_revenue, color: '#7C5CBF', isNew: true },
             ].map(item => {
               const pct = Math.round((item.amount / d.total_revenue) * 100);
               return (
                 <div key={item.label}>
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-sm text-[#37352F]">{item.label}</span>
+                    <span className="text-sm text-[#37352F]">
+                      {item.label}
+                      {item.isNew && (
+                        <span className="ml-1.5 text-[10px] font-semibold text-[#7C5CBF] bg-[#F4F0FA] px-1.5 py-0.5 rounded">신규</span>
+                      )}
+                    </span>
                     <span className="text-sm font-medium tabular-nums text-[#37352F]">{item.amount.toLocaleString()}원</span>
                   </div>
                   <div className="h-2 bg-[#F7F7F5] rounded-full overflow-hidden">
@@ -87,31 +106,100 @@ export default function DashboardPage() {
               );
             })}
           </div>
+          <div className="mt-4 pt-3 border-t border-[#E9E9E7] flex items-center justify-between">
+            <span className="text-sm font-semibold text-[#37352F]">총수입</span>
+            <span className="text-sm font-bold tabular-nums text-[#0F7B6C]">{d.total_revenue.toLocaleString()}원</span>
+          </div>
         </Card>
 
-        {/* 결제 수단별 */}
-        <Card title="결제 수단별 매출">
+        {/* 비용 항목 */}
+        <Card title="비용 항목">
           <div className="space-y-4">
             {[
-              { label: '카드', amount: d.card_revenue, pct: Math.round(d.card_revenue / d.total_revenue * 100) },
-              { label: '현금', amount: d.cash_revenue, pct: Math.round(d.cash_revenue / d.total_revenue * 100) },
-              { label: '계좌이체', amount: d.transfer_revenue, pct: Math.round(d.transfer_revenue / d.total_revenue * 100) },
-            ].map(item => (
-              <div key={item.label}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm text-[#37352F]">{item.label}</span>
-                  <span className="text-sm font-medium tabular-nums text-[#37352F]">{item.amount.toLocaleString()}원</span>
+              ...(d.royalty_is_billing_month
+                ? [{ label: '본사 로열티', amount: d.hq_royalty, color: '#EB5757', badge: '분기 청구' }]
+                : []),
+              { label: '교안 마켓 이용료', amount: d.marketplace_fee, color: '#EB5757', badge: '' },
+            ].map(item => {
+              const pct = Math.round((item.amount / d.total_cost) * 100);
+              return (
+                <div key={item.label}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm text-[#37352F]">
+                      {item.label}
+                      {item.badge && (
+                        <span className="ml-1.5 text-[10px] font-semibold text-[#EB5757] bg-[#FDECEA] px-1.5 py-0.5 rounded">{item.badge}</span>
+                      )}
+                    </span>
+                    <span className="text-sm font-medium tabular-nums text-[#37352F]">{item.amount.toLocaleString()}원</span>
+                  </div>
+                  <div className="h-2 bg-[#F7F7F5] rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: item.color }} />
+                  </div>
+                  <p className="text-xs text-[#787774] mt-0.5">{pct}%</p>
                 </div>
-                <div className="h-2 bg-[#F7F7F5] rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-[#787774]" style={{ width: `${item.pct}%` }} />
-                </div>
-                <p className="text-xs text-[#787774] mt-0.5">{item.pct}%</p>
-              </div>
-            ))}
+              );
+            })}
+            {!d.royalty_is_billing_month && (
+              <p className="text-xs text-[#787774]">이번 달은 분기 정산월이 아니어서 본사 로열티는 계상되지 않습니다.</p>
+            )}
+          </div>
+          <div className="mt-4 pt-3 border-t border-[#E9E9E7] flex items-center justify-between">
+            <span className="text-sm font-semibold text-[#37352F]">총비용</span>
+            <span className="text-sm font-bold tabular-nums text-[#EB5757]">{d.total_cost.toLocaleString()}원</span>
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-2 gap-5 mb-6">
+        {/* 교안 마켓플레이스 (별도 손익 카드) */}
+        <Card title="교안 마켓플레이스" className="!bg-[#FAF8FD]">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[#37352F]">교안 판매 수익</span>
+              <span className="text-sm font-medium tabular-nums text-[#0F7B6C]">+{d.marketplace_revenue.toLocaleString()}원</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[#37352F]">마켓 이용료</span>
+              <span className="text-sm font-medium tabular-nums text-[#EB5757]">−{d.marketplace_fee.toLocaleString()}원</span>
+            </div>
+            <div className="pt-3 border-t border-[#E9E9E7] flex items-center justify-between">
+              <span className="text-sm font-semibold text-[#7C5CBF]">마켓 순익</span>
+              <span className="text-base font-bold tabular-nums text-[#7C5CBF]">+{d.marketplace_net.toLocaleString()}원</span>
+            </div>
+          </div>
+          <p className="text-xs text-[#787774] mt-3">위 총수입·총비용에 이미 합산되어 있습니다.</p>
+        </Card>
+
+        {/* 결제 수단별 (학원 매출만) */}
+        <Card title="결제 수단별 매출">
+          <div className="space-y-4">
+            {(() => {
+              const payTotal = d.card_revenue + d.cash_revenue + d.transfer_revenue;
+              return [
+                { label: '카드', amount: d.card_revenue },
+                { label: '현금', amount: d.cash_revenue },
+                { label: '계좌이체', amount: d.transfer_revenue },
+              ].map(item => {
+                const pct = Math.round((item.amount / payTotal) * 100);
+                return (
+                  <div key={item.label}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-sm text-[#37352F]">{item.label}</span>
+                      <span className="text-sm font-medium tabular-nums text-[#37352F]">{item.amount.toLocaleString()}원</span>
+                    </div>
+                    <div className="h-2 bg-[#F7F7F5] rounded-full overflow-hidden">
+                      <div className="h-full rounded-full bg-[#787774]" style={{ width: `${pct}%` }} />
+                    </div>
+                    <p className="text-xs text-[#787774] mt-0.5">{pct}%</p>
+                  </div>
+                );
+              });
+            })()}
           </div>
           <div className="mt-4 pt-3 border-t border-[#E9E9E7] bg-[#EDF7F5] rounded-lg px-3 py-2">
             <p className="text-xs font-semibold text-[#0F7B6C]">✓ PG·카드·현금 통합 집계</p>
-            <p className="text-xs text-[#787774]">PG 사이트 별도 접속 불필요</p>
+            <p className="text-xs text-[#787774]">학원 매출만 집계 · 교안 마켓 제외</p>
           </div>
         </Card>
       </div>

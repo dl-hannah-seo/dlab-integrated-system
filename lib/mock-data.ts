@@ -166,8 +166,11 @@ export interface Student {
   streak: number;
   title: string;
   // ── 레거시 원생 자료 보강 필드 (옵셔널) ──
+  gender?: '남' | '여';        // 성별
   division?: string;           // 학부 (유치부/초등부/중등부)
   father_phone?: string;       // 부모 연락처(부)
+  other_guardian_phone?: string;    // 그 외 보호자 연락처
+  other_guardian_relation?: string; // 그 외 보호자 관계 (조부모 등)
   school_type?: string;        // 학교구분 (특성)
   special_note?: string;       // 특이사항 (특성)
   memo?: string;               // 메모
@@ -300,11 +303,15 @@ const STUDENT_NOTES: Record<string, { special_note?: string; memo?: string }> = 
 };
 
 students.forEach((s, i) => {
+  s.gender = i % 2 === 0 ? '남' : '여';
   s.division = deriveDivision(s.grade);
   // 부모 연락처(부): 약 1/3 학생만 등록 (나머지는 모 연락처만)
   if (i % 3 === 0) s.father_phone = s.parent_phone.replace(/\d{4}$/, String(2000 + i).slice(-4));
   s.school_type = i % 7 === 0 ? '국제' : i % 11 === 0 ? '특목' : '일반';
 });
+// 그 외 보호자(조부모 등) 연락처 데모
+const og = students.find(st => st.id === 's-09');
+if (og) { og.other_guardian_phone = '010-3210-9876'; og.other_guardian_relation = '외조모'; }
 Object.entries(STUDENT_NOTES).forEach(([id, note]) => {
   const s = students.find(st => st.id === id);
   if (s) Object.assign(s, note);
@@ -531,6 +538,8 @@ function buildInvoices(): { invoices: Invoice[]; payments: Payment[] } {
 export const { invoices, payments } = buildInvoices();
 
 // ── 대시보드 집계 (6월 기준) ─────────────────────────────────
+// 손익 대시보드: 수입(매출) − 비용 = 순이익.
+// 로열티는 현금주의 — 분기 정산월(이번 달=6월)에만 전액 계상.
 export const dashboardData = {
   billing_month: '2026-06',
   total_students: 78,
@@ -538,17 +547,31 @@ export const dashboardData = {
   unpaid_students: 16,
   payment_rate: 79.5,
 
-  total_revenue: 12_840_000,
-  tuition_revenue: 10_320_000,
-  material_revenue: 1_860_000,
-  content_revenue: 660_000,
+  // ── 수입 (매출) ──
+  tuition_revenue: 10_320_000,    // 교육비
+  material_revenue: 1_860_000,    // 교구 대여비
+  content_revenue: 660_000,       // 콘텐츠 사용비
+  marketplace_revenue: 480_000,   // 교안 마켓플레이스 수익 (신규)
+  total_revenue: 13_320_000,      // 수입 합계
 
+  // ── 비용 ──
+  hq_royalty: 1_500_000,          // 본사 분기 로열티
+  royalty_is_billing_month: true, // 이번 달이 분기 정산월인가 (현금주의)
+  marketplace_fee: 90_000,        // 교안 마켓플레이스 이용료
+  total_cost: 1_590_000,          // 비용 합계 (청구월 아니면 로열티 제외)
+
+  // ── 손익 ──
+  net_profit: 11_730_000,         // total_revenue − total_cost
+  marketplace_net: 390_000,       // 교안 마켓 별도 손익 (수익 − 이용료, 드릴다운)
+
+  // ── 결제 수단별 (학원 매출만 집계, 마켓 제외) ──
   card_revenue: 10_080_000,
   cash_revenue: 1_560_000,
   transfer_revenue: 1_200_000,
 
-  prev_month_revenue: 11_200_000,
-  revenue_diff: 1_640_000,
+  // ── 전월 대비 (총수입 기준) ──
+  prev_month_revenue: 12_900_000,
+  revenue_diff: 420_000,
 
   today_attend: 3,
   today_absent: 0,

@@ -22,6 +22,7 @@ const DIVISIONS = ['전체', '유치부', '초등부', '중등부', '고등부']
 const GRADES = ['전체', '5세', '6세', '7세', '초1', '초2', '초3', '초4', '초5', '초6', '중1', '중2', '중3', '고1', '고2', '고3'];
 const STATUSES = ['전체', '재원', '퇴원', '휴원'];
 const SOURCES = ['지인소개', '인스타그램', '블로그', '학교안내', '현수막', '네이버카페'];
+const GUARDIAN_RELATIONS = ['조부', '조모', '외조부', '외조모', '삼촌', '이모', '고모', '형제자매', '기타'];
 const MSG_TEMPLATES = [
   { value: 'notice', label: '단체 안내', body: '[D.LAB 판교] {원생명} 학부모님, 안녕하세요.\n본원 관련 안내 말씀 드립니다.' },
   { value: 'payment', label: '결제 URL 안내', body: '[D.LAB 판교] {원생명} 학부모님,\n수강료 결제 안내입니다.\n결제 링크: https://pay.dlab.co.kr/pangyo' },
@@ -98,12 +99,15 @@ export default function StudentsPage() {
   const [includeEndedReg, setIncludeEndedReg] = useState(false);
   // 등록 필수값 (이름 + 모/부 연락처 중 1개 이상)
   const [regName, setRegName] = useState('');
+  const [regGender, setRegGender] = useState('');
   const [regMotherPhone, setRegMotherPhone] = useState('');
   const [regFatherPhone, setRegFatherPhone] = useState('');
-  const canRegister = regName.trim() !== '' && (regMotherPhone.trim() !== '' || regFatherPhone.trim() !== '');
+  const [regOtherPhone, setRegOtherPhone] = useState('');
+  const [regOtherRelation, setRegOtherRelation] = useState('');
+  const canRegister = regName.trim() !== '' && (regMotherPhone.trim() !== '' || regFatherPhone.trim() !== '' || regOtherPhone.trim() !== '');
   function closeRegister() {
     setShowRegister(false);
-    setRegName(''); setRegMotherPhone(''); setRegFatherPhone('');
+    setRegName(''); setRegGender(''); setRegMotherPhone(''); setRegFatherPhone(''); setRegOtherPhone(''); setRegOtherRelation('');
     setRegClasses(new Set()); setRegClassSearch(''); setIncludeEndedReg(false);
     setRegSourceSel(SOURCES[0]); setRegSourceEtc('');
   }
@@ -178,6 +182,11 @@ export default function StudentsPage() {
     setFilterStatus('재원'); setFilterClass('전체'); setFilterTeacher('전체'); setFilterSource('전체');
     setFirstFrom(''); setFirstTo('');
   }
+
+  // 문자 발송 대상: 선택이 있으면 선택분, 없으면 현재 조회된 전체
+  const msgRecipients = selected.size > 0
+    ? ([...selected].map(id => localStudents.find(s => s.id === id)).filter(Boolean) as Student[])
+    : filtered;
 
   function toggleSelect(id: string) {
     setSelected(p => {
@@ -270,7 +279,7 @@ export default function StudentsPage() {
         return <span className="text-xs whitespace-nowrap" title={names.join('\n')}>{classLabel(r.id)}</span>;
       },
     },
-    { key: 'first_enrolled_at', header: '최초 입학일', render: (r: Student) => <span className="tabular-nums text-xs whitespace-nowrap">{r.first_enrolled_at}</span> },
+    { key: 'first_enrolled_at', header: '최초 등원일', render: (r: Student) => <span className="tabular-nums text-xs whitespace-nowrap">{r.first_enrolled_at}</span> },
     {
       key: 'status', header: '등록구분',
       render: (r: Student) => <Badge variant={r.status === '재원' ? 'active' : 'withdrawn'}>{r.status}</Badge>,
@@ -292,6 +301,11 @@ export default function StudentsPage() {
           <div className="grid grid-cols-2 gap-x-8 gap-y-3">
             <Field label="이름">
               {editMode && f ? <Input value={f.name} onChange={e => updateField('name', e.target.value)} /> : <ViewText>{s.name}</ViewText>}
+            </Field>
+            <Field label="성별">
+              {editMode && f
+                ? <Select value={f.gender ?? ''} onChange={e => updateField('gender', (e.target.value || undefined) as Student['gender'])} options={[{ value: '', label: '선택' }, { value: '남', label: '남' }, { value: '여', label: '여' }]} />
+                : <ViewText>{s.gender ?? '-'}</ViewText>}
             </Field>
             <Field label="학부">
               {editMode && f
@@ -315,6 +329,20 @@ export default function StudentsPage() {
             <Field label="부 연락처">
               {editMode && f ? <Input value={f.father_phone ?? ''} placeholder="미등록" onChange={e => updateField('father_phone', e.target.value)} /> : <ViewText>{s.father_phone || '미등록'}</ViewText>}
             </Field>
+            <Field label="그 외 보호자">
+              {editMode && f ? (
+                <div className="w-full flex gap-2">
+                  <div className="w-24 shrink-0">
+                    <Select value={f.other_guardian_relation ?? ''} onChange={e => updateField('other_guardian_relation', e.target.value)} options={[{ value: '', label: '관계' }, ...GUARDIAN_RELATIONS.map(r => ({ value: r, label: r }))]} />
+                  </div>
+                  <div className="flex-1">
+                    <Input value={f.other_guardian_phone ?? ''} placeholder="010-0000-0000" onChange={e => updateField('other_guardian_phone', e.target.value)} />
+                  </div>
+                </div>
+              ) : (
+                <ViewText>{s.other_guardian_phone ? `${s.other_guardian_relation ? s.other_guardian_relation + ' · ' : ''}${s.other_guardian_phone}` : '미등록'}</ViewText>
+              )}
+            </Field>
             <Field label="등록구분">
               {editMode && f
                 ? <Select value={f.status} onChange={e => updateField('status', e.target.value as Student['status'])} options={STATUSES.slice(1).map(v => ({ value: v, label: v }))} />
@@ -334,7 +362,7 @@ export default function StudentsPage() {
                 </div>
               ) : <ViewText>{s.source}</ViewText>}
             </Field>
-            <Field label="최초 입학일"><ViewText>{s.first_enrolled_at}</ViewText></Field>
+            <Field label="최초 등원일"><ViewText>{s.first_enrolled_at}</ViewText></Field>
             <Field label="포인트"><ViewText>{s.points.toLocaleString()}DP</ViewText></Field>
             <Field label="칭호"><ViewText>{s.title || '없음'}</ViewText></Field>
           </div>
@@ -533,7 +561,7 @@ export default function StudentsPage() {
           <Select label="담임" value={filterTeacher} onChange={e => setFilterTeacher(e.target.value)} options={[{ value: '전체', label: '전체 담임' }, ...TEACHERS.map(t => ({ value: t, label: t }))]} />
           <Select label="유입경로" value={filterSource} onChange={e => setFilterSource(e.target.value)} options={[{ value: '전체', label: '전체' }, ...SOURCES.map(s => ({ value: s, label: s })), { value: '기타', label: '기타' }]} />
           <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-[#37352F]">최초입학일</span>
+            <span className="text-sm font-medium text-[#37352F]">최초등원일</span>
             <div className="flex items-center gap-1">
               <input type="date" value={firstFrom} onChange={e => setFirstFrom(e.target.value)} className="w-full border border-[#E9E9E7] rounded-md px-2 py-2 text-sm text-[#37352F] focus:outline-none focus:border-[#FF6C37]" />
               <span className="text-[#787774]">~</span>
@@ -654,25 +682,34 @@ export default function StudentsPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <Input label={<>이름 <span className="text-[#EB5757]">*</span></>} placeholder="홍길동" value={regName} onChange={e => setRegName(e.target.value)} />
-            <Select label="학부" options={DIVISIONS.slice(1).map(d => ({ value: d, label: d }))} />
+            <Select label="성별" value={regGender} onChange={e => setRegGender(e.target.value)} options={[{ value: '', label: '선택' }, { value: '남', label: '남' }, { value: '여', label: '여' }]} />
           </div>
           <div className="grid grid-cols-2 gap-3">
+            <Select label="학부" options={DIVISIONS.slice(1).map(d => ({ value: d, label: d }))} />
             <Select label="학년" options={GRADES.slice(1).map(g => ({ value: g, label: g }))} />
-            <Input label="학교" placeholder="판교초" />
           </div>
+          <Input label="학교" placeholder="판교초" />
           <div>
-            <p className="text-sm font-medium text-[#37352F] mb-1">부모 연락처 <span className="text-xs font-normal text-[#787774]">(모·부 중 1개 이상 필수)</span></p>
+            <p className="text-sm font-medium text-[#37352F] mb-1">보호자 연락처 <span className="text-xs font-normal text-[#787774]">(모·부·기타 중 1개 이상 필수)</span></p>
             <div className="grid grid-cols-2 gap-3">
               <Input label="모 연락처" placeholder="010-0000-0000" value={regMotherPhone} onChange={e => setRegMotherPhone(e.target.value)} />
               <Input label="부 연락처" placeholder="010-0000-0000" value={regFatherPhone} onChange={e => setRegFatherPhone(e.target.value)} />
             </div>
-            {regName.trim() !== '' && !regMotherPhone.trim() && !regFatherPhone.trim() && (
-              <p className="text-xs text-[#EB5757] mt-1">모 또는 부 연락처 중 최소 1개는 필수입니다.</p>
+            <div className="mt-3 flex gap-2 items-end">
+              <div className="w-32 shrink-0">
+                <Select label="그 외 보호자 관계" value={regOtherRelation} onChange={e => setRegOtherRelation(e.target.value)} options={[{ value: '', label: '관계' }, ...GUARDIAN_RELATIONS.map(r => ({ value: r, label: r }))]} />
+              </div>
+              <div className="flex-1">
+                <Input label="그 외 보호자 연락처" placeholder="010-0000-0000" value={regOtherPhone} onChange={e => setRegOtherPhone(e.target.value)} />
+              </div>
+            </div>
+            {regName.trim() !== '' && !regMotherPhone.trim() && !regFatherPhone.trim() && !regOtherPhone.trim() && (
+              <p className="text-xs text-[#EB5757] mt-1">모·부·기타 보호자 연락처 중 최소 1개는 필수입니다.</p>
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Input label="원생 연락처 (선택)" placeholder="010-0000-0000" />
-            <Input label="최초 입학일" type="date" />
+            <Input label="최초 등원일" type="date" />
           </div>
           <Select
             label="유입경로"

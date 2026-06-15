@@ -193,7 +193,7 @@ export default function TimetablePage() {
       {/* 헤더 */}
       <div className="mb-5 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-[#37352F]">시간표 허브</h1>
+          <h1 className="text-xl font-bold text-[#37352F]">출석 체크</h1>
           <p className="text-sm text-[#787774] mt-1">2026년 6월 14일 · 판교 캠퍼스</p>
         </div>
         <div className="flex items-center gap-2">
