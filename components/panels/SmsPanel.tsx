@@ -1,0 +1,139 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { SlidePanel } from '@/components/panels/SlidePanel';
+import { useQuickActions, SmsRecipient, SmsTemplate } from '@/components/panels/QuickActionsContext';
+import { Button } from '@/components/ui/Button';
+
+const TEMPLATES: Record<SmsTemplate, string> = {
+  absence: '[D.LAB 판교] 안녕하세요. 오늘 수업에 미도착/결석 처리되었습니다. 문의: 031-000-0000',
+  unpaid: '[D.LAB 판교] 안녕하세요. 이번 달 수강료 미납 안내드립니다. 확인 부탁드립니다.',
+  custom: '',
+};
+
+const TEMPLATE_LABELS: Record<SmsTemplate, string> = {
+  absence: '결석 알림',
+  unpaid: '미납 안내',
+  custom: '직접 입력',
+};
+
+export function SmsPanel() {
+  const { activePanel, close, smsConfig } = useQuickActions();
+  const open = activePanel === 'sms';
+
+  const [recipients, setRecipients] = useState<SmsRecipient[]>([]);
+  const [template, setTemplate] = useState<SmsTemplate>('custom');
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    if (open && smsConfig) {
+      setRecipients(smsConfig.recipients);
+      setTemplate(smsConfig.template);
+      setMessage(TEMPLATES[smsConfig.template]);
+      setSent(false);
+    }
+    if (!open) setSent(false);
+  }, [open, smsConfig]);
+
+  function handleTemplateChange(t: SmsTemplate) {
+    setTemplate(t);
+    setMessage(TEMPLATES[t]);
+  }
+
+  function removeRecipient(studentId: string) {
+    setRecipients(prev => prev.filter(r => r.studentId !== studentId));
+  }
+
+  function handleSend() {
+    if (!message.trim() || recipients.length === 0) return;
+    setSending(true);
+    setTimeout(() => {
+      setSending(false);
+      setSent(true);
+      setTimeout(close, 1200);
+    }, 800);
+  }
+
+  return (
+    <SlidePanel open={open} onClose={close} title="문자 발송">
+      <div className="px-5 py-4 space-y-5">
+        {/* 수신자 */}
+        <div>
+          <p className="text-xs font-semibold text-[#787774] mb-2">수신자</p>
+          <div className="flex flex-wrap gap-1.5 p-3 bg-[#F7F7F5] rounded-lg min-h-[48px]">
+            {recipients.length === 0 && (
+              <span className="text-xs text-[#787774]">수신자를 선택하세요</span>
+            )}
+            {recipients.map(r => (
+              <span
+                key={r.studentId}
+                className="flex items-center gap-1 px-2.5 py-1 bg-white border border-[#E9E9E7] rounded-full text-xs text-[#37352F]"
+              >
+                {r.name} 부모님
+                <button
+                  onClick={() => removeRecipient(r.studentId)}
+                  className="text-[#787774] hover:text-[#EB5757] ml-0.5 transition-colors"
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* 템플릿 */}
+        <div>
+          <p className="text-xs font-semibold text-[#787774] mb-2">템플릿</p>
+          <div className="flex gap-2">
+            {(['absence', 'unpaid', 'custom'] as SmsTemplate[]).map(t => (
+              <button
+                key={t}
+                onClick={() => handleTemplateChange(t)}
+                className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                  template === t
+                    ? 'bg-[#FF6C37] text-white border-[#FF6C37]'
+                    : 'bg-white text-[#787774] border-[#E9E9E7] hover:border-[#FF6C37]/50'
+                }`}
+              >
+                {TEMPLATE_LABELS[t]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 메시지 */}
+        <div>
+          <p className="text-xs font-semibold text-[#787774] mb-2">메시지</p>
+          <textarea
+            value={message}
+            onChange={e => setMessage(e.target.value.slice(0, 90))}
+            rows={4}
+            placeholder="메시지를 입력하세요"
+            className="w-full px-3 py-2.5 text-sm text-[#37352F] bg-white border border-[#E9E9E7] rounded-lg resize-none focus:outline-none focus:ring-1 focus:ring-[#FF6C37] focus:border-[#FF6C37]"
+          />
+          <p className={`text-right text-xs mt-1 ${message.length >= 85 ? 'text-[#EB5757]' : 'text-[#787774]'}`}>
+            {message.length} / 90자
+          </p>
+        </div>
+
+        {/* 발송 */}
+        {sent ? (
+          <div className="text-center py-3 bg-[#EDF7F5] rounded-lg text-sm font-semibold text-[#0F7B6C]">
+            ✓ 발송 완료
+          </div>
+        ) : (
+          <Button
+            className="w-full"
+            onClick={handleSend}
+            loading={sending}
+            disabled={recipients.length === 0 || !message.trim()}
+          >
+            {recipients.length > 0 ? `${recipients.length}명에게 발송` : '발송하기'}
+          </Button>
+        )}
+      </div>
+    </SlidePanel>
+  );
+}
