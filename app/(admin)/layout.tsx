@@ -5,7 +5,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="flex min-h-screen bg-white">
       <Sidebar />
       <main className="flex-1 ml-60 min-h-screen">
-        <div className="max-w-[960px] mx-auto px-10 py-10">
+        <div className="max-w-[1440px] mx-auto px-10 py-10">
           {children}
         </div>
       </main>

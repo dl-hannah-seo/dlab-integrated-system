@@ -36,7 +36,7 @@ export default function ClassesPage() {
 
   // 새 반 생성 폼
   const [createYear, setCreateYear]           = useState(() => new Date().getFullYear());
-  const [createSeason, setCreateSeason]       = useState('봄');
+  const [createSeason, setCreateSeason]       = useState('');
   const [createDays, setCreateDays]           = useState<string[]>([]);
   const [createTime, setCreateTime]           = useState('09:00');
   const [createCourse, setCreateCourse]       = useState('');
@@ -429,7 +429,7 @@ export default function ClassesPage() {
             <Input
               label="구분명"
               type="text"
-              placeholder="예: 여름, 1학기, 특강"
+              placeholder="예: 봄학기"
               value={createSeason}
               onChange={e => setCreateSeason(e.target.value)}
             />
