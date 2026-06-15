@@ -226,10 +226,46 @@ export default function PaymentsPage() {
               {studentPayments.length > 0 ? (
                 <Table
                   columns={[
-                    { key: 'paid_at', header: '수납일', render: r => <span className="tabular-nums text-xs">{String(r.paid_at).slice(0,10)}</span> },
+                    {
+                      key: 'paid_at',
+                      header: '수납일자',
+                      render: r => <span className="tabular-nums text-xs">{String(r.paid_at).slice(0, 10)}</span>,
+                    },
+                    {
+                      key: 'invoice_id',
+                      header: '수납내용',
+                      render: r => {
+                        const inv = invoices.find(i => i.id === String(r.invoice_id));
+                        const cl = inv ? classes.find(c => c.id === inv.class_id) : null;
+                        return <span className="text-xs text-[#37352F]">{cl ? cl.name : '-'}</span>;
+                      },
+                    },
+                    {
+                      key: 'invoice_id',
+                      header: '상태',
+                      render: r => {
+                        const inv = invoices.find(i => i.id === String(r.invoice_id));
+                        return (
+                          <Badge variant={inv?.status === '완납' ? 'paid' : 'unpaid'}>
+                            {inv?.status ?? '-'}
+                          </Badge>
+                        );
+                      },
+                    },
                     { key: 'method', header: '수납방법' },
-                    { key: 'card_type', header: '카드종류', render: r => <span className="text-xs text-[#787774]">{String(r.card_type) || '-'}</span> },
-                    { key: 'amount', header: '수납금액', render: r => <span className="tabular-nums font-medium">{Number(r.amount).toLocaleString()}원</span> },
+                    {
+                      key: 'card_type',
+                      header: '카드종류',
+                      render: r => {
+                        const detail = r.card_detail ? ` (${r.card_detail})` : '';
+                        return <span className="text-xs text-[#787774]">{String(r.card_type) || '-'}{detail}</span>;
+                      },
+                    },
+                    {
+                      key: 'amount',
+                      header: '수납금액',
+                      render: r => <span className="tabular-nums font-medium">{Number(r.amount).toLocaleString()}원</span>,
+                    },
                   ]}
                   data={studentPayments as unknown as Record<string, unknown>[]}
                 />
