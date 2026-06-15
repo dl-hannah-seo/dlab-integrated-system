@@ -281,32 +281,92 @@ export default function PaymentsPage() {
           </>
         }
       >
-        <div className="space-y-4">
+        <div className="space-y-3">
+          {/* Row 1: 수강년월 + 수납일자 */}
           <div className="grid grid-cols-2 gap-3">
             <Input label="수강년월" type="month" defaultValue={monthFilter} />
-            <Select label="수납구분" options={[{value:'완납', label:'완납'}]} />
+            <Input label="수납일자" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
           </div>
+
+          {/* Row 2: 수강기간 (read-only) */}
+          <div className="bg-[#F7F7F5] rounded-lg px-3 py-2 text-sm text-[#37352F]">
+            <span className="text-xs text-[#787774] mr-2">수강기간</span>
+            {cls ? `${cls.start_date} ~ ${cls.end_date}` : '-'}
+          </div>
+
+          {/* Row 3: 수납구분 + 수납방법 */}
+          <div className="grid grid-cols-2 gap-3">
+            <Select label="수납구분" options={[
+              { value: '완납', label: '완납' },
+              { value: '분납', label: '분납' },
+            ]} />
+            <Select label="수납방법" options={[
+              { value: '카드', label: '카드' },
+              { value: '현금', label: '현금' },
+              { value: '계좌이체', label: '계좌이체' },
+            ]} />
+          </div>
+
+          {/* Row 4: 대상금액 + 할인금액 */}
           <div className="grid grid-cols-2 gap-3">
             <Input label="대상금액" type="number" defaultValue={String(totalAmount)} suffix="원" />
             <Input label="할인금액" type="number" defaultValue="0" suffix="원" />
           </div>
-          <Select label="수납방법" options={[
-            {value:'카드', label:'카드'},
-            {value:'현금', label:'현금'},
-            {value:'계좌이체', label:'계좌이체'},
-          ]} />
+
+          {/* Row 5: 수납대상금액(computed) + 누적수납(read-only) */}
           <div className="grid grid-cols-2 gap-3">
-            <Input label="카드 수납액" type="number" defaultValue={String(totalAmount)} suffix="원" />
-            <Input label="현금 수납액" type="number" defaultValue="0" suffix="원" />
+            <div className="bg-[#FFF8F5] border border-[#FFD4C2] rounded-lg px-3 py-2">
+              <p className="text-xs text-[#787774] mb-0.5">수납대상금액</p>
+              <p className="text-sm font-bold text-[#FF6C37] tabular-nums">{fmt(totalAmount)}</p>
+            </div>
+            <div className="bg-[#F7F7F5] border border-[#E9E9E7] rounded-lg px-3 py-2">
+              <p className="text-xs text-[#787774] mb-0.5">누적수납</p>
+              <p className="text-sm font-bold text-[#37352F] tabular-nums">
+                {fmt(studentPayments.reduce((sum, p) => sum + p.amount, 0))}
+              </p>
+            </div>
           </div>
+
+          {/* Row 6: 카드 수납액 + 현금 수납액 */}
           <div className="grid grid-cols-2 gap-3">
-            <Select label="카드종류" options={['국민','신한','삼성','현대','하나','우리'].map(s=>({value:s,label:s+'카드'}))} />
-            <div className="flex items-end pb-2">
-              <label className="flex items-center gap-2 text-sm text-[#37352F]">
-                <input type="checkbox" className="accent-[#FF6C37]" /> 현금영수증 발행
+            <Input label="카드수납" type="number" defaultValue={String(totalAmount)} suffix="원" />
+            <Input label="현금수납" type="number" defaultValue="0" suffix="원" />
+          </div>
+
+          {/* Row 7: 카드종류 2단계 */}
+          <div className="grid grid-cols-2 gap-3">
+            <Select label="카드사" options={['국민', '신한', '삼성', '현대', '하나', '우리'].map(s => ({ value: s, label: s + '카드' }))} />
+            <Select label="카드종류" options={[
+              { value: '일반', label: '일반' },
+              { value: '체크', label: '체크' },
+              { value: '기업', label: '기업' },
+            ]} />
+          </div>
+
+          {/* Row 8: 취소번호 + 결제단말기 */}
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="취소번호" placeholder="승인취소 시 입력" />
+            <Input label="결제단말기" placeholder="단말기 ID" />
+          </div>
+
+          {/* Row 9: 현금영수증 radio */}
+          <div>
+            <p className="text-xs font-medium text-[#37352F] mb-1.5">현금영수증</p>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-1.5 text-sm text-[#37352F] cursor-pointer">
+                <input type="radio" name="cash_receipt" value="발행" defaultChecked className="accent-[#FF6C37]" />
+                발행
+              </label>
+              <label className="flex items-center gap-1.5 text-sm text-[#37352F] cursor-pointer">
+                <input type="radio" name="cash_receipt" value="미발행" className="accent-[#FF6C37]" />
+                미발행
               </label>
             </div>
           </div>
+
+          {/* Row 10: 특이사항 */}
+          <Input label="특이사항" placeholder="메모 입력" />
+
           {paySuccess && (
             <div className="bg-[#EDF7F5] border border-[#0F7B6C]/20 rounded-lg px-4 py-3 text-sm font-semibold text-[#0F7B6C]">
               ✓ 수납 처리 완료. 청구서 상태가 완납으로 변경됩니다.
