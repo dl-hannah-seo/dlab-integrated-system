@@ -163,6 +163,12 @@ export default function PaymentsPage() {
                 <div>
                   <h2 className="text-base font-bold text-[#37352F]">{selectedStudent.name}</h2>
                   <p className="text-sm text-[#787774]">{selectedStudent.grade} · {cls?.schedule} · {cls?.course}</p>
+                  <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-[#787774]">
+                    {selectedStudent.school && <span>학교 {selectedStudent.school}</span>}
+                    {selectedStudent.student_phone && <span>원생 {selectedStudent.student_phone}</span>}
+                    <span>모 {selectedStudent.parent_phone}</span>
+                    {selectedStudent.father_phone && <span>부 {selectedStudent.father_phone}</span>}
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" variant="secondary" onClick={() => setShowMsgModal(true)}>결제 문자 발송</Button>
