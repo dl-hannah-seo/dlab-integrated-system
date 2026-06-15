@@ -482,10 +482,15 @@ export interface Payment {
   card_amount: number;
   cash_amount: number;
   method: PayMethod;
-  card_type: string;
+  card_type: string;           // 카드사 (국민, 신한, 삼성, 현대 등)
+  card_detail?: string;        // 카드 세부종류 (일반/체크/기업)
   cash_receipt: boolean;
+  cash_receipt_no?: string;    // 현금영수증 번호
   amount: number;
   paid_at: string;
+  cancellation_no?: string;    // 취소번호
+  special_note?: string;       // 특이사항
+  terminal_id?: string;        // 결제단말기
 }
 
 // 62/78 = 79.5% ≈ 79% 결제 완료 (나머지 16명 미납)
@@ -525,7 +530,9 @@ function buildInvoices(): { invoices: Invoice[]; payments: Payment[] } {
         cash_amount: method === '현금' ? total : 0,
         method,
         card_type: method === '카드' ? ['국민', '신한', '삼성', '현대'][i % 4] + '카드' : '',
+        card_detail: method === '카드' ? ['일반', '체크', '기업'][i % 3] : undefined,
         cash_receipt: method === '현금' && i % 2 === 0,
+        cash_receipt_no: method === '현금' && i % 2 === 0 ? `CR${String(20260600 + i).padStart(10, '0')}` : undefined,
         amount: total - (i % 10 === 0 ? 20000 : 0),
         paid_at: `2026-06-0${(i % 9) + 1}T10:00:00`,
       });
