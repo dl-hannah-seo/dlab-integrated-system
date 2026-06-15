@@ -112,7 +112,7 @@ export function Sidebar() {
       <div className="px-4 py-4 border-t border-[#E9E9E7]">
         <div className="mb-2">
           <p className="text-sm font-medium text-[#37352F]">데스크 담당자</p>
-          <p className="text-xs text-[#787774]">강남 캠퍼스 · staff</p>
+          <p className="text-xs text-[#787774]">판교 캠퍼스 · staff</p>
         </div>
         <button className="w-full px-3 py-2 text-sm text-[#787774] bg-[#F1F1EF] hover:bg-[#EFEFEE] hover:text-[#37352F] rounded-md transition-colors">
           로그아웃

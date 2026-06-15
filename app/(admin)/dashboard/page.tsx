@@ -28,7 +28,7 @@ export default function DashboardPage() {
       <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold text-[#37352F]">매출 대시보드</h1>
-          <p className="text-sm text-[#787774] mt-1">강남 캠퍼스 · 2026년 6월</p>
+          <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 2026년 6월</p>
         </div>
         <Select
           options={[{ value: '2026-06', label: '2026년 6월' }, { value: '2026-05', label: '2026년 5월' }]}
@@ -200,7 +200,7 @@ export default function DashboardPage() {
             <Button variant="secondary" onClick={() => setShowMsgModal(false)}>취소</Button>
             <Button onClick={() => {
               setShowMsgModal(false);
-              alert(`[발송 미리보기] 미납 ${unpaid.length}명에게 결제 URL 문자가 발송되었습니다.\n\n[D.LAB 강남] {원생명} 학부모님, 6월 수강료가 미납 상태입니다.\n결제 링크: https://pay.dlab.co.kr/gangnam`);
+              alert(`[발송 미리보기] 미납 ${unpaid.length}명에게 결제 URL 문자가 발송되었습니다.\n\n[D.LAB 판교] {원생명} 학부모님, 6월 수강료가 미납 상태입니다.\n결제 링크: https://pay.dlab.co.kr/pangyo`);
             }}>
               {unpaid.length}명에게 발송
             </Button>
@@ -214,7 +214,7 @@ export default function DashboardPage() {
           </div>
           <div className="border border-[#E9E9E7] rounded-lg p-4 bg-[#F7F7F5]">
             <p className="text-xs font-semibold text-[#787774] mb-2">메시지 미리보기</p>
-            <p className="text-sm text-[#37352F] whitespace-pre-line">{`[D.LAB 강남] 김민준 학부모님,\n6월 수강료가 미납 상태입니다.\n결제: https://pay.dlab.co.kr/gangnam\n\n문의: 02-000-0000`}</p>
+            <p className="text-sm text-[#37352F] whitespace-pre-line">{`[D.LAB 판교] 김민준 학부모님,\n6월 수강료가 미납 상태입니다.\n결제: https://pay.dlab.co.kr/pangyo\n\n문의: 02-000-0000`}</p>
           </div>
         </div>
       </Modal>

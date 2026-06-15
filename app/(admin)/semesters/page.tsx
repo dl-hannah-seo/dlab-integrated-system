@@ -103,7 +103,7 @@ export default function SemestersPage() {
       <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold text-[#37352F]">학기 편성 관리</h1>
-          <p className="text-sm text-[#787774] mt-1">강남 캠퍼스 · 개설 학기 및 과정 설정</p>
+          <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 개설 학기 및 과정 설정</p>
         </div>
         <Button size="sm" onClick={() => setShowModal(true)}>
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

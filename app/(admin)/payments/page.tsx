@@ -51,7 +51,7 @@ export default function PaymentsPage() {
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-[#37352F]">창구수납</h1>
-        <p className="text-sm text-[#787774] mt-1">원생 중심 수납 처리 · 강남 캠퍼스</p>
+        <p className="text-sm text-[#787774] mt-1">원생 중심 수납 처리 · 판교 캠퍼스</p>
       </div>
 
       <div className="flex gap-5">
@@ -221,7 +221,7 @@ export default function PaymentsPage() {
         }
       >
         <div className="border border-[#E9E9E7] rounded-lg p-4 bg-[#F7F7F5] text-sm text-[#37352F] whitespace-pre-line">
-          {`[D.LAB 강남] ${selectedStudent?.name} 학부모님,\n6월 수강료 미납 안내입니다.\n금액: ${fmt(totalAmount)}\n결제: https://pay.dlab.co.kr/gangnam\n\n문의: 02-000-0000`}
+          {`[D.LAB 판교] ${selectedStudent?.name} 학부모님,\n6월 수강료 미납 안내입니다.\n금액: ${fmt(totalAmount)}\n결제: https://pay.dlab.co.kr/pangyo\n\n문의: 02-000-0000`}
         </div>
       </Modal>
     </div>

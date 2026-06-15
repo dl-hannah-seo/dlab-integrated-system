@@ -93,7 +93,7 @@ function AbsenceModal({
         {makeupSlot && (
           <div className="bg-[#EDF7F5] border border-[#0F7B6C]/20 rounded-lg px-4 py-3">
             <p className="text-xs font-semibold text-[#0F7B6C] mb-1">알림톡 미리보기</p>
-            <p className="text-sm text-[#37352F]">[D.LAB 강남] {student?.name} 학부모님, 오늘 결석({reason}) 처리되었습니다. 보강: {makeupOptions.find(o=>o.value===makeupSlot)?.label?.split(' ').slice(0,3).join(' ')}</p>
+            <p className="text-sm text-[#37352F]">[D.LAB 판교] {student?.name} 학부모님, 오늘 결석({reason}) 처리되었습니다. 보강: {makeupOptions.find(o=>o.value===makeupSlot)?.label?.split(' ').slice(0,3).join(' ')}</p>
           </div>
         )}
         <label className="flex items-center gap-2 text-sm text-[#37352F]">
@@ -194,7 +194,7 @@ export default function TimetablePage() {
       <div className="mb-5 flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold text-[#37352F]">시간표 허브</h1>
-          <p className="text-sm text-[#787774] mt-1">2026년 6월 14일 · 강남 캠퍼스</p>
+          <p className="text-sm text-[#787774] mt-1">2026년 6월 14일 · 판교 캠퍼스</p>
         </div>
         <div className="flex items-center gap-2">
           {/* 뷰 토글 */}

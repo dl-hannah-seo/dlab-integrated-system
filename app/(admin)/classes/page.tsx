@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
 import { Input, Select } from '@/components/ui/Input';
+import { DeleteButton } from '@/components/ui/DeleteButton';
 
 const DAYS = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -33,6 +34,7 @@ export default function ClassesPage() {
   const [showCreate, setShowCreate]     = useState(false);
   const [showClone, setShowClone]       = useState(false);
   const [cloneSuccess, setCloneSuccess] = useState(false);
+  const [confirmDeleteClass, setConfirmDeleteClass] = useState(false);
 
   // 새 반 생성 폼
   const [createYear, setCreateYear]           = useState(() => new Date().getFullYear());
@@ -200,6 +202,14 @@ export default function ClassesPage() {
     setShowEdit(false);
   }
 
+  function handleDeleteClass() {
+    if (!selectedClass) return;
+    const remaining = localClasses.filter(c => c.id !== selectedClass.id);
+    setLocalClasses(remaining);
+    setSelectedClass(remaining[0] ?? null);
+    setConfirmDeleteClass(false);
+  }
+
   function openEditSem(sem: Semester) {
     setEditSemItem(sem);
     setEditSemYear(sem.year);
@@ -225,7 +235,7 @@ export default function ClassesPage() {
       <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold text-[#37352F]">반 관리</h1>
-          <p className="text-sm text-[#787774] mt-1">반 생성 및 수강료 설정</p>
+          <p className="text-sm text-[#787774] mt-1">학기별 반 생성/삭제 · 편집 · 수강료 설정 · 이전 학기 복제</p>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" size="sm" onClick={() => setShowClone(true)}>이전 학기 복제</Button>
@@ -391,6 +401,13 @@ export default function ClassesPage() {
                     <div className="text-sm font-medium text-[#37352F] mt-0.5">{item.value}</div>
                   </div>
                 ))}
+              </div>
+              <div className="mt-5 pt-4 border-t border-[#E9E9E7] flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[#37352F]">반 삭제</p>
+                  <p className="text-xs text-[#787774] mt-0.5">삭제하면 이 반 설정이 영구히 제거됩니다.</p>
+                </div>
+                <DeleteButton onClick={() => setConfirmDeleteClass(true)}>반 삭제</DeleteButton>
               </div>
             </Card>
           </div>
@@ -711,6 +728,34 @@ export default function ClassesPage() {
           </div>
         )}
       </Modal>
+
+      {/* ── 반 삭제 확인 모달 ── */}
+      {confirmDeleteClass && selectedClass && (
+        <Modal
+          open={confirmDeleteClass}
+          onClose={() => setConfirmDeleteClass(false)}
+          title="반 삭제"
+          size="sm"
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setConfirmDeleteClass(false)}>취소</Button>
+              <Button variant="danger" onClick={handleDeleteClass}>삭제</Button>
+            </>
+          }
+        >
+          <p className="text-sm text-[#37352F]">
+            <span className="font-mono font-semibold">{selectedClass.name}</span> 반을 삭제하시겠습니까?
+          </p>
+          {selectedClass.enrolled_count > 0 && (
+            <div className="mt-3 bg-[#FFF1EC] border border-[#FF6C37]/20 rounded-md px-3 py-2">
+              <p className="text-xs text-[#FF6C37] font-medium">
+                현재 {selectedClass.enrolled_count}명이 수강 중입니다. 삭제 전 학생을 다른 반으로 이동하세요.
+              </p>
+            </div>
+          )}
+          <p className="text-xs text-[#787774] mt-2">이 작업은 되돌릴 수 없습니다.</p>
+        </Modal>
+      )}
     </div>
   );
 }

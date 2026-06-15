@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // D.LAB OS — Mock Data (Phase 1, 시연용)
-// PRD §5 스키마 기반. 강남 캠퍼스 단일 스코프.
+// PRD §5 스키마 기반. 판교 캠퍼스 단일 스코프.
 // ─────────────────────────────────────────────────────────────
 
 export type AttendanceStatus = 'attend' | 'absent' | 'pending' | 'makeup';
@@ -17,8 +17,8 @@ export interface Campus {
 
 export const campus: Campus = {
   id: 'campus-001',
-  name: '강남 캠퍼스',
-  payment_link_url: 'https://pay.dlab.co.kr/gangnam',
+  name: '판교 캠퍼스',
+  payment_link_url: 'https://pay.dlab.co.kr/pangyo',
 };
 
 // ── 학기 편성 ─────────────────────────────────────────────────
@@ -85,47 +85,47 @@ export const classes: Class[] = [
   {
     id: 'cl-01', campus_id: 'campus-001', class_group_id: 'cg-01',
     course: '파이썬 기초', name: '2026여름토0900/파이썬기초/론',
-    teacher: '론', team_lead: '민', capacity: 15,
+    teacher: '론', team_lead: '케이', capacity: 15,
     start_date: '2026-07-05', end_date: '2026-08-30', weeks: 8,
     schedule: '토 09:00', payment_method: '매월', payment_due_day: 1,
     tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 14,
   },
   {
     id: 'cl-02', campus_id: 'campus-001', class_group_id: 'cg-02',
-    course: '파이썬 기초', name: '2026여름토1000/파이썬기초/민',
-    teacher: '민', team_lead: '민', capacity: 15,
+    course: '파이썬 기초', name: '2026여름토1000/파이썬기초/씨드',
+    teacher: '씨드', team_lead: '케이', capacity: 15,
     start_date: '2026-07-05', end_date: '2026-08-30', weeks: 8,
     schedule: '토 10:00', payment_method: '매월', payment_due_day: 1,
     tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 15,
   },
   {
     id: 'cl-03', campus_id: 'campus-001', class_group_id: 'cg-03',
-    course: '맞춤수업', name: '2026여름토1100/맞춤수업/론',
-    teacher: '론', team_lead: '민', capacity: 12,
+    course: '맞춤수업', name: '2026여름토1100/맞춤수업/루스',
+    teacher: '루스', team_lead: '케이', capacity: 12,
     start_date: '2026-07-05', end_date: '2026-08-30', weeks: 8,
     schedule: '토 11:00', payment_method: '일시', payment_due_day: 1,
     tuition_fee: 220000, material_fee: 30000, content_fee: 0, enrolled_count: 11,
   },
   {
     id: 'cl-04', campus_id: 'campus-001', class_group_id: 'cg-04',
-    course: '파이썬 기초', name: '2026여름화목1600/파이썬기초/김',
-    teacher: '김연구', team_lead: '박', capacity: 18,
+    course: '파이썬 기초', name: '2026여름화목1600/파이썬기초/리암',
+    teacher: '리암', team_lead: '케이', capacity: 18,
     start_date: '2026-07-07', end_date: '2026-09-01', weeks: 8,
     schedule: '화·목 16:00', payment_method: '매월', payment_due_day: 1,
     tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 18,
   },
   {
     id: 'cl-05', campus_id: 'campus-001', class_group_id: 'cg-05',
-    course: '맞춤수업', name: '2026여름화목1700/맞춤수업/박',
-    teacher: '박', team_lead: '박', capacity: 18,
+    course: '맞춤수업', name: '2026여름화목1700/맞춤수업/허빈',
+    teacher: '허빈', team_lead: '케이', capacity: 18,
     start_date: '2026-07-07', end_date: '2026-09-01', weeks: 8,
     schedule: '화·목 17:00', payment_method: '매월', payment_due_day: 1,
     tuition_fee: 220000, material_fee: 30000, content_fee: 0, enrolled_count: 16,
   },
   {
     id: 'cl-06', campus_id: 'campus-001', class_group_id: 'cg-06',
-    course: '아두이노', name: '2026여름화목1800/아두이노/이',
-    teacher: '이연구', team_lead: '박', capacity: 12,
+    course: '아두이노', name: '2026여름화목1800/아두이노/씨드',
+    teacher: '씨드', team_lead: '케이', capacity: 12,
     start_date: '2026-07-07', end_date: '2026-09-01', weeks: 8,
     schedule: '화·목 18:00', payment_method: '일시', payment_due_day: 1,
     tuition_fee: 200000, material_fee: 50000, content_fee: 30000, enrolled_count: 4,
@@ -350,10 +350,27 @@ students.forEach(s => {
   });
 });
 
+// 복수 반 수강 데모 — 일부 학생은 2개 반을 동시 수강
+const MULTI_CLASS_DEMO: Record<string, string[]> = {
+  's-01': ['cl-04'],   // 김민준: 토 09:00 + 화·목 16:00
+  's-15': ['cl-03'],   // 류준혁: 토 10:00 + 토 11:00
+  's-30': ['cl-06'],   // 도하린: 토 11:00 + 화·목 18:00
+};
+Object.entries(MULTI_CLASS_DEMO).forEach(([sid, extra]) => {
+  extra.forEach((cid, i) => {
+    enrollments.push({ id: `enr-${sid}-x${i}`, student_id: sid, class_id: cid, started_at: '2026-03-02', ended_at: null, end_reason: null });
+  });
+});
+
 // 학생의 현재(진행 중) 수강 등록 — 등록시작일 표시·필터용
 export function getCurrentEnrollment(studentId: string) {
   const list = enrollments.filter(e => e.student_id === studentId);
   return list.find(e => e.ended_at === null) ?? list[list.length - 1];
+}
+
+// 학생의 모든 진행 중 수강 반 (복수 반)
+export function getActiveEnrollments(studentId: string) {
+  return enrollments.filter(e => e.student_id === studentId && e.ended_at === null);
 }
 
 // ── 오늘 시범 회차 (시나리오 1 시연용) ────────────────────────

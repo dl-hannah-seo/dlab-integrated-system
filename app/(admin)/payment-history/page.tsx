@@ -42,7 +42,7 @@ export default function PaymentHistoryPage() {
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-[#37352F]">수납 내역</h1>
-        <p className="text-sm text-[#787774] mt-1">강남 캠퍼스 · 월별 청구·수납 이력</p>
+        <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 월별 청구·수납 이력</p>
       </div>
 
       {/* 요약 카드 */}

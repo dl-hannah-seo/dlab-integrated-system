@@ -4,24 +4,35 @@ import { useState, useMemo } from 'react';
 import {
   students as initialStudents,
   classes,
-  enrollments,
+  enrollments as initialEnrollments,
   getCurrentEnrollment,
   getInvoiceByStudent,
   payments,
   Student,
+  Enrollment,
 } from '@/lib/mock-data';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Input, Select } from '@/components/ui/Input';
+import { Input, Select, Textarea } from '@/components/ui/Input';
 import { Table } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
+import { DeleteButton } from '@/components/ui/DeleteButton';
 
 const DIVISIONS = ['전체', '유치부', '초등부', '중등부', '고등부'];
 const GRADES = ['전체', '5세', '6세', '7세', '초1', '초2', '초3', '초4', '초5', '초6', '중1', '중2', '중3', '고1', '고2', '고3'];
 const STATUSES = ['전체', '재원', '퇴원', '휴원'];
 const SOURCES = ['지인소개', '인스타그램', '블로그', '학교안내', '현수막', '네이버카페'];
-const SCHOOL_TYPES = ['일반', '국제', '특목'];
+const MSG_TEMPLATES = [
+  { value: 'notice', label: '단체 안내', body: '[D.LAB 판교] {원생명} 학부모님, 안녕하세요.\n본원 관련 안내 말씀 드립니다.' },
+  { value: 'payment', label: '결제 URL 안내', body: '[D.LAB 판교] {원생명} 학부모님,\n수강료 결제 안내입니다.\n결제 링크: https://pay.dlab.co.kr/pangyo' },
+  { value: 'absent', label: '결석 확인', body: '[D.LAB 판교] {원생명} 학부모님,\n오늘 수업에 결석하여 안내드립니다.' },
+];
+const MSG_TARGETS = [
+  { value: '모', label: '어머니 (모)' },
+  { value: '부', label: '아버지 (부)' },
+  { value: '본인', label: '학생 본인' },
+];
 const DETAIL_TABS = ['기본정보', '가족/보호자', '수강이력', '수납이력'] as const;
 type DetailTab = (typeof DETAIL_TABS)[number];
 
@@ -44,6 +55,18 @@ function ViewText({ children }: { children: React.ReactNode }) {
 
 export default function StudentsPage() {
   const [localStudents, setLocalStudents] = useState<Student[]>(initialStudents);
+  const [localEnrollments, setLocalEnrollments] = useState<Enrollment[]>(initialEnrollments);
+
+  // 학생의 진행 중 수강 반(복수) 헬퍼
+  const activeClassIds = (sid: string) =>
+    localEnrollments.filter(e => e.student_id === sid && e.ended_at === null).map(e => e.class_id);
+  const activeClassNames = (sid: string) =>
+    activeClassIds(sid).map(id => classes.find(c => c.id === id)?.name).filter(Boolean) as string[];
+  const classLabel = (sid: string) => {
+    const names = activeClassNames(sid);
+    if (names.length === 0) return '미배정';
+    return names.length === 1 ? names[0] : `${names[0]} 외 ${names.length - 1}`;
+  };
 
   // 필터
   const [filterName, setFilterName] = useState('');
@@ -60,6 +83,30 @@ export default function StudentsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showRegister, setShowRegister] = useState(false);
   const [showMsgModal, setShowMsgModal] = useState(false);
+
+  // 신규 등록 폼 — 조건부 UI용 상태
+  const [regSourceSel, setRegSourceSel] = useState(SOURCES[0]);
+  const [regSourceEtc, setRegSourceEtc] = useState('');
+  const [regClasses, setRegClasses] = useState<Set<string>>(new Set());
+
+  // 편집 시 수강 반(복수) 작업 집합
+  const [editClasses, setEditClasses] = useState<Set<string>>(new Set());
+  function toggleEditClass(cid: string) {
+    setEditClasses(prev => { const n = new Set(prev); n.has(cid) ? n.delete(cid) : n.add(cid); return n; });
+  }
+  function toggleRegClass(cid: string) {
+    setRegClasses(prev => { const n = new Set(prev); n.has(cid) ? n.delete(cid) : n.add(cid); return n; });
+  }
+
+  // 문자 발송 폼
+  const [msgTemplate, setMsgTemplate] = useState('notice');
+  const [msgBody, setMsgBody] = useState(MSG_TEMPLATES[0].body);
+  const [msgTarget, setMsgTarget] = useState<'모' | '부' | '본인'>('모');
+  function selectMsgTemplate(v: string) {
+    setMsgTemplate(v);
+    const t = MSG_TEMPLATES.find(x => x.value === v);
+    if (t) setMsgBody(t.body);
+  }
 
   // 상세 모달
   const [detailStudent, setDetailStudent] = useState<Student | null>(null);
@@ -79,10 +126,11 @@ export default function StudentsPage() {
       if (filterDivision !== '전체' && (s.division ?? '') !== filterDivision) return false;
       if (filterGrade !== '전체' && s.grade !== filterGrade) return false;
       if (filterStatus !== '전체' && s.status !== filterStatus) return false;
-      if (filterClass !== '전체' && s.class_id !== filterClass) return false;
+      const myClassIds = activeClassIds(s.id);
+      if (filterClass !== '전체' && !myClassIds.includes(filterClass)) return false;
       if (filterTeacher !== '전체') {
-        const cls = classes.find(c => c.id === s.class_id);
-        if (cls?.teacher !== filterTeacher) return false;
+        const myTeachers = myClassIds.map(id => classes.find(c => c.id === id)?.teacher);
+        if (!myTeachers.includes(filterTeacher)) return false;
       }
       const enrollStart = getCurrentEnrollment(s.id)?.started_at ?? s.first_enrolled_at;
       if (enrollFrom && enrollStart < enrollFrom) return false;
@@ -91,7 +139,7 @@ export default function StudentsPage() {
       if (firstTo && s.first_enrolled_at > firstTo) return false;
       return true;
     });
-  }, [localStudents, filterName, filterDivision, filterGrade, filterStatus, filterClass, filterTeacher, enrollFrom, enrollTo, firstFrom, firstTo]);
+  }, [localStudents, localEnrollments, filterName, filterDivision, filterGrade, filterStatus, filterClass, filterTeacher, enrollFrom, enrollTo, firstFrom, firstTo]);
 
   function resetFilters() {
     setFilterName(''); setFilterDivision('전체'); setFilterGrade('전체');
@@ -127,6 +175,7 @@ export default function StudentsPage() {
   function startEdit() {
     if (!detailStudent) return;
     setEditForm({ ...detailStudent });
+    setEditClasses(new Set(activeClassIds(detailStudent.id)));
     setEditMode(true);
   }
   function cancelEdit() {
@@ -138,8 +187,20 @@ export default function StudentsPage() {
   }
   function saveEdit() {
     if (!editForm) return;
-    setLocalStudents(prev => prev.map(s => (s.id === editForm.id ? editForm : s)));
-    setDetailStudent(editForm);
+    const sid = editForm.id;
+    const primaryClass = [...editClasses][0] ?? editForm.class_id;
+    const updated = { ...editForm, class_id: primaryClass };
+    setLocalStudents(prev => prev.map(s => (s.id === sid ? updated : s)));
+    // 수강 반 반영: 이 학생의 활성 등록을 editClasses와 일치시키고, 종료 이력은 보존
+    setLocalEnrollments(prev => {
+      const kept = prev.filter(e => e.student_id !== sid || e.ended_at !== null);
+      const active: Enrollment[] = [...editClasses].map(cid => {
+        const existing = prev.find(e => e.student_id === sid && e.class_id === cid && e.ended_at === null);
+        return existing ?? { id: `enr-${sid}-n-${cid}`, student_id: sid, class_id: cid, started_at: '2026-03-02', ended_at: null, end_reason: null };
+      });
+      return [...kept, ...active];
+    });
+    setDetailStudent(updated);
     setEditMode(false);
   }
   function deleteStudent() {
@@ -161,17 +222,17 @@ export default function StudentsPage() {
       className: 'w-10',
     },
     { key: 'name', header: '성명', render: (r: Student) => <span className="font-medium whitespace-nowrap">{r.name}</span> },
-    { key: 'student_phone', header: '원생HP', render: (r: Student) => <span className="tabular-nums text-xs">{r.student_phone || '-'}</span> },
-    { key: 'parent_phone', header: '부모HP(모)', render: (r: Student) => <span className="tabular-nums text-xs">{r.parent_phone}</span> },
-    { key: 'father_phone', header: '부모HP(부)', render: (r: Student) => <span className="tabular-nums text-xs">{r.father_phone || '-'}</span> },
+    { key: 'student_phone', header: '원생 연락처', render: (r: Student) => <span className="tabular-nums text-xs">{r.student_phone || '-'}</span> },
+    { key: 'parent_phone', header: '모 연락처', render: (r: Student) => <span className="tabular-nums text-xs">{r.parent_phone}</span> },
+    { key: 'father_phone', header: '부 연락처', render: (r: Student) => <span className="tabular-nums text-xs">{r.father_phone || '-'}</span> },
     { key: 'division', header: '학부', render: (r: Student) => <span className="text-xs whitespace-nowrap">{r.division ?? '-'}</span> },
     { key: 'school', header: '학교', render: (r: Student) => <span className="text-xs whitespace-nowrap">{r.school}</span> },
     { key: 'grade', header: '학년', render: (r: Student) => <span className="text-xs whitespace-nowrap">{r.grade}</span> },
     {
       key: 'class_id', header: '반명',
       render: (r: Student) => {
-        const cls = classes.find(c => c.id === r.class_id);
-        return <span className="text-xs whitespace-nowrap">{cls?.name ?? '-'}</span>;
+        const names = activeClassNames(r.id);
+        return <span className="text-xs whitespace-nowrap" title={names.join('\n')}>{classLabel(r.id)}</span>;
       },
     },
     { key: 'enroll_start', header: '등록시작일', render: (r: Student) => <span className="tabular-nums text-xs whitespace-nowrap">{getCurrentEnrollment(r.id)?.started_at ?? r.first_enrolled_at}</span> },
@@ -209,11 +270,6 @@ export default function StudentsPage() {
             <Field label="학교">
               {editMode && f ? <Input value={f.school} onChange={e => updateField('school', e.target.value)} /> : <ViewText>{s.school}</ViewText>}
             </Field>
-            <Field label="학교구분">
-              {editMode && f
-                ? <Select value={f.school_type ?? '일반'} onChange={e => updateField('school_type', e.target.value)} options={SCHOOL_TYPES.map(t => ({ value: t, label: t }))} />
-                : <ViewText>{s.school_type ?? '일반'}</ViewText>}
-            </Field>
             <Field label="원생 연락처">
               {editMode && f ? <Input value={f.student_phone} placeholder="미등록" onChange={e => updateField('student_phone', e.target.value)} /> : <ViewText>{s.student_phone || '미등록'}</ViewText>}
             </Field>
@@ -223,9 +279,18 @@ export default function StudentsPage() {
                 : <ViewText>{s.status}</ViewText>}
             </Field>
             <Field label="유입경로">
-              {editMode && f
-                ? <Select value={f.source} onChange={e => updateField('source', e.target.value)} options={SOURCES.map(v => ({ value: v, label: v }))} />
-                : <ViewText>{s.source}</ViewText>}
+              {editMode && f ? (
+                <div className="w-full flex flex-col gap-1.5">
+                  <Select
+                    value={SOURCES.includes(f.source) ? f.source : '기타'}
+                    onChange={e => updateField('source', e.target.value === '기타' ? (SOURCES.includes(f.source) ? '' : f.source) : e.target.value)}
+                    options={[...SOURCES, '기타'].map(v => ({ value: v, label: v }))}
+                  />
+                  {!SOURCES.includes(f.source) && (
+                    <Input value={f.source} placeholder="유입경로 직접 입력" onChange={e => updateField('source', e.target.value)} />
+                  )}
+                </div>
+              ) : <ViewText>{s.source}</ViewText>}
             </Field>
             <Field label="최초 입학일"><ViewText>{s.first_enrolled_at}</ViewText></Field>
             <Field label="포인트"><ViewText>{s.points.toLocaleString()}DP</ViewText></Field>
@@ -236,13 +301,28 @@ export default function StudentsPage() {
           </div>
           <Field label="메모">
             {editMode && f
-              ? <input value={f.memo ?? ''} placeholder="메모 입력" onChange={e => updateField('memo', e.target.value)}
-                  className="w-full border border-[#E9E9E7] rounded-md px-3 py-2 text-sm text-[#37352F] placeholder:text-[#BEBDBA] focus:outline-none focus:border-[#FF6C37]" />
-              : <ViewText>{s.memo || '없음'}</ViewText>}
+              ? <textarea value={f.memo ?? ''} rows={3} placeholder="메모 입력" onChange={e => updateField('memo', e.target.value)}
+                  className="w-full border border-[#E9E9E7] rounded-md px-3 py-2 text-sm text-[#37352F] placeholder:text-[#BEBDBA] focus:outline-none focus:border-[#FF6C37] resize-y" />
+              : <span className="text-sm font-medium text-[#37352F] whitespace-pre-line">{s.memo || '없음'}</span>}
           </Field>
           <div className="bg-[#F7F7F5] rounded-lg p-3">
-            <p className="text-xs font-semibold text-[#787774] mb-2">현재 수강 반</p>
-            <p className="text-sm text-[#37352F]">{classes.find(c => c.id === s.class_id)?.name ?? '-'}</p>
+            <p className="text-xs font-semibold text-[#787774] mb-2">수강 반 {editMode && <span className="font-normal">(복수 선택 가능)</span>}</p>
+            {editMode && f ? (
+              <div className="space-y-1.5">
+                {classes.map(c => (
+                  <label key={c.id} className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={editClasses.has(c.id)} onChange={() => toggleEditClass(c.id)} className="w-4 h-4 accent-[#FF6C37]" />
+                    <span className="text-sm text-[#37352F]">{c.name}</span>
+                  </label>
+                ))}
+              </div>
+            ) : activeClassNames(s.id).length === 0 ? (
+              <p className="text-sm text-[#787774]">미배정</p>
+            ) : (
+              <div className="space-y-1">
+                {activeClassNames(s.id).map(n => <p key={n} className="text-sm text-[#37352F]">{n}</p>)}
+              </div>
+            )}
           </div>
         </div>
       );
@@ -285,7 +365,7 @@ export default function StudentsPage() {
 
     // 수강이력
     if (detailTab === '수강이력') {
-      const ens = enrollments.filter(e => e.student_id === s.id);
+      const ens = localEnrollments.filter(e => e.student_id === s.id);
       return (
         <div className="space-y-2">
           {editMode && <p className="text-xs text-[#787774]">수강이력은 편집할 수 없습니다.</p>}
@@ -433,7 +513,7 @@ export default function StudentsPage() {
               </>
             ) : detailTab === '기본정보' ? (
               <div className="w-full flex items-center justify-between">
-                <button onClick={() => setConfirmDelete(true)} className="text-sm text-[#EB5757] hover:underline">원생 삭제</button>
+                <DeleteButton onClick={() => setConfirmDelete(true)}>원생 삭제</DeleteButton>
                 <Button onClick={startEdit}>편집</Button>
               </div>
             ) : (
@@ -504,44 +584,113 @@ export default function StudentsPage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Select label="학년" options={GRADES.slice(1).map(g => ({ value: g, label: g }))} />
-            <Input label="학교" placeholder="강남초" />
+            <Input label="학교" placeholder="판교초" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Input label="부모 연락처 (모)" placeholder="010-0000-0000" />
             <Input label="부모 연락처 (부)" placeholder="010-0000-0000" />
           </div>
-          <Input label="원생 연락처 (선택)" placeholder="010-0000-0000" />
-          <Select label="유입경로" options={SOURCES.map(s => ({ value: s, label: s }))} />
-          <Select label="입반할 반" options={classes.map(c => ({ value: c.id, label: c.name }))} />
-          <div className="bg-[#EDF7F5] border border-[#0F7B6C]/20 rounded-lg px-5 py-3">
-            <p className="text-sm font-semibold text-[#0F7B6C]">청구 자동 생성 안내</p>
-            <p className="text-xs text-[#787774] mt-1">선택한 반의 수강료·납입기준일 설정에 따라 2026-06월 청구 자료가 자동 생성됩니다.</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Input label="원생 연락처 (선택)" placeholder="010-0000-0000" />
+            <Input label="최초 입학일" type="date" />
           </div>
+          <Select
+            label="유입경로"
+            value={regSourceSel}
+            onChange={e => setRegSourceSel(e.target.value)}
+            options={[...SOURCES, '기타'].map(s => ({ value: s, label: s }))}
+          />
+          {regSourceSel === '기타' && (
+            <Input label="유입경로 직접 입력" placeholder="예: 당근마켓, 지역 맘카페" value={regSourceEtc} onChange={e => setRegSourceEtc(e.target.value)} />
+          )}
+          <div>
+            <label className="text-sm font-medium text-[#37352F]">입반할 반 <span className="text-xs font-normal text-[#787774]">(복수 선택 가능)</span></label>
+            <div className="mt-1.5 border border-[#E9E9E7] rounded-md divide-y divide-[#E9E9E7] max-h-40 overflow-y-auto">
+              {classes.map(c => (
+                <label key={c.id} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[#F7F7F5]">
+                  <input type="checkbox" checked={regClasses.has(c.id)} onChange={() => toggleRegClass(c.id)} className="w-4 h-4 accent-[#FF6C37]" />
+                  <span className="text-sm text-[#37352F]">{c.name}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-[#787774] mt-1">선택하지 않으면 미배정으로 등록됩니다.</p>
+          </div>
+          <Input label="특이사항 (선택)" placeholder="예: 견과류 알레르기" />
+          <Textarea label="메모 (선택)" rows={3} placeholder="상담 내용 등 비공개 메모" />
+          {regClasses.size === 0 ? (
+            <div className="bg-[#FFF8E6] border border-[#D9A80A]/30 rounded-lg px-5 py-3">
+              <p className="text-sm font-semibold text-[#D9A80A]">반 미배정 안내</p>
+              <p className="text-xs text-[#787774] mt-1">반을 나중에 배정하면 그 시점에 청구 자료가 생성됩니다. 지금은 청구가 생성되지 않습니다.</p>
+            </div>
+          ) : (
+            <div className="bg-[#EDF7F5] border border-[#0F7B6C]/20 rounded-lg px-5 py-3">
+              <p className="text-sm font-semibold text-[#0F7B6C]">청구 자동 생성 안내</p>
+              <p className="text-xs text-[#787774] mt-1">선택한 {regClasses.size}개 반의 수강료·납입기준일 설정에 따라 2026-06월 청구 자료가 각각 자동 생성됩니다.</p>
+            </div>
+          )}
         </div>
       </Modal>
 
       {/* 문자 발송 모달 */}
-      <Modal open={showMsgModal} onClose={() => setShowMsgModal(false)} title={`문자 발송 — ${selected.size}명`}
+      <Modal open={showMsgModal} onClose={() => setShowMsgModal(false)} title={`문자 발송 — ${selected.size}명`} size="lg"
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowMsgModal(false)}>취소</Button>
-            <Button onClick={() => { setShowMsgModal(false); alert('발송 미리보기: [D.LAB 강남] 안내 문자가 발송되었습니다.'); }}>발송</Button>
+            <Button onClick={() => { setShowMsgModal(false); alert(`발송 미리보기: 문자가 ${selected.size}명에게 발송되었습니다.`); }}>발송</Button>
           </>
         }
       >
-        <div className="space-y-3">
-          <Select label="템플릿" options={[
-            { value: 'notice', label: '단체 안내' },
-            { value: 'payment', label: '결제 URL 안내' },
-            { value: 'absent', label: '결석 확인' },
-          ]} />
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-[#37352F]">메시지 내용</label>
-            <textarea rows={4} className="w-full border border-[#E9E9E7] rounded-md px-3 py-2 text-sm focus:outline-none focus:border-[#FF6C37]"
-              defaultValue={`[D.LAB 강남] {원생명} 학부모님, 안녕하세요.\n본원 관련 안내 말씀 드립니다.`} />
-            <p className="text-xs text-[#787774]">{'{'}'원생명{'}'} 변수는 자동 치환됩니다.</p>
-          </div>
-        </div>
+        {(() => {
+          const recipients = [...selected].map(id => localStudents.find(s => s.id === id)).filter(Boolean) as Student[];
+          const phoneOf = (s: Student) => msgTarget === '모' ? s.parent_phone : msgTarget === '부' ? (s.father_phone ?? '') : s.student_phone;
+          const sampleName = recipients[0]?.name ?? '홍길동';
+          const missing = recipients.filter(s => !phoneOf(s));
+          const previewText = msgBody.split('{원생명}').join(sampleName);
+          return (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <Select label="템플릿" value={msgTemplate} onChange={e => selectMsgTemplate(e.target.value)}
+                  options={MSG_TEMPLATES.map(t => ({ value: t.value, label: t.label }))} />
+                <Select label="수신 대상" value={msgTarget} onChange={e => setMsgTarget(e.target.value as '모' | '부' | '본인')}
+                  options={MSG_TARGETS} />
+              </div>
+
+              <div>
+                <Textarea label="메시지 내용" rows={8} value={msgBody} onChange={e => setMsgBody(e.target.value)} />
+                <p className="text-xs text-[#787774] mt-1">{'{'}원생명{'}'} 변수는 각 수신자 이름으로 자동 치환됩니다.</p>
+              </div>
+
+              {/* 발송 미리보기 */}
+              <div>
+                <p className="text-xs font-semibold text-[#787774] mb-1.5">발송 미리보기 · {sampleName} 기준</p>
+                <div className="bg-[#FEF6E0] border border-[#E9E9E7] rounded-xl px-4 py-3 max-w-[320px]">
+                  <p className="text-[11px] text-[#787774] mb-1.5 flex items-center gap-1">
+                    <span className="inline-block w-3.5 h-3.5 rounded bg-[#FAE100] text-[#37352F] text-[8px] font-bold flex items-center justify-center">talk</span>
+                    카카오 알림톡
+                  </p>
+                  <p className="text-sm text-[#37352F] whitespace-pre-line leading-relaxed">{previewText}</p>
+                </div>
+              </div>
+
+              {/* 수신 번호 */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-xs font-semibold text-[#787774]">수신 번호 · {recipients.length - missing.length}명 발송</p>
+                  {missing.length > 0 && <p className="text-xs text-[#EB5757]">{missing.length}명 번호 없음 (발송 제외)</p>}
+                </div>
+                <div className="max-h-36 overflow-y-auto border border-[#E9E9E7] rounded-md divide-y divide-[#E9E9E7]">
+                  {recipients.length === 0 && <p className="px-3 py-3 text-xs text-[#787774] text-center">선택된 원생이 없습니다.</p>}
+                  {recipients.map(s => (
+                    <div key={s.id} className="flex items-center justify-between px-3 py-1.5">
+                      <span className="text-xs text-[#37352F]">{s.name}</span>
+                      <span className={`text-xs tabular-nums ${phoneOf(s) ? 'text-[#37352F]' : 'text-[#EB5757]'}`}>{phoneOf(s) || '번호 없음'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </Modal>
     </div>
   );

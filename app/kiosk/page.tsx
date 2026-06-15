@@ -53,7 +53,7 @@ export default function KioskPage() {
       <div className="mb-8 text-center">
         <div className="inline-flex items-center gap-2 mb-2">
           <span className="text-2xl font-bold" style={{ color: 'var(--kiosk-orange)' }}>D.LAB</span>
-          <span className="text-2xl font-bold text-white">강남 캠퍼스</span>
+          <span className="text-2xl font-bold text-white">판교 캠퍼스</span>
         </div>
         <p className="text-sm" style={{ color: 'var(--kiosk-muted)' }}>출석 체크인</p>
       </div>
