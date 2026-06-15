@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { students, classes, invoices, payments, getUnpaidStudents, Student, Invoice } from '@/lib/mock-data';
+import { students, classes, invoices, payments, Student } from '@/lib/mock-data';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input, Select } from '@/components/ui/Input';
@@ -10,20 +10,48 @@ import { Modal } from '@/components/ui/Modal';
 import { Table } from '@/components/ui/Table';
 
 function fmt(n: number) { return n.toLocaleString('ko-KR') + '원'; }
+function classTotal(c: { tuition_fee: number; material_fee: number; content_fee: number }) {
+  return c.tuition_fee + c.material_fee + c.content_fee;
+}
 
 export default function PaymentsPage() {
+  // 현황 필터
+  const [monthFilter, setMonthFilter] = useState('2026-06');
+  const [statusFilter, setStatusFilter] = useState('전체');
+  const [methodFilter, setMethodFilter] = useState('전체');
   const [searchName, setSearchName] = useState('');
+  // 마스터-디테일 선택
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  // 디테일 내부 상태
   const [activeTab, setActiveTab] = useState('전체');
   const [showPayModal, setShowPayModal] = useState(false);
   const [showMsgModal, setShowMsgModal] = useState(false);
   const [paySuccess, setPaySuccess] = useState(false);
 
-  const searchResults = useMemo(() => {
-    if (!searchName) return students.slice(0, 10);
-    return students.filter(s => s.name.includes(searchName));
-  }, [searchName]);
+  // ── 월별 현황 행 (월·상태·수단·이름 AND 필터) ──
+  const rows = useMemo(() => {
+    return invoices
+      .filter(inv => inv.billing_month === monthFilter)
+      .map(inv => {
+        const s = students.find(st => st.id === inv.student_id)!;
+        const cls = classes.find(c => c.id === inv.class_id)!;
+        const pay = payments.find(p => p.invoice_id === inv.id);
+        return { inv, s, cls, pay };
+      })
+      .filter(row => {
+        if (statusFilter !== '전체' && row.inv.status !== statusFilter) return false;
+        if (methodFilter !== '전체' && row.pay?.method !== methodFilter) return false;
+        if (searchName && !row.s.name.includes(searchName)) return false;
+        return true;
+      });
+  }, [monthFilter, statusFilter, methodFilter, searchName]);
 
+  const totalPaid   = rows.filter(r => r.inv.status === '완납').reduce((acc, r) => acc + (r.pay?.amount ?? 0), 0);
+  const totalUnpaid = rows.filter(r => r.inv.status === '미납').reduce((acc, r) => acc + classTotal(r.cls), 0);
+  const paidCount   = rows.filter(r => r.inv.status === '완납').length;
+  const unpaidCount = rows.filter(r => r.inv.status === '미납').length;
+
+  // ── 선택된 학생 디테일 ──
   const studentInvoices = useMemo(() =>
     selectedStudent ? invoices.filter(inv => inv.student_id === selectedStudent.id) : [],
     [selectedStudent]
@@ -32,15 +60,10 @@ export default function PaymentsPage() {
     selectedStudent ? payments.filter(p => p.student_id === selectedStudent.id) : [],
     [selectedStudent]
   );
-  const unpaid = useMemo(() => getUnpaidStudents(), []);
-
   const cls = selectedStudent ? classes.find(c => c.id === selectedStudent.class_id) : null;
-  const totalAmount = cls ? cls.tuition_fee + cls.material_fee + cls.content_fee : 0;
+  const totalAmount = cls ? classTotal(cls) : 0;
 
   const tabs = ['전체', '미납자료', '수강료', '교재', '기타'];
-  const filteredInvoices = activeTab === '전체' ? studentInvoices
-    : activeTab === '미납자료' ? studentInvoices.filter(i => i.status === '미납')
-    : studentInvoices;
 
   function handlePay() {
     setPaySuccess(true);
@@ -50,39 +73,90 @@ export default function PaymentsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-[#37352F]">창구수납</h1>
-        <p className="text-sm text-[#787774] mt-1">원생 중심 수납 처리 · 판교 캠퍼스</p>
+        <h1 className="text-xl font-bold text-[#37352F]">수납 관리</h1>
+        <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 월별 수납 현황 조회 및 창구 수납 처리</p>
       </div>
 
-      <div className="flex gap-5">
-        {/* 좌측: 원생 검색 */}
-        <div className="w-64 flex-shrink-0 space-y-3">
-          <Input
-            placeholder="원생 이름 검색"
-            value={searchName}
-            onChange={e => setSearchName(e.target.value)}
-          />
-          <div className="bg-white border border-[#E9E9E7] rounded-lg overflow-hidden divide-y divide-[#E9E9E7] max-h-[600px] overflow-y-auto">
-            {searchResults.map(s => {
-              const inv = invoices.find(i => i.student_id === s.id);
-              const isUnpaid = inv?.status === '미납';
-              return (
-                <button key={s.id} onClick={() => setSelectedStudent(s)}
-                  className={`w-full text-left px-4 py-3 transition-colors hover:bg-[#F7F7F5] ${selectedStudent?.id === s.id ? 'bg-[#FFF1EC]' : ''}`}>
+      {/* 요약 카드 */}
+      <div className="grid grid-cols-3 gap-5 mb-6">
+        <Card className="!p-0">
+          <div className="px-5 py-4 text-center">
+            <p className="text-xs text-[#787774] mb-1">총 수납액 ({paidCount}건)</p>
+            <p className="text-2xl font-bold text-[#0F7B6C] tabular-nums">{fmt(totalPaid)}</p>
+          </div>
+        </Card>
+        <Card className="!p-0">
+          <div className="px-5 py-4 text-center">
+            <p className="text-xs text-[#787774] mb-1">미납 합계 ({unpaidCount}건)</p>
+            <p className="text-2xl font-bold text-[#EB5757] tabular-nums">{fmt(totalUnpaid)}</p>
+          </div>
+        </Card>
+        <Card className="!p-0">
+          <div className="px-5 py-4 text-center">
+            <p className="text-xs text-[#787774] mb-1">전체 원생</p>
+            <p className="text-2xl font-bold text-[#37352F] tabular-nums">{rows.length}명</p>
+          </div>
+        </Card>
+      </div>
+
+      {/* 필터 바 */}
+      <div className="flex gap-3 mb-4">
+        <Input type="month" value={monthFilter} onChange={e => setMonthFilter(e.target.value)} className="w-40" />
+        <Select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+          options={['전체', '완납', '미납', '부분납'].map(v => ({ value: v, label: v }))}
+          className="w-32"
+        />
+        <Select
+          value={methodFilter}
+          onChange={e => setMethodFilter(e.target.value)}
+          options={['전체', '카드', '현금', '계좌이체'].map(v => ({ value: v, label: v }))}
+          className="w-32"
+        />
+        <Input
+          placeholder="원생 이름 검색"
+          value={searchName}
+          onChange={e => setSearchName(e.target.value)}
+          className="w-48"
+        />
+        <span className="ml-auto self-center text-sm text-[#787774]">{rows.length}건</span>
+      </div>
+
+      {selectedStudent ? (
+        /* ── 마스터-디테일 모드 ── */
+        <div className="flex gap-5">
+          {/* 좌측: 축소 목록 */}
+          <div className="w-72 flex-shrink-0">
+            <div className="bg-white border border-[#E9E9E7] rounded-lg overflow-hidden divide-y divide-[#E9E9E7] max-h-[640px] overflow-y-auto">
+              {rows.map(({ inv, s, cls: rowCls, pay }) => (
+                <button key={inv.id} onClick={() => setSelectedStudent(s)}
+                  className={`w-full text-left px-4 py-3 transition-colors hover:bg-[#F7F7F5] ${selectedStudent.id === s.id ? 'bg-[#FFF1EC]' : ''}`}>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-[#37352F]">{s.name}</span>
-                    {isUnpaid && <Badge variant="unpaid">미납</Badge>}
+                    <Badge variant={inv.status === '완납' ? 'paid' : 'unpaid'}>{inv.status}</Badge>
                   </div>
-                  <span className="text-xs text-[#787774]">{s.grade} · {classes.find(c => c.id === s.class_id)?.schedule ?? '-'}</span>
+                  <div className="flex items-center justify-between mt-0.5">
+                    <span className="text-xs text-[#787774]">{s.grade}</span>
+                    <span className="text-xs text-[#787774] tabular-nums">{fmt(pay ? pay.amount : classTotal(rowCls))}</span>
+                  </div>
                 </button>
-              );
-            })}
+              ))}
+              {rows.length === 0 && (
+                <p className="text-sm text-[#787774] py-8 text-center">조건에 맞는 원생이 없습니다.</p>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* 우측: 수납 정보 */}
-        {selectedStudent ? (
+          {/* 우측: 디테일 */}
           <div className="flex-1 space-y-4">
+            <button
+              onClick={() => setSelectedStudent(null)}
+              className="text-sm text-[#787774] hover:text-[#37352F] transition-colors"
+            >
+              ← 전체 현황으로
+            </button>
+
             {/* 원생 요약 카드 */}
             <Card>
               <div className="flex items-start justify-between">
@@ -114,7 +188,7 @@ export default function PaymentsPage() {
             </Card>
 
             {/* 청구 상세 */}
-            <Card title="청구 세부내역 (2026-06)">
+            <Card title={`청구 세부내역 (${monthFilter})`}>
               <div className="space-y-2">
                 {cls && [
                   { label: '교육비 (비과세)', amount: cls.tuition_fee },
@@ -158,15 +232,45 @@ export default function PaymentsPage() {
               )}
             </Card>
           </div>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-center py-20">
-            <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="#E9E9E7" strokeWidth={1.5} className="mb-3">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <p className="text-sm text-[#787774]">좌측에서 원생을 검색·선택하세요</p>
+        </div>
+      ) : (
+        /* ── 현황 모드: 전체 폭 테이블 ── */
+        <div className="bg-white border border-[#E9E9E7] rounded-lg overflow-hidden">
+          <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1.5fr_1fr] gap-0 border-b border-[#E9E9E7] bg-[#F7F7F5] px-4 py-2.5 text-xs font-semibold text-[#787774]">
+            <span>원생</span>
+            <span>반</span>
+            <span>납입 상태</span>
+            <span>결제 수단</span>
+            <span className="text-right">금액</span>
+            <span className="text-right">수납일</span>
           </div>
-        )}
-      </div>
+          <div className="divide-y divide-[#E9E9E7] max-h-[560px] overflow-y-auto">
+            {rows.map(({ inv, s, cls: rowCls, pay }) => (
+              <button key={inv.id} onClick={() => setSelectedStudent(s)}
+                className="w-full grid grid-cols-[2fr_1.5fr_1fr_1fr_1.5fr_1fr] gap-0 px-4 py-3 text-sm items-center text-left hover:bg-[#F7F7F5] transition-colors">
+                <div>
+                  <span className="font-medium text-[#37352F]">{s.name}</span>
+                  <span className="text-xs text-[#787774] ml-2">{s.grade}</span>
+                </div>
+                <span className="text-xs text-[#787774] truncate">{rowCls.schedule}</span>
+                <span>
+                  <Badge variant={inv.status === '완납' ? 'paid' : 'unpaid'}>{inv.status}</Badge>
+                </span>
+                <span className="text-xs text-[#37352F]">{pay?.method ?? '-'}</span>
+                <span className="text-right tabular-nums font-medium text-[#37352F]">
+                  {fmt(pay ? pay.amount : classTotal(rowCls))}
+                </span>
+                <span className="text-right text-xs text-[#787774] tabular-nums">
+                  {pay ? pay.paid_at.slice(0, 10) : '-'}
+                </span>
+              </button>
+            ))}
+            {rows.length === 0 && (
+              <p className="text-sm text-[#787774] py-12 text-center">조건에 맞는 수납 내역이 없습니다.</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* 수납 입력 모달 */}
       <Modal open={showPayModal} onClose={() => setShowPayModal(false)} title={`수납 입력 — ${selectedStudent?.name}`} size="lg"
@@ -179,7 +283,7 @@ export default function PaymentsPage() {
       >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <Input label="수강년월" type="month" defaultValue="2026-06" />
+            <Input label="수강년월" type="month" defaultValue={monthFilter} />
             <Select label="수납구분" options={[{value:'완납', label:'완납'}]} />
           </div>
           <div className="grid grid-cols-2 gap-3">
