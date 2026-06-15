@@ -139,15 +139,22 @@ export interface Student {
   name: string;
   grade: string;
   school: string;
-  parent_phone: string;
-  student_phone: string;
+  parent_phone: string;        // 부모 연락처(모) — 키오스크 인증 키
+  student_phone: string;       // 원생 HP
   status: StudentStatus;
   first_enrolled_at: string;
-  source: string;
+  source: string;              // 유입경로
   points: number;
   class_id: string;
   streak: number;
   title: string;
+  // ── 레거시 원생 자료 보강 필드 (옵셔널) ──
+  division?: string;           // 학부 (유치부/초등부/중등부)
+  father_phone?: string;       // 부모 연락처(부)
+  school_type?: string;        // 학교구분 (특성)
+  special_note?: string;       // 특이사항 (특성)
+  memo?: string;               // 메모
+  sibling_ids?: string[];      // 재원형제
 }
 
 export interface Guardian {
@@ -258,9 +265,43 @@ export const students: Student[] = [
   { id: 's-78', campus_id: 'campus-001', name: '나서윤', grade: '초6', school: '강남초', parent_phone: '010-0123-4569', student_phone: '', status: '재원', first_enrolled_at: '2025-03-02', source: '인스타그램', points: 820, class_id: 'cl-06', streak: 7, title: '열정 코더' },
 ];
 
+// ── 레거시 보강 필드 채우기 (학부·부 연락처·특성·재원형제) ──
+function deriveDivision(grade: string): string {
+  if (grade.startsWith('초')) return '초등부';
+  if (grade.startsWith('중')) return '중등부';
+  if (grade.startsWith('고')) return '고등부';
+  return '유치부';
+}
+// 재원형제 그룹 (데모용)
+const SIBLING_GROUPS: string[][] = [['s-03', 's-11'], ['s-21', 's-29'], ['s-41', 's-50']];
+// 특이사항·메모 (일부 학생)
+const STUDENT_NOTES: Record<string, { special_note?: string; memo?: string }> = {
+  's-01': { special_note: '견과류 알레르기', memo: '하원 시 차량 이용' },
+  's-09': { memo: '신규 입학 · 적응 관찰 필요' },
+  's-30': { special_note: '리더십 우수' },
+  's-41': { memo: '형제 동시 수강 (할인 적용)' },
+};
+
+students.forEach((s, i) => {
+  s.division = deriveDivision(s.grade);
+  // 부모 연락처(부): 약 1/3 학생만 등록 (나머지는 모 연락처만)
+  if (i % 3 === 0) s.father_phone = s.parent_phone.replace(/\d{4}$/, String(2000 + i).slice(-4));
+  s.school_type = i % 7 === 0 ? '국제' : i % 11 === 0 ? '특목' : '일반';
+});
+Object.entries(STUDENT_NOTES).forEach(([id, note]) => {
+  const s = students.find(st => st.id === id);
+  if (s) Object.assign(s, note);
+});
+SIBLING_GROUPS.forEach(group => {
+  group.forEach(id => {
+    const s = students.find(st => st.id === id);
+    if (s) s.sibling_ids = group.filter(g => g !== id);
+  });
+});
+
 // 수강이력 조회용 퇴원 학생 (원생 상세 탭에서 복원 이력 시연용)
 export const withdrawnStudents: Student[] = [
-  { id: 's-ex1', campus_id: 'campus-001', name: '이지호', grade: '중3', school: '대치중', parent_phone: '010-1111-9999', student_phone: '010-1111-9999', status: '퇴원', first_enrolled_at: '2023-01-10', source: '지인소개', points: 0, class_id: '', streak: 0, title: '' },
+  { id: 's-ex1', campus_id: 'campus-001', name: '이지호', grade: '중3', school: '대치중', parent_phone: '010-1111-9999', student_phone: '010-1111-9999', status: '퇴원', first_enrolled_at: '2023-01-10', source: '지인소개', points: 0, class_id: '', streak: 0, title: '', division: '중등부' },
 ];
 
 // ── 보호자 ────────────────────────────────────────────────────
@@ -282,14 +323,38 @@ export interface Enrollment {
   end_reason: string | null;
 }
 
-export const enrollments: Enrollment[] = students.map((s, i) => ({
-  id: `enr-${s.id}`,
-  student_id: s.id,
-  class_id: s.class_id,
-  started_at: s.first_enrolled_at,
-  ended_at: null,
-  end_reason: null,
-}));
+// 등록시작일(입반일)은 최초입학일과 별개.
+// 2025년 이전 입학생은 현재 학기(2026 여름)에 재배정된 것으로 처리 → 두 날짜가 달라짐.
+export const enrollments: Enrollment[] = [];
+students.forEach(s => {
+  const firstYear = Number(s.first_enrolled_at.slice(0, 4));
+  const currentStart = firstYear < 2025 ? '2026-03-02' : s.first_enrolled_at;
+  // 재배정 학생은 과거(종료된) 수강 이력을 남긴다
+  if (currentStart !== s.first_enrolled_at) {
+    enrollments.push({
+      id: `enr-${s.id}-prev`,
+      student_id: s.id,
+      class_id: s.class_id,
+      started_at: s.first_enrolled_at,
+      ended_at: '2026-02-28',
+      end_reason: '학기 종료',
+    });
+  }
+  enrollments.push({
+    id: `enr-${s.id}`,
+    student_id: s.id,
+    class_id: s.class_id,
+    started_at: currentStart,
+    ended_at: null,
+    end_reason: null,
+  });
+});
+
+// 학생의 현재(진행 중) 수강 등록 — 등록시작일 표시·필터용
+export function getCurrentEnrollment(studentId: string) {
+  const list = enrollments.filter(e => e.student_id === studentId);
+  return list.find(e => e.ended_at === null) ?? list[list.length - 1];
+}
 
 // ── 오늘 시범 회차 (시나리오 1 시연용) ────────────────────────
 // 오늘 = 2026-06-14. 시연은 토 09:00반과 화목 16:00반을 중심으로.
