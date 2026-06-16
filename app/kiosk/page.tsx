@@ -28,7 +28,8 @@ export default function KioskPage() {
     const found = students.filter(s => s.parent_phone.replace(/-/g, '').slice(-8) === suffix);
     if (found.length === 0) { setPhoneError('일치하는 원생이 없습니다'); return; }
     setMatched(found);
-    if (found.length === 1) { setSelected(found[0]); setStep('ready'); }
+    // 단일 매칭이면 확인 즉시 체크인, 복수 매칭일 때만 본인 확인 단계를 거친다
+    if (found.length === 1) { setSelected(found[0]); handleCheckin(); }
     else setStep('select');
   }
   function handleCheckin() {
