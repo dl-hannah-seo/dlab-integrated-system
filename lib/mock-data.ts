@@ -703,9 +703,10 @@ const CURRENT_CLASS_IDS = ['cl-01', 'cl-02', 'cl-03', 'cl-04', 'cl-05', 'cl-06']
 const TWICE_WEEKLY = new Set(['cl-04', 'cl-05', 'cl-06']); // 화·목 (주 2회)
 
 function shiftDate(iso: string, days: number): string {
-  const d = new Date(iso + 'T00:00:00');
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
 }
 
 function hashString(s: string): number {
@@ -716,6 +717,7 @@ function hashString(s: string): number {
 
 // 학생·회차 기반 결정적 상태 (대부분 출석, 소수 결석·보강; streak 높을수록 출석↑)
 function deriveHistStatus(student: Student, sessionIndex: number): AttendanceStatus {
+  // 37: 회차별로 해시값을 흩뜨리는 소수 / streak 높을수록 결석 상한↓
   const r = (hashString(student.id) + sessionIndex * 37) % 100;
   const absentThreshold = Math.max(2, 11 - Math.floor(student.streak / 3));
   if (r < absentThreshold) return 'absent';
@@ -780,10 +782,11 @@ const sessionById: Record<string, Session> = {};
 sessionHistory.forEach(s => { sessionById[s.id] = s; });
 
 function weekStartISO(iso: string): string {
-  const d = new Date(iso + 'T00:00:00');
-  const day = (d.getDay() + 6) % 7; // 월요일=0
-  d.setDate(d.getDate() - day);
-  return d.toISOString().slice(0, 10);
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const day = (dt.getUTCDay() + 6) % 7; // 월요일=0
+  dt.setUTCDate(dt.getUTCDate() - day);
+  return dt.toISOString().slice(0, 10);
 }
 
 export interface TrendPoint {
