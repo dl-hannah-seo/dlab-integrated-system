@@ -7,6 +7,12 @@ import { classes, classGroups, semesters, Class, ClassGroup } from '@/lib/mock-d
 // ── 헬퍼 ────────────────────────────────────────────────────────
 const DAY_ORDER = ['월', '화', '수', '목', '금', '토'] as const;
 
+// 고정 시간 축: 수업 유무와 무관하게 09:00~18:00 항상 표시
+const TIME_AXIS = [
+  '09:00', '10:00', '11:00', '12:00', '13:00',
+  '14:00', '15:00', '16:00', '17:00', '18:00',
+] as const;
+
 function parseDays(dayGroup: string): string[] {
   const map: Record<string, string[]> = {
     '토': ['토'],
@@ -44,6 +50,8 @@ type Popover = { cls: Class; group: ClassGroup; top: number; left: number };
 export default function SchedulePage() {
   const [selectedSemId, setSelectedSemId] = useState('sem-01');
   const [view, setView] = useState<'grid' | 'card'>('grid');
+  const [teacherFilter, setTeacherFilter] = useState('전체');
+  const [dayFilter, setDayFilter] = useState('전체');
   const [popover, setPopover] = useState<Popover | null>(null);
 
   // 선택된 학기의 반 목록
@@ -53,6 +61,23 @@ export default function SchedulePage() {
   );
 
   const sem = semesters.find(s => s.id === selectedSemId);
+
+  // 담임(선생님) 선택지 — 필터로 줄어들지 않도록 학기 전체 기준
+  const teacherOptions = [...new Set(semClasses.map(c => c.teacher))];
+
+  // 담임·요일 필터 적용
+  const filteredClasses = semClasses.filter(c => {
+    if (teacherFilter !== '전체' && c.teacher !== teacherFilter) return false;
+    if (dayFilter !== '전체') {
+      const g = semGroups.find(x => x.id === c.class_group_id);
+      if (!g || !parseDays(g.day_group).includes(dayFilter)) return false;
+    }
+    return true;
+  });
+
+  // 그리드에 표시할 요일 — 요일 선택 시 해당 열만
+  const gridDays = dayFilter === '전체' ? [...DAY_ORDER] : [dayFilter];
+  const hasFilter = teacherFilter !== '전체' || dayFilter !== '전체';
 
   function handleBlockClick(
     e: React.MouseEvent<HTMLDivElement>,
@@ -102,17 +127,53 @@ export default function SchedulePage() {
         </div>
       </div>
 
+      {/* 필터 바 — 담임별 · 요일별 조회 */}
+      <div className="mb-4 flex items-center gap-2">
+        <select
+          value={teacherFilter}
+          onChange={e => setTeacherFilter(e.target.value)}
+          className="text-sm border border-[#E9E9E7] rounded-lg px-3 py-1.5 text-[#37352F] bg-white focus:outline-none"
+        >
+          <option value="전체">담임 전체</option>
+          {teacherOptions.map(t => (
+            <option key={t} value={t}>{t} 선생님</option>
+          ))}
+        </select>
+        <select
+          value={dayFilter}
+          onChange={e => setDayFilter(e.target.value)}
+          className="text-sm border border-[#E9E9E7] rounded-lg px-3 py-1.5 text-[#37352F] bg-white focus:outline-none"
+        >
+          <option value="전체">요일 전체</option>
+          {DAY_ORDER.map(d => (
+            <option key={d} value={d}>{d}요일</option>
+          ))}
+        </select>
+        {hasFilter && (
+          <button
+            onClick={() => { setTeacherFilter('전체'); setDayFilter('전체'); }}
+            className="text-sm text-[#787774] hover:text-[#37352F] px-2 py-1.5"
+          >
+            초기화
+          </button>
+        )}
+        <span className="ml-auto text-sm text-[#787774]">
+          {filteredClasses.length}개 반
+        </span>
+      </div>
+
       {/* 뷰 렌더링 */}
       {view === 'grid' && (
         <GridView
-          semClasses={semClasses}
+          semClasses={filteredClasses}
           semGroups={semGroups}
+          days={gridDays}
           onBlockClick={handleBlockClick}
         />
       )}
       {view === 'card' && (
         <CardView
-          semClasses={semClasses}
+          semClasses={filteredClasses}
           semGroups={semGroups}
           onBlockClick={handleBlockClick}
         />
@@ -130,30 +191,33 @@ export default function SchedulePage() {
 function GridView({
   semClasses,
   semGroups,
+  days,
   onBlockClick,
 }: {
   semClasses: Class[];
   semGroups: ClassGroup[];
+  days: string[];
   onBlockClick: (e: React.MouseEvent<HTMLDivElement>, cls: Class, group: ClassGroup) => void;
 }) {
-  // 시간대 목록 (정렬)
-  const times = [...new Set(semGroups.map(g => fmtSlot(g.time_slot)))].sort();
+  // 고정 시간 축 (09~18)
+  const times = TIME_AXIS;
+  const gridCols = `52px repeat(${days.length}, 1fr)`;
 
-  // 셀 맵: { day: { time: { cls, group } } }
-  const cellMap: Record<string, Record<string, { cls: Class; group: ClassGroup }>> = {};
+  // 셀 맵: { day: { time: Array<{ cls, group }> } } — 한 칸에 복수 반 누적
+  const cellMap: Record<string, Record<string, { cls: Class; group: ClassGroup }[]>> = {};
   for (const cls of semClasses) {
     const group = semGroups.find(g => g.id === cls.class_group_id);
     if (!group) continue;
     for (const day of parseDays(group.day_group)) {
-      if (!cellMap[day]) cellMap[day] = {};
-      cellMap[day][fmtSlot(group.time_slot)] = { cls, group };
+      const time = fmtSlot(group.time_slot);
+      ((cellMap[day] ??= {})[time] ??= []).push({ cls, group });
     }
   }
 
-  if (times.length === 0) {
+  if (semClasses.length === 0) {
     return (
       <div className="bg-white border border-[#E9E9E7] rounded-lg px-5 py-12 text-center text-sm text-[#787774]">
-        이 학기에 편성된 수업이 없습니다.
+        조건에 맞는 수업이 없습니다.
       </div>
     );
   }
@@ -161,9 +225,9 @@ function GridView({
   return (
     <div className="bg-white border border-[#E9E9E7] rounded-lg overflow-hidden">
       {/* 요일 헤더 */}
-      <div className="grid border-b border-[#E9E9E7]" style={{ gridTemplateColumns: '52px repeat(6, 1fr)' }}>
+      <div className="grid border-b border-[#E9E9E7]" style={{ gridTemplateColumns: gridCols }}>
         <div className="bg-[#F7F7F5] px-3 py-3" />
-        {DAY_ORDER.map(day => {
+        {days.map(day => {
           const isSat = day === '토';
           return (
             <div
@@ -183,7 +247,7 @@ function GridView({
           key={time}
           className="grid border-[#E9E9E7]"
           style={{
-            gridTemplateColumns: '52px repeat(6, 1fr)',
+            gridTemplateColumns: gridCols,
             borderBottomWidth: idx < times.length - 1 ? 1 : 0,
             borderBottomStyle: 'solid',
             minHeight: 68,
@@ -194,28 +258,31 @@ function GridView({
             <span className="text-xs font-semibold text-[#787774]">{time}</span>
           </div>
 
-          {/* 요일 셀 */}
-          {DAY_ORDER.map(day => {
-            const cell = cellMap[day]?.[time];
+          {/* 요일 셀 — 같은 시간대에 복수 반이면 세로로 누적 */}
+          {days.map(day => {
+            const cells = cellMap[day]?.[time] ?? [];
             const isSat = day === '토';
-            const color = cell ? blockColor(cell.group.day_group) : null;
             return (
               <div
                 key={day}
-                className="border-l border-[#E9E9E7] p-1.5"
-                style={{ background: isSat && !cell ? '#FFFBF9' : undefined }}
+                className="border-l border-[#E9E9E7] p-1.5 space-y-1"
+                style={{ background: isSat && cells.length === 0 ? '#FFFBF9' : undefined }}
               >
-                {cell && color && (
-                  <div
-                    onClick={e => onBlockClick(e, cell.cls, cell.group)}
-                    className="h-full rounded-md px-2 py-1.5 cursor-pointer hover:opacity-90 transition-opacity"
-                    style={{ background: color.block }}
-                  >
-                    <p className="text-xs font-semibold text-white leading-tight">{cell.cls.course}</p>
-                    <p className="text-xs text-white/80 mt-0.5">{cell.cls.teacher}</p>
-                    <p className="text-xs text-white/70">{cell.cls.enrolled_count}명</p>
-                  </div>
-                )}
+                {cells.map(({ cls, group }) => {
+                  const color = blockColor(group.day_group);
+                  return (
+                    <div
+                      key={cls.id}
+                      onClick={e => onBlockClick(e, cls, group)}
+                      className="rounded-md px-2 py-1.5 cursor-pointer hover:opacity-90 transition-opacity"
+                      style={{ background: color.block }}
+                    >
+                      <p className="text-xs font-semibold text-white leading-tight">{cls.course}</p>
+                      <p className="text-xs text-white/80 mt-0.5">{cls.teacher}</p>
+                      <p className="text-xs text-white/70">{cls.enrolled_count}명</p>
+                    </div>
+                  );
+                })}
               </div>
             );
           })}
@@ -235,64 +302,65 @@ function CardView({
   semGroups: ClassGroup[];
   onBlockClick: (e: React.MouseEvent<HTMLDivElement>, cls: Class, group: ClassGroup) => void;
 }) {
-  // 고유 day_group 순서 유지 (ClassGroup 순서 기준)
-  const uniqueGroups = semGroups.reduce<ClassGroup[]>((acc, g) => {
-    if (!acc.some(a => a.day_group === g.day_group)) acc.push(g);
-    return acc;
-  }, []);
+  // 필터된 반을 소속 그룹과 짝지음
+  const pairs = semClasses
+    .map(cls => ({ cls, group: semGroups.find(g => g.id === cls.class_group_id) }))
+    .filter((p): p is { cls: Class; group: ClassGroup } => !!p.group);
 
-  if (uniqueGroups.length === 0) {
+  // day_group 등장 순서 유지
+  const dayGroups: string[] = [];
+  for (const { group } of pairs) {
+    if (!dayGroups.includes(group.day_group)) dayGroups.push(group.day_group);
+  }
+
+  if (pairs.length === 0) {
     return (
       <div className="bg-white border border-[#E9E9E7] rounded-lg px-5 py-12 text-center text-sm text-[#787774]">
-        이 학기에 편성된 수업이 없습니다.
+        조건에 맞는 수업이 없습니다.
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {uniqueGroups.map(groupRep => {
-        const color = blockColor(groupRep.day_group);
-        // 이 day_group에 속하는 ClassGroup들 (시간순)
-        const slots = semGroups
-          .filter(g => g.day_group === groupRep.day_group)
-          .sort((a, b) => a.time_slot.localeCompare(b.time_slot));
+      {dayGroups.map(dg => {
+        const color = blockColor(dg);
+        // 이 day_group에 속하는 반들 (시간순)
+        const slots = pairs
+          .filter(p => p.group.day_group === dg)
+          .sort((a, b) => a.group.time_slot.localeCompare(b.group.time_slot));
 
         return (
-          <div key={groupRep.day_group} className="bg-white border border-[#E9E9E7] rounded-lg overflow-hidden">
+          <div key={dg} className="bg-white border border-[#E9E9E7] rounded-lg overflow-hidden">
             {/* 카드 헤더 */}
             <div
               className="px-5 py-3 border-b border-[#E9E9E7]"
               style={{ background: color.colBg }}
             >
               <span className="text-sm font-semibold" style={{ color: color.block }}>
-                {dayLabel(groupRep.day_group)}
+                {dayLabel(dg)}
               </span>
             </div>
 
             {/* 시간대 행 */}
             <div className="divide-y divide-[#E9E9E7]">
-              {slots.map(slot => {
-                const cls = semClasses.find(c => c.class_group_id === slot.id);
-                if (!cls) return null;
-                return (
-                  <div
-                    key={slot.id}
-                    onClick={e => onBlockClick(e, cls, slot)}
-                    className="flex items-center gap-4 px-5 py-3 cursor-pointer hover:bg-[#F7F7F5] transition-colors"
+              {slots.map(({ cls, group }) => (
+                <div
+                  key={cls.id}
+                  onClick={e => onBlockClick(e, cls, group)}
+                  className="flex items-center gap-4 px-5 py-3 cursor-pointer hover:bg-[#F7F7F5] transition-colors"
+                >
+                  <span
+                    className="text-xs font-semibold px-2 py-1 rounded text-white min-w-[52px] text-center"
+                    style={{ background: color.block }}
                   >
-                    <span
-                      className="text-xs font-semibold px-2 py-1 rounded text-white min-w-[52px] text-center"
-                      style={{ background: color.block }}
-                    >
-                      {fmtSlot(slot.time_slot)}
-                    </span>
-                    <span className="text-sm font-medium text-[#37352F]">{cls.course}</span>
-                    <span className="text-sm text-[#787774]">{cls.teacher} 선생님</span>
-                    <span className="text-sm text-[#787774] ml-auto">{cls.enrolled_count}명</span>
-                  </div>
-                );
-              })}
+                    {fmtSlot(group.time_slot)}
+                  </span>
+                  <span className="text-sm font-medium text-[#37352F]">{cls.course}</span>
+                  <span className="text-sm text-[#787774]">{cls.teacher} 선생님</span>
+                  <span className="text-sm text-[#787774] ml-auto">{cls.enrolled_count}명</span>
+                </div>
+              ))}
             </div>
           </div>
         );
