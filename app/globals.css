@@ -94,6 +94,18 @@ body {
 .badge-pending { background: #F1F1EF; color: #787774; }
 .badge-makeup  { background: #FFF8E6; color: #D9A80A; }
 
+/* ── 시간표 주차 슬라이드 애니메이션 ── */
+@keyframes slide-from-right {
+  from { transform: translateX(24px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes slide-from-left {
+  from { transform: translateX(-24px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+.animate-slide-from-right { animation: slide-from-right 0.18s ease-out; }
+.animate-slide-from-left  { animation: slide-from-left  0.18s ease-out; }
+
 /* ── 스크롤바 ── */
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
