@@ -55,10 +55,34 @@ export function buildRows(
     });
 }
 
-export function filterRows(rows: PaymentRow[], opts: { status: StatusFilter; search: string }): PaymentRow[] {
+export interface FilterOptions {
+  status?: StatusFilter;
+  studentName?: string;
+  className?: string;
+  /** classes 페이지와 동일한 그룹명 형식: "{year}년 {season}" (예: "2026년 여름") */
+  groupName?: string;
+  paymentMethod?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export function filterRows(
+  rows: PaymentRow[],
+  opts: FilterOptions,
+  classGroupsData: { id: string; year: number; season: string }[] = [],
+): PaymentRow[] {
   return rows.filter(r => {
-    if (opts.status !== '전체' && r.status !== opts.status) return false;
-    if (opts.search && !r.student.name.includes(opts.search) && !r.cls.name.includes(opts.search)) return false;
+    if (opts.status && opts.status !== '전체' && r.status !== opts.status) return false;
+    if (opts.studentName && !r.student.name.includes(opts.studentName)) return false;
+    if (opts.className && r.cls.name !== opts.className) return false;
+    if (opts.groupName) {
+      const cg = classGroupsData.find(g => g.id === r.cls.class_group_id);
+      const key = cg ? `${cg.year}년 ${cg.season}` : '';
+      if (key !== opts.groupName) return false;
+    }
+    if (opts.paymentMethod && r.pay?.method !== opts.paymentMethod) return false;
+    if (opts.dateFrom && (!r.pay?.paid_at || String(r.pay.paid_at).slice(0, 10) < opts.dateFrom)) return false;
+    if (opts.dateTo && (!r.pay?.paid_at || String(r.pay.paid_at).slice(0, 10) > opts.dateTo)) return false;
     return true;
   });
 }

@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { students, classes, invoices, payments, Student } from '@/lib/mock-data';
+import { students, classes, classGroups, invoices, payments, Student } from '@/lib/mock-data';
 import {
   buildRows, filterRows, computeSummary, isUnpaidMode,
   fmt, classTotal, StatusFilter,
 } from '@/lib/payments';
-import { StatusCards } from '@/components/payments/StatusCards';
 import { PaymentList } from '@/components/payments/PaymentList';
+import { DonutChart } from '@/components/ui/DonutChart';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input, Select } from '@/components/ui/Input';
@@ -20,7 +20,12 @@ const TODAY = '2026-06-16';
 export default function PaymentsPage() {
   const [monthFilter, setMonthFilter] = useState('2026-06');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('전체');
-  const [searchName, setSearchName] = useState('');
+  const [studentName, setStudentName] = useState('');
+  const [groupFilter, setGroupFilter] = useState('');
+  const [classFilter, setClassFilter] = useState('');
+  const [methodFilter, setMethodFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [activeTab, setActiveTab] = useState('전체');
@@ -33,11 +38,36 @@ export default function PaymentsPage() {
     [monthFilter],
   );
   const summary = useMemo(() => computeSummary(allRows), [allRows]);
+  const groupOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const opts = [{ value: '', label: '전체 그룹' }];
+    for (const r of allRows) {
+      const cg = classGroups.find(g => g.id === r.cls.class_group_id);
+      if (cg) {
+        const key = `${cg.year}년 ${cg.season}`;
+        if (!seen.has(key)) { seen.add(key); opts.push({ value: key, label: key }); }
+      }
+    }
+    return opts;
+  }, [allRows]);
+
+  const classOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const opts = [{ value: '', label: '전체 반' }];
+    for (const r of allRows) {
+      if (!seen.has(r.cls.name)) { seen.add(r.cls.name); opts.push({ value: r.cls.name, label: r.cls.name }); }
+    }
+    return opts;
+  }, [allRows]);
+
   const rows = useMemo(
-    () => filterRows(allRows, { status: statusFilter, search: searchName }),
-    [allRows, statusFilter, searchName],
+    () => filterRows(allRows, { status: statusFilter, studentName, className: classFilter, groupName: groupFilter, paymentMethod: methodFilter, dateFrom, dateTo }, classGroups),
+    [allRows, statusFilter, studentName, classFilter, groupFilter, methodFilter, dateFrom, dateTo],
   );
   const unpaidMode = isUnpaidMode(statusFilter);
+  const paymentRate = summary.counts['전체'] > 0
+    ? Math.round((summary.counts['완납'] / summary.counts['전체']) * 100)
+    : 0;
 
   const studentInvoices = useMemo(
     () => (selectedStudent ? invoices.filter(inv => inv.student_id === selectedStudent.id) : []),
@@ -59,10 +89,6 @@ export default function PaymentsPage() {
       return n;
     });
   }
-  function selectStatus(s: StatusFilter) {
-    setStatusFilter(s);
-    setSelectedIds(new Set());
-  }
   function handlePay() {
     setPaySuccess(true);
     setTimeout(() => { setPaySuccess(false); setShowPayModal(false); }, 1200);
@@ -81,30 +107,97 @@ export default function PaymentsPage() {
         <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 조건별 수납 조회 · 미납/예정 관리</p>
       </div>
 
-      <StatusCards summary={summary} selected={statusFilter} onSelect={selectStatus} />
+      {/* KPI 요약 */}
+      <div className="grid grid-cols-3 gap-4 mb-4">
+        <div className="bg-white border border-[#E9E9E7] rounded-lg px-4 py-3">
+          <p className="text-xs text-[#787774] mb-1">이번 달 총수납</p>
+          <p className="text-2xl font-bold text-[#37352F] tabular-nums leading-none">{fmt(summary.totalPaid)}</p>
+        </div>
+        <div className="bg-white border border-[#E9E9E7] rounded-lg px-4 py-3">
+          <p className="text-xs text-[#787774] mb-1">완납 금액</p>
+          <p className="text-2xl font-bold text-[#0F7B6C] tabular-nums leading-none">{fmt(summary.card + summary.cashBank)}</p>
+        </div>
+        <div className="bg-white border border-[#E9E9E7] rounded-lg px-4 py-3">
+          <p className="text-xs text-[#787774] mb-1">미수금</p>
+          <p className="text-2xl font-bold text-[#EB5757] tabular-nums leading-none">{fmt(summary.unpaidTotal)}</p>
+        </div>
+      </div>
 
-      {/* 도구줄 */}
-      <div className="flex gap-3 mb-4 items-center">
-        <Input type="month" value={monthFilter} onChange={e => setMonthFilter(e.target.value)} className="w-40" />
-        <Input placeholder="원생·반 검색" value={searchName} onChange={e => setSearchName(e.target.value)} className="w-48" />
-        <span className="ml-auto text-sm text-[#787774]">{rows.length}건</span>
-        {unpaidMode ? (
-          <>
-            <Button size="sm" disabled={selectedCount === 0}
-              onClick={() => alert(`[발송 미리보기] 선택 ${selectedCount}명에게 결제 안내 문자를 발송합니다.`)}>
-              일괄 문자{selectedCount > 0 ? ` (${selectedCount})` : ''}
+      {/* 수납 완료율 */}
+      {summary.counts['전체'] > 0 && (
+        <div className="bg-white border border-[#E9E9E7] rounded-lg px-5 py-4 mb-4">
+          <p className="text-sm font-semibold text-[#37352F] mb-3">
+            수납 완료율 <span className="text-[#FF6C37]">{paymentRate}%</span>
+          </p>
+          <DonutChart
+            slices={[
+              { label: '완납', amount: summary.counts['완납'], color: '#FF6C37' },
+              { label: '미납·예정', amount: summary.counts['미납'] + summary.counts['예정'], color: '#E9E9E7' },
+            ]}
+            size={120}
+          />
+          <p className="text-xs text-[#787774] mt-3 tabular-nums">
+            {summary.counts['완납']}명 완납 / {summary.counts['전체']}명 전체
+          </p>
+        </div>
+      )}
+
+      {/* 필터 */}
+      <div className="bg-[#F7F7F5] border border-[#E9E9E7] rounded-lg p-3 mb-4 space-y-2">
+        <div className="flex gap-2 flex-wrap">
+          <Input type="month" value={monthFilter} onChange={e => setMonthFilter(e.target.value)} className="w-36" />
+          <Input placeholder="학생 이름" value={studentName} onChange={e => setStudentName(e.target.value)} className="w-36" />
+          <Select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} options={groupOptions} className="w-36" />
+          <Select value={classFilter} onChange={e => setClassFilter(e.target.value)} options={classOptions} className="w-56" />
+          <Select
+            value={statusFilter}
+            onChange={e => { setStatusFilter(e.target.value as StatusFilter); setSelectedIds(new Set()); }}
+            options={[
+              { value: '전체', label: '전체 상태' },
+              { value: '완납', label: '완납' },
+              { value: '미납', label: '미납' },
+              { value: '예정', label: '예정' },
+              { value: '환불', label: '환불' },
+            ]}
+            className="w-28"
+          />
+          <Select
+            value={methodFilter}
+            onChange={e => setMethodFilter(e.target.value)}
+            options={[
+              { value: '', label: '전체 결제수단' },
+              { value: '카드', label: '카드' },
+              { value: '현금', label: '현금' },
+              { value: '계좌이체', label: '계좌이체' },
+              { value: 'PG', label: 'PG' },
+            ]}
+            className="w-36"
+          />
+        </div>
+        <div className="flex gap-2 items-center flex-wrap">
+          <span className="text-xs text-[#787774] shrink-0">수납일</span>
+          <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-36" />
+          <span className="text-xs text-[#787774]">~</span>
+          <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-36" />
+          <span className="ml-auto text-sm text-[#787774]">{rows.length}건</span>
+          {unpaidMode ? (
+            <>
+              <Button size="sm" disabled={selectedCount === 0}
+                onClick={() => alert(`[발송 미리보기] 선택 ${selectedCount}명에게 결제 안내 문자를 발송합니다.`)}>
+                일괄 문자{selectedCount > 0 ? ` (${selectedCount})` : ''}
+              </Button>
+              <Button size="sm" variant="secondary" disabled={selectedCount === 0}
+                onClick={() => alert(`[인쇄 미리보기] 선택 ${selectedCount}명 교육회비통지서를 인쇄합니다.`)}>
+                통지서 인쇄
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" variant="secondary"
+              onClick={() => alert('[엑셀 미리보기] 현재 목록을 엑셀로 저장합니다.')}>
+              엑셀 저장
             </Button>
-            <Button size="sm" variant="secondary" disabled={selectedCount === 0}
-              onClick={() => alert(`[인쇄 미리보기] 선택 ${selectedCount}명 교육회비통지서를 인쇄합니다.`)}>
-              통지서 인쇄
-            </Button>
-          </>
-        ) : (
-          <Button size="sm" variant="secondary"
-            onClick={() => alert('[엑셀 미리보기] 현재 목록을 엑셀로 저장합니다.')}>
-            엑셀 저장
-          </Button>
-        )}
+          )}
+        </div>
       </div>
 
       {selectedStudent ? (
