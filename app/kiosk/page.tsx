@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { students, classes, todaySessions, Student } from '@/lib/mock-data';
+import { students, classes, Student } from '@/lib/mock-data';
 import Link from 'next/link';
 
-type Step = 'input' | 'select' | 'ready' | 'done';
+type Step = 'input' | 'select' | 'done';
 
 export default function KioskPage() {
   const [step, setStep] = useState<Step>('input');
@@ -42,9 +42,6 @@ export default function KioskPage() {
     setStep('input'); setPhone(''); setPhoneError('');
     setMatched([]); setSelected(null); setCheckinTime('');
   }
-
-  const todayClass = selected ? classes.find(c => c.id === selected.class_id) : null;
-  const todaySession = todayClass ? todaySessions.find(s => s.class_id === todayClass.id) : null;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-10"
@@ -107,7 +104,7 @@ export default function KioskPage() {
             <h2 className="text-lg font-bold text-white mb-4 text-center">본인을 선택하세요</h2>
             <div className="space-y-3">
               {matched.map(s => (
-                <button key={s.id} onClick={() => { setSelected(s); setStep('ready'); }}
+                <button key={s.id} onClick={() => { setSelected(s); handleCheckin(); }}
                   className="w-full flex items-center gap-4 p-4 rounded-xl border transition-all hover:border-[#FF6C37]"
                   style={{ background: 'var(--kiosk-card)', borderColor: 'var(--kiosk-border)' }}>
                   <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg"
@@ -124,34 +121,6 @@ export default function KioskPage() {
             <button onClick={handleReset} className="mt-4 w-full text-sm py-3 rounded-xl" style={{ color: 'var(--kiosk-muted)', background: 'var(--kiosk-border)' }}>
               다시 입력
             </button>
-          </div>
-        )}
-
-        {step === 'ready' && selected && (
-          <div className="text-center">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold mx-auto mb-4"
-              style={{ background: 'linear-gradient(135deg, var(--kiosk-orange), var(--kiosk-orange2))' }}>
-              {selected.name[0]}
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-1">{selected.name}</h2>
-            <p className="mb-1" style={{ color: 'var(--kiosk-muted)' }}>{selected.grade} · {selected.school}</p>
-            {todaySession && (
-              <div className="mt-3 mb-6 px-4 py-2.5 rounded-xl border inline-block" style={{ borderColor: 'var(--kiosk-orange)', background: 'rgba(255,108,55,0.1)' }}>
-                <p className="text-sm" style={{ color: 'var(--kiosk-orange)' }}>
-                  오늘 수업: {todayClass?.schedule} · {todaySession.session_no}회차
-                </p>
-              </div>
-            )}
-            <div className="mb-4 flex items-center justify-center gap-4 text-sm" style={{ color: 'var(--kiosk-muted)' }}>
-              <span>⚡ {selected.streak}일 연속출석</span>
-              <span>💎 {selected.points.toLocaleString()} DP</span>
-            </div>
-            <button onClick={handleCheckin}
-              className="w-full h-16 rounded-2xl text-xl font-bold text-white mb-3 transition-all active:scale-95"
-              style={{ background: 'linear-gradient(135deg, var(--kiosk-orange), #FF9A5A)' }}>
-              ✅ 출석 체크인
-            </button>
-            <button onClick={handleReset} className="text-sm" style={{ color: 'var(--kiosk-muted)' }}>취소</button>
           </div>
         )}
 
