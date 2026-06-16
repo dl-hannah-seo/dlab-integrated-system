@@ -37,6 +37,20 @@ function blockColor(dayGroup: string) {
   return { block: '#3B82F6', colBg: '#F0F7FF', headerText: '#3B82F6' };
 }
 
+function fmtDateLabel(dateISO: string): string {
+  const [, m, d] = dateISO.split('-');
+  return `${koWeekday(dateISO)} ${+m}/${+d}`;
+}
+
+function sessionVisual(type: Session['type'], group: ClassGroup | undefined) {
+  switch (type) {
+    case '보강': return { bg: '#FF6C37', badge: '보강', cancelled: false };
+    case '특강': return { bg: '#8B5CF6', badge: '특강', cancelled: false };
+    case '휴강': return { bg: '#B9B9B7', badge: '휴강', cancelled: true };
+    default:     return { bg: group ? blockColor(group.day_group).block : '#3B82F6', badge: null, cancelled: false };
+  }
+}
+
 type Popover = { cls: Class; group: ClassGroup; session?: Session; top: number; left: number };
 
 // ── 메인 ────────────────────────────────────────────────────────
@@ -160,18 +174,50 @@ export default function SchedulePage() {
         </span>
       </div>
 
+      {/* 주차 선택기 — 주간 모드에서만 */}
+      {scheduleMode === 'week' && (
+        <div className="mb-4 flex items-center gap-3">
+          <button
+            onClick={() => setWeekStart(addDays(activeWeek, -7))}
+            className="px-2 py-1 text-sm border border-[#E9E9E7] rounded-md text-[#787774] hover:text-[#37352F]"
+            aria-label="이전 주"
+          >
+            ◀
+          </button>
+          <span className="text-sm font-medium text-[#37352F]">
+            {fmtDateLabel(activeWeek).slice(2)} ~ {fmtDateLabel(addDays(activeWeek, 5)).slice(2)}
+          </span>
+          <button
+            onClick={() => setWeekStart(addDays(activeWeek, 7))}
+            className="px-2 py-1 text-sm border border-[#E9E9E7] rounded-md text-[#787774] hover:text-[#37352F]"
+            aria-label="다음 주"
+          >
+            ▶
+          </button>
+        </div>
+      )}
+
       {/* 뷰 렌더링 */}
-      {view === 'grid' && (
+      {scheduleMode === 'template' && view === 'grid' && (
         <GridView
           semClasses={filteredClasses}
           semGroups={semGroups}
           onBlockClick={handleBlockClick}
         />
       )}
-      {view === 'card' && (
+      {scheduleMode === 'template' && view === 'card' && (
         <CardView
           semClasses={filteredClasses}
           semGroups={semGroups}
+          onBlockClick={handleBlockClick}
+        />
+      )}
+      {scheduleMode === 'week' && (
+        <WeekGridView
+          sessions={weekSessions}
+          classes={filteredClasses}
+          groups={semGroups}
+          dates={weekDates(activeWeek)}
           onBlockClick={handleBlockClick}
         />
       )}
@@ -275,6 +321,120 @@ function GridView({
                       <p className="text-xs font-semibold text-white leading-tight">{cls.course}</p>
                       <p className="text-xs text-white/80 mt-0.5">{cls.teacher}</p>
                       <p className="text-xs text-white/70">{cls.enrolled_count}명</p>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── 주간(실제) 그리드 뷰 ────────────────────────────────────────
+function WeekGridView({
+  sessions,
+  classes,
+  groups,
+  dates,
+  onBlockClick,
+}: {
+  sessions: Session[];
+  classes: Class[];
+  groups: ClassGroup[];
+  dates: string[];
+  onBlockClick: (e: React.MouseEvent<HTMLDivElement>, cls: Class, group: ClassGroup, session: Session) => void;
+}) {
+  const times = TIME_AXIS;
+  const gridCols = `52px repeat(${dates.length}, 1fr)`;
+  const classOf = (id: string) => classes.find(c => c.id === id);
+  const groupOf = (cls: Class | undefined) =>
+    cls ? groups.find(g => g.id === cls.class_group_id) : undefined;
+
+  // 셀 맵: { date: { time: Session[] } }
+  const cellMap: Record<string, Record<string, Session[]>> = {};
+  for (const s of sessions) {
+    const time = fmtSlot(s.start_time);
+    ((cellMap[s.date] ??= {})[time] ??= []).push(s);
+  }
+
+  if (sessions.length === 0) {
+    return (
+      <div className="bg-white border border-[#E9E9E7] rounded-lg px-5 py-12 text-center text-sm text-[#787774]">
+        이 주에는 편성된 수업이 없습니다.
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white border border-[#E9E9E7] rounded-lg overflow-hidden">
+      {/* 날짜 헤더 */}
+      <div className="grid border-b border-[#E9E9E7]" style={{ gridTemplateColumns: gridCols }}>
+        <div className="bg-[#F7F7F5] px-3 py-3" />
+        {dates.map(date => {
+          const isSat = koWeekday(date) === '토';
+          return (
+            <div
+              key={date}
+              className="px-2 py-3 text-center text-sm font-semibold border-l border-[#E9E9E7]"
+              style={{ background: isSat ? '#FFF8F5' : '#F7F7F5', color: isSat ? '#FF6C37' : '#787774' }}
+            >
+              {fmtDateLabel(date)}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 시간대 행 */}
+      {times.map((time, idx) => (
+        <div
+          key={time}
+          className="grid border-[#E9E9E7]"
+          style={{
+            gridTemplateColumns: gridCols,
+            borderBottomWidth: idx < times.length - 1 ? 1 : 0,
+            borderBottomStyle: 'solid',
+            minHeight: 68,
+          }}
+        >
+          <div className="px-3 py-3 bg-[#F7F7F5] border-r border-[#E9E9E7] flex items-center">
+            <span className="text-xs font-semibold text-[#787774]">{time}</span>
+          </div>
+
+          {dates.map(date => {
+            const cells = cellMap[date]?.[time] ?? [];
+            const isSat = koWeekday(date) === '토';
+            return (
+              <div
+                key={date}
+                className="border-l border-[#E9E9E7] p-1.5 space-y-1"
+                style={{ background: isSat && cells.length === 0 ? '#FFFBF9' : undefined }}
+              >
+                {cells.map(s => {
+                  const cls = classOf(s.class_id);
+                  const group = groupOf(cls);
+                  if (!cls || !group) return null;
+                  const vis = sessionVisual(s.type, group);
+                  return (
+                    <div
+                      key={s.id}
+                      onClick={e => onBlockClick(e, cls, group, s)}
+                      className={`rounded-md px-2 py-1.5 cursor-pointer hover:opacity-90 transition-opacity ${
+                        vis.cancelled ? 'line-through' : ''
+                      }`}
+                      style={{ background: vis.bg, opacity: vis.cancelled ? 0.6 : 1 }}
+                    >
+                      <div className="flex items-center gap-1">
+                        {vis.badge && (
+                          <span className="text-[10px] font-bold bg-white/30 text-white rounded px-1 leading-tight">
+                            {vis.badge}
+                          </span>
+                        )}
+                        <p className="text-xs font-semibold text-white leading-tight">{cls.course}</p>
+                      </div>
+                      <p className="text-xs text-white/80 mt-0.5">{s.teacher ?? cls.teacher}</p>
                     </div>
                   );
                 })}
