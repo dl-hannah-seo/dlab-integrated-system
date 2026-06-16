@@ -2,6 +2,12 @@
 
 import { useState, useMemo } from 'react';
 import { students, classes, invoices, payments, Student } from '@/lib/mock-data';
+import {
+  buildRows, filterRows, computeSummary, isUnpaidMode,
+  fmt, classTotal, StatusFilter,
+} from '@/lib/payments';
+import { StatusCards } from '@/components/payments/StatusCards';
+import { PaymentList } from '@/components/payments/PaymentList';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input, Select } from '@/components/ui/Input';
@@ -9,118 +15,96 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { Table } from '@/components/ui/Table';
 
-function fmt(n: number) { return n.toLocaleString('ko-KR') + '원'; }
-function classTotal(c: { tuition_fee: number; material_fee: number; content_fee: number }) {
-  return c.tuition_fee + c.material_fee + c.content_fee;
-}
+const TODAY = '2026-06-16';
 
 export default function PaymentsPage() {
-  // 현황 필터
   const [monthFilter, setMonthFilter] = useState('2026-06');
-  const [statusFilter, setStatusFilter] = useState('전체');
-  const [methodFilter, setMethodFilter] = useState('전체');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('전체');
   const [searchName, setSearchName] = useState('');
-  // 마스터-디테일 선택
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  // 디테일 내부 상태
   const [activeTab, setActiveTab] = useState('전체');
   const [showPayModal, setShowPayModal] = useState(false);
   const [showMsgModal, setShowMsgModal] = useState(false);
   const [paySuccess, setPaySuccess] = useState(false);
 
-  // ── 월별 현황 행 (월·상태·수단·이름 AND 필터) ──
-  const rows = useMemo(() => {
-    return invoices
-      .filter(inv => inv.billing_month === monthFilter)
-      .map(inv => {
-        const s = students.find(st => st.id === inv.student_id)!;
-        const cls = classes.find(c => c.id === inv.class_id)!;
-        const pay = payments.find(p => p.invoice_id === inv.id);
-        return { inv, s, cls, pay };
-      })
-      .filter(row => {
-        if (statusFilter !== '전체' && row.inv.status !== statusFilter) return false;
-        if (methodFilter !== '전체' && row.pay?.method !== methodFilter) return false;
-        if (searchName && !row.s.name.includes(searchName)) return false;
-        return true;
-      });
-  }, [monthFilter, statusFilter, methodFilter, searchName]);
-
-  const totalPaid   = rows.filter(r => r.inv.status === '완납').reduce((acc, r) => acc + (r.pay?.amount ?? 0), 0);
-  const totalUnpaid = rows.filter(r => r.inv.status === '미납').reduce((acc, r) => acc + classTotal(r.cls), 0);
-  const paidCount   = rows.filter(r => r.inv.status === '완납').length;
-  const unpaidCount = rows.filter(r => r.inv.status === '미납').length;
-
-  // ── 선택된 학생 디테일 ──
-  const studentInvoices = useMemo(() =>
-    selectedStudent ? invoices.filter(inv => inv.student_id === selectedStudent.id) : [],
-    [selectedStudent]
+  const allRows = useMemo(
+    () => buildRows(monthFilter, TODAY, { invoices, students, classes, payments }),
+    [monthFilter],
   );
-  const studentPayments = useMemo(() =>
-    selectedStudent ? payments.filter(p => p.student_id === selectedStudent.id) : [],
-    [selectedStudent]
+  const summary = useMemo(() => computeSummary(allRows), [allRows]);
+  const rows = useMemo(
+    () => filterRows(allRows, { status: statusFilter, search: searchName }),
+    [allRows, statusFilter, searchName],
+  );
+  const unpaidMode = isUnpaidMode(statusFilter);
+
+  const studentInvoices = useMemo(
+    () => (selectedStudent ? invoices.filter(inv => inv.student_id === selectedStudent.id) : []),
+    [selectedStudent],
+  );
+  const studentPayments = useMemo(
+    () => (selectedStudent ? payments.filter(p => p.student_id === selectedStudent.id) : []),
+    [selectedStudent],
   );
   const cls = selectedStudent ? classes.find(c => c.id === selectedStudent.class_id) : null;
   const totalAmount = cls ? classTotal(cls) : 0;
 
   const tabs = ['전체', '미납자료', '수강료', '교재', '기타'];
 
+  function toggleId(id: string) {
+    setSelectedIds(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  }
+  function selectStatus(s: StatusFilter) {
+    setStatusFilter(s);
+    setSelectedIds(new Set());
+  }
   function handlePay() {
     setPaySuccess(true);
     setTimeout(() => { setPaySuccess(false); setShowPayModal(false); }, 1200);
   }
 
+  const selectedCount = selectedIds.size;
+  const siblingNames = selectedStudent?.sibling_ids
+    ?.map(id => students.find(s => s.id === id)?.name)
+    .filter(Boolean)
+    .join(', ');
+
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-[#37352F]">수납 관리</h1>
-        <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 월별 수납 현황 조회 및 창구 수납 처리</p>
+        <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 조건별 수납 조회 · 미납/예정 관리</p>
       </div>
 
-      {/* 요약 카드 */}
-      <div className="grid grid-cols-3 gap-5 mb-6">
-        <Card className="!p-0">
-          <div className="px-5 py-4 text-center">
-            <p className="text-xs text-[#787774] mb-1">총 수납액 ({paidCount}건)</p>
-            <p className="text-2xl font-bold text-[#0F7B6C] tabular-nums">{fmt(totalPaid)}</p>
-          </div>
-        </Card>
-        <Card className="!p-0">
-          <div className="px-5 py-4 text-center">
-            <p className="text-xs text-[#787774] mb-1">미납 합계 ({unpaidCount}건)</p>
-            <p className="text-2xl font-bold text-[#EB5757] tabular-nums">{fmt(totalUnpaid)}</p>
-          </div>
-        </Card>
-        <Card className="!p-0">
-          <div className="px-5 py-4 text-center">
-            <p className="text-xs text-[#787774] mb-1">전체 원생</p>
-            <p className="text-2xl font-bold text-[#37352F] tabular-nums">{rows.length}명</p>
-          </div>
-        </Card>
-      </div>
+      <StatusCards summary={summary} selected={statusFilter} onSelect={selectStatus} />
 
-      {/* 필터 바 */}
-      <div className="flex gap-3 mb-4">
+      {/* 도구줄 */}
+      <div className="flex gap-3 mb-4 items-center">
         <Input type="month" value={monthFilter} onChange={e => setMonthFilter(e.target.value)} className="w-40" />
-        <Select
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-          options={['전체', '완납', '미납', '부분납'].map(v => ({ value: v, label: v }))}
-          className="w-32"
-        />
-        <Select
-          value={methodFilter}
-          onChange={e => setMethodFilter(e.target.value)}
-          options={['전체', '카드', '현금', '계좌이체'].map(v => ({ value: v, label: v }))}
-          className="w-32"
-        />
-        <Input
-          placeholder="원생 이름 검색"
-          value={searchName}
-          onChange={e => setSearchName(e.target.value)}
-          className="w-48"
-        />
-        <span className="ml-auto self-center text-sm text-[#787774]">{rows.length}건</span>
+        <Input placeholder="원생·반 검색" value={searchName} onChange={e => setSearchName(e.target.value)} className="w-48" />
+        <span className="ml-auto text-sm text-[#787774]">{rows.length}건</span>
+        {unpaidMode ? (
+          <>
+            <Button size="sm" disabled={selectedCount === 0}
+              onClick={() => alert(`[발송 미리보기] 선택 ${selectedCount}명에게 결제 안내 문자를 발송합니다.`)}>
+              일괄 문자{selectedCount > 0 ? ` (${selectedCount})` : ''}
+            </Button>
+            <Button size="sm" variant="secondary" disabled={selectedCount === 0}
+              onClick={() => alert(`[인쇄 미리보기] 선택 ${selectedCount}명 교육회비통지서를 인쇄합니다.`)}>
+              통지서 인쇄
+            </Button>
+          </>
+        ) : (
+          <Button size="sm" variant="secondary"
+            onClick={() => alert('[엑셀 미리보기] 현재 목록을 엑셀로 저장합니다.')}>
+            엑셀 저장
+          </Button>
+        )}
       </div>
 
       {selectedStudent ? (
@@ -129,16 +113,16 @@ export default function PaymentsPage() {
           {/* 좌측: 축소 목록 */}
           <div className="w-72 flex-shrink-0">
             <div className="bg-white border border-[#E9E9E7] rounded-lg overflow-hidden divide-y divide-[#E9E9E7] max-h-[640px] overflow-y-auto">
-              {rows.map(({ inv, s, cls: rowCls, pay }) => (
-                <button key={inv.id} onClick={() => setSelectedStudent(s)}
-                  className={`w-full text-left px-4 py-3 transition-colors hover:bg-[#F7F7F5] ${selectedStudent.id === s.id ? 'bg-[#FFF1EC]' : ''}`}>
+              {rows.map(r => (
+                <button key={r.inv.id} onClick={() => setSelectedStudent(r.student)}
+                  className={`w-full text-left px-4 py-3 transition-colors hover:bg-[#F7F7F5] ${selectedStudent.id === r.student.id ? 'bg-[#FFF1EC]' : ''}`}>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-[#37352F]">{s.name}</span>
-                    <Badge variant={inv.status === '완납' ? 'paid' : 'unpaid'}>{inv.status}</Badge>
+                    <span className="text-sm font-medium text-[#37352F]">{r.student.name}</span>
+                    <Badge variant={r.status === '완납' ? 'paid' : r.status === '예정' ? 'warn' : r.status === '환불' ? 'primary' : 'unpaid'}>{r.status}</Badge>
                   </div>
                   <div className="flex items-center justify-between mt-0.5">
-                    <span className="text-xs text-[#787774]">{s.grade}</span>
-                    <span className="text-xs text-[#787774] tabular-nums">{fmt(pay ? pay.amount : classTotal(rowCls))}</span>
+                    <span className="text-xs text-[#787774]">{r.student.grade}</span>
+                    <span className="text-xs text-[#787774] tabular-nums">{fmt(r.amount)}</span>
                   </div>
                 </button>
               ))}
@@ -150,10 +134,8 @@ export default function PaymentsPage() {
 
           {/* 우측: 디테일 */}
           <div className="flex-1 space-y-4">
-            <button
-              onClick={() => setSelectedStudent(null)}
-              className="text-sm text-[#787774] hover:text-[#37352F] transition-colors"
-            >
+            <button onClick={() => setSelectedStudent(null)}
+              className="text-sm text-[#787774] hover:text-[#37352F] transition-colors">
               ← 전체 현황으로
             </button>
 
@@ -165,13 +147,19 @@ export default function PaymentsPage() {
                   <p className="text-sm text-[#787774]">{selectedStudent.grade} · {cls?.schedule} · {cls?.course}</p>
                   <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-[#787774]">
                     {selectedStudent.school && <span>학교 {selectedStudent.school}</span>}
-                    {selectedStudent.student_phone && <span>원생 {selectedStudent.student_phone}</span>}
                     <span>모 {selectedStudent.parent_phone}</span>
                     {selectedStudent.father_phone && <span>부 {selectedStudent.father_phone}</span>}
+                    {selectedStudent.virtual_account && <span>가상계좌 {selectedStudent.virtual_account}</span>}
+                    {selectedStudent.scholarship_type && <span>🎓 {selectedStudent.scholarship_type}</span>}
+                    {siblingNames && <span>👧 형제 {siblingNames}</span>}
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="secondary" onClick={() => setShowMsgModal(true)}>결제 문자 발송</Button>
+                  <Button size="sm" variant="secondary" onClick={() => setShowMsgModal(true)}>결제 문자</Button>
+                  <Button size="sm" variant="secondary"
+                    onClick={() => alert(`[인쇄 미리보기] ${selectedStudent.name} 납입증명서를 인쇄합니다.`)}>
+                    납입증명서 인쇄
+                  </Button>
                   <Button size="sm" onClick={() => setShowPayModal(true)}>수납 입력</Button>
                 </div>
               </div>
@@ -276,42 +264,14 @@ export default function PaymentsPage() {
           </div>
         </div>
       ) : (
-        /* ── 현황 모드: 전체 폭 테이블 ── */
-        <div className="bg-white border border-[#E9E9E7] rounded-lg overflow-hidden">
-          <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr_1.5fr_1fr] gap-0 border-b border-[#E9E9E7] bg-[#F7F7F5] px-4 py-2.5 text-xs font-semibold text-[#787774]">
-            <span>원생</span>
-            <span>반</span>
-            <span>납입 상태</span>
-            <span>결제 수단</span>
-            <span className="text-right">금액</span>
-            <span className="text-right">수납일</span>
-          </div>
-          <div className="divide-y divide-[#E9E9E7] max-h-[560px] overflow-y-auto">
-            {rows.map(({ inv, s, cls: rowCls, pay }) => (
-              <button key={inv.id} onClick={() => setSelectedStudent(s)}
-                className="w-full grid grid-cols-[2fr_1.5fr_1fr_1fr_1.5fr_1fr] gap-0 px-4 py-3 text-sm items-center text-left hover:bg-[#F7F7F5] transition-colors">
-                <div>
-                  <span className="font-medium text-[#37352F]">{s.name}</span>
-                  <span className="text-xs text-[#787774] ml-2">{s.grade}</span>
-                </div>
-                <span className="text-xs text-[#787774] truncate">{rowCls.schedule}</span>
-                <span>
-                  <Badge variant={inv.status === '완납' ? 'paid' : 'unpaid'}>{inv.status}</Badge>
-                </span>
-                <span className="text-xs text-[#37352F]">{pay?.method ?? '-'}</span>
-                <span className="text-right tabular-nums font-medium text-[#37352F]">
-                  {fmt(pay ? pay.amount : classTotal(rowCls))}
-                </span>
-                <span className="text-right text-xs text-[#787774] tabular-nums">
-                  {pay ? pay.paid_at.slice(0, 10) : '-'}
-                </span>
-              </button>
-            ))}
-            {rows.length === 0 && (
-              <p className="text-sm text-[#787774] py-12 text-center">조건에 맞는 수납 내역이 없습니다.</p>
-            )}
-          </div>
-        </div>
+        /* ── 현황 모드: 이중 목록 ── */
+        <PaymentList
+          rows={rows}
+          mode={unpaidMode ? 'unpaid' : 'paid'}
+          selectedIds={selectedIds}
+          onToggle={toggleId}
+          onRowClick={r => setSelectedStudent(r.student)}
+        />
       )}
 
       {/* 수납 입력 모달 */}
@@ -324,19 +284,14 @@ export default function PaymentsPage() {
         }
       >
         <div className="space-y-3">
-          {/* Row 1: 수강년월 + 수납일자 */}
           <div className="grid grid-cols-2 gap-3">
             <Input label="수강년월" type="month" defaultValue={monthFilter} />
             <Input label="수납일자" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
           </div>
-
-          {/* Row 2: 수강기간 (read-only) */}
           <div className="bg-[#F7F7F5] rounded-lg px-3 py-2 text-sm text-[#37352F]">
             <span className="text-xs text-[#787774] mr-2">수강기간</span>
             {cls ? `${cls.start_date} ~ ${cls.end_date}` : '-'}
           </div>
-
-          {/* Row 3: 수납구분 + 수납방법 */}
           <div className="grid grid-cols-2 gap-3">
             <Select label="수납구분" options={[
               { value: '완납', label: '완납' },
@@ -348,14 +303,10 @@ export default function PaymentsPage() {
               { value: '계좌이체', label: '계좌이체' },
             ]} />
           </div>
-
-          {/* Row 4: 대상금액 + 할인금액 */}
           <div className="grid grid-cols-2 gap-3">
             <Input label="대상금액" type="number" defaultValue={String(totalAmount)} suffix="원" />
             <Input label="할인금액" type="number" defaultValue="0" suffix="원" />
           </div>
-
-          {/* Row 5: 수납대상금액(computed) + 누적수납(read-only) */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-[#FFF8F5] border border-[#FFD4C2] rounded-lg px-3 py-2">
               <p className="text-xs text-[#787774] mb-0.5">수납대상금액</p>
@@ -368,14 +319,10 @@ export default function PaymentsPage() {
               </p>
             </div>
           </div>
-
-          {/* Row 6: 카드 수납액 + 현금 수납액 */}
           <div className="grid grid-cols-2 gap-3">
             <Input label="카드수납" type="number" defaultValue={String(totalAmount)} suffix="원" />
             <Input label="현금수납" type="number" defaultValue="0" suffix="원" />
           </div>
-
-          {/* Row 7: 카드종류 2단계 */}
           <div className="grid grid-cols-2 gap-3">
             <Select label="카드사" options={['국민', '신한', '삼성', '현대', '하나', '우리'].map(s => ({ value: s, label: s + '카드' }))} />
             <Select label="카드종류" options={[
@@ -384,31 +331,24 @@ export default function PaymentsPage() {
               { value: '기업', label: '기업' },
             ]} />
           </div>
-
-          {/* Row 8: 취소번호 + 결제단말기 */}
           <div className="grid grid-cols-2 gap-3">
             <Input label="취소번호" placeholder="승인취소 시 입력" />
             <Input label="결제단말기" placeholder="단말기 ID" />
           </div>
-
-          {/* Row 9: 현금영수증 radio */}
           <div>
             <p className="text-xs font-medium text-[#37352F] mb-1.5">현금영수증</p>
             <div className="flex gap-4">
               <label className="flex items-center gap-1.5 text-sm text-[#37352F] cursor-pointer">
-                <input type="radio" name="cash_receipt" value="발행" defaultChecked className="accent-[#FF6C37]" />
+                <Input type="radio" name="cash_receipt" value="발행" defaultChecked className="accent-[#FF6C37] w-auto" />
                 발행
               </label>
               <label className="flex items-center gap-1.5 text-sm text-[#37352F] cursor-pointer">
-                <input type="radio" name="cash_receipt" value="미발행" className="accent-[#FF6C37]" />
+                <Input type="radio" name="cash_receipt" value="미발행" className="accent-[#FF6C37] w-auto" />
                 미발행
               </label>
             </div>
           </div>
-
-          {/* Row 10: 특이사항 */}
           <Input label="특이사항" placeholder="메모 입력" />
-
           {paySuccess && (
             <div className="bg-[#EDF7F5] border border-[#0F7B6C]/20 rounded-lg px-4 py-3 text-sm font-semibold text-[#0F7B6C]">
               ✓ 수납 처리 완료. 청구서 상태가 완납으로 변경됩니다.
