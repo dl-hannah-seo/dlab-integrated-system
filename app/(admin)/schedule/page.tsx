@@ -51,7 +51,6 @@ export default function SchedulePage() {
   const [selectedSemId, setSelectedSemId] = useState('sem-01');
   const [view, setView] = useState<'grid' | 'card'>('grid');
   const [teacherFilter, setTeacherFilter] = useState('전체');
-  const [dayFilter, setDayFilter] = useState('전체');
   const [popover, setPopover] = useState<Popover | null>(null);
 
   // 선택된 학기의 반 목록
@@ -65,19 +64,10 @@ export default function SchedulePage() {
   // 담임(선생님) 선택지 — 필터로 줄어들지 않도록 학기 전체 기준
   const teacherOptions = [...new Set(semClasses.map(c => c.teacher))];
 
-  // 담임·요일 필터 적용
-  const filteredClasses = semClasses.filter(c => {
-    if (teacherFilter !== '전체' && c.teacher !== teacherFilter) return false;
-    if (dayFilter !== '전체') {
-      const g = semGroups.find(x => x.id === c.class_group_id);
-      if (!g || !parseDays(g.day_group).includes(dayFilter)) return false;
-    }
-    return true;
-  });
-
-  // 그리드에 표시할 요일 — 요일 선택 시 해당 열만
-  const gridDays = dayFilter === '전체' ? [...DAY_ORDER] : [dayFilter];
-  const hasFilter = teacherFilter !== '전체' || dayFilter !== '전체';
+  // 담임 필터 적용
+  const filteredClasses = teacherFilter === '전체'
+    ? semClasses
+    : semClasses.filter(c => c.teacher === teacherFilter);
 
   function handleBlockClick(
     e: React.MouseEvent<HTMLDivElement>,
@@ -127,7 +117,7 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      {/* 필터 바 — 담임별 · 요일별 조회 */}
+      {/* 필터 바 — 담임별 조회 */}
       <div className="mb-4 flex items-center gap-2">
         <select
           value={teacherFilter}
@@ -139,19 +129,9 @@ export default function SchedulePage() {
             <option key={t} value={t}>{t} 선생님</option>
           ))}
         </select>
-        <select
-          value={dayFilter}
-          onChange={e => setDayFilter(e.target.value)}
-          className="text-sm border border-[#E9E9E7] rounded-lg px-3 py-1.5 text-[#37352F] bg-white focus:outline-none"
-        >
-          <option value="전체">요일 전체</option>
-          {DAY_ORDER.map(d => (
-            <option key={d} value={d}>{d}요일</option>
-          ))}
-        </select>
-        {hasFilter && (
+        {teacherFilter !== '전체' && (
           <button
-            onClick={() => { setTeacherFilter('전체'); setDayFilter('전체'); }}
+            onClick={() => setTeacherFilter('전체')}
             className="text-sm text-[#787774] hover:text-[#37352F] px-2 py-1.5"
           >
             초기화
@@ -167,7 +147,6 @@ export default function SchedulePage() {
         <GridView
           semClasses={filteredClasses}
           semGroups={semGroups}
-          days={gridDays}
           onBlockClick={handleBlockClick}
         />
       )}
@@ -191,17 +170,15 @@ export default function SchedulePage() {
 function GridView({
   semClasses,
   semGroups,
-  days,
   onBlockClick,
 }: {
   semClasses: Class[];
   semGroups: ClassGroup[];
-  days: string[];
   onBlockClick: (e: React.MouseEvent<HTMLDivElement>, cls: Class, group: ClassGroup) => void;
 }) {
   // 고정 시간 축 (09~18)
   const times = TIME_AXIS;
-  const gridCols = `52px repeat(${days.length}, 1fr)`;
+  const gridCols = `52px repeat(${DAY_ORDER.length}, 1fr)`;
 
   // 셀 맵: { day: { time: Array<{ cls, group }> } } — 한 칸에 복수 반 누적
   const cellMap: Record<string, Record<string, { cls: Class; group: ClassGroup }[]>> = {};
@@ -227,7 +204,7 @@ function GridView({
       {/* 요일 헤더 */}
       <div className="grid border-b border-[#E9E9E7]" style={{ gridTemplateColumns: gridCols }}>
         <div className="bg-[#F7F7F5] px-3 py-3" />
-        {days.map(day => {
+        {DAY_ORDER.map(day => {
           const isSat = day === '토';
           return (
             <div
@@ -259,7 +236,7 @@ function GridView({
           </div>
 
           {/* 요일 셀 — 같은 시간대에 복수 반이면 세로로 누적 */}
-          {days.map(day => {
+          {DAY_ORDER.map(day => {
             const cells = cellMap[day]?.[time] ?? [];
             const isSat = day === '토';
             return (
