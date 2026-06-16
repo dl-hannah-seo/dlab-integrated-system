@@ -532,7 +532,7 @@ function ClassPopover({
   popover: Popover;
   onClose: () => void;
 }) {
-  const { cls, group, top, left } = popover;
+  const { cls, group, session, top, left } = popover;
   const color = blockColor(group.day_group);
 
   return (
@@ -556,8 +556,18 @@ function ClassPopover({
 
       {/* 팝오버 내용 */}
       <div className="px-4 py-3 space-y-1.5 text-sm text-[#37352F]">
-        <p>📅 {dayLabel(group.day_group)} {fmtSlot(group.time_slot)}</p>
-        <p>👨‍🏫 {cls.teacher} 선생님</p>
+        {session ? (
+          <>
+            <p>📅 {fmtDateLabel(session.date)} {fmtSlot(session.start_time)}</p>
+            <p>🏷️ {session.type}{session.memo ? ` · ${session.memo}` : ''}</p>
+            <p>👨‍🏫 {(session.teacher ?? cls.teacher)} 선생님</p>
+          </>
+        ) : (
+          <>
+            <p>📅 {dayLabel(group.day_group)} {fmtSlot(group.time_slot)}</p>
+            <p>👨‍🏫 {cls.teacher} 선생님</p>
+          </>
+        )}
         <p>
           👥 {cls.enrolled_count}명{' '}
           <span className="text-[#787774]">/ 정원 {cls.capacity}명</span>
