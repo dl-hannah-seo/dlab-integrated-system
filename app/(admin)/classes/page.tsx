@@ -37,8 +37,9 @@ export default function ClassesPage() {
   const [confirmDeleteClass, setConfirmDeleteClass] = useState(false);
 
   // 새 반 생성 폼
-  const [createYear, setCreateYear]           = useState(() => new Date().getFullYear());
-  const [createSeason, setCreateSeason]       = useState('');
+  const [createSemId, setCreateSemId]         = useState<string>(() => localSemesters[0]?.id ?? '__new__');
+  const [createNewYear, setCreateNewYear]     = useState(() => new Date().getFullYear());
+  const [createNewSeason, setCreateNewSeason] = useState('');
   const [createDays, setCreateDays]           = useState<string[]>([]);
   const [createTime, setCreateTime]           = useState('09:00');
   const [createCourse, setCreateCourse]       = useState('');
@@ -55,8 +56,9 @@ export default function ClassesPage() {
 
   // 반 편집 폼
   const [showEdit, setShowEdit]           = useState(false);
-  const [editYear, setEditYear]           = useState(() => new Date().getFullYear());
-  const [editSeason, setEditSeason]       = useState('봄');
+  const [editSemId, setEditSemId]         = useState<string>('');
+  const [editNewYear, setEditNewYear]     = useState(() => new Date().getFullYear());
+  const [editNewSeason, setEditNewSeason] = useState('');
   const [editDays, setEditDays]           = useState<string[]>([]);
   const [editTime, setEditTime]           = useState('09:00');
   const [editCourse, setEditCourse]       = useState('');
@@ -158,7 +160,10 @@ export default function ClassesPage() {
     ? allSemesterTree.filter(({ isEnded }) => !isEnded)
     : allSemesterTree;
 
-  const autoName      = buildAutoName(createYear, createSeason, createDays, createTime, createCourse, createTeacher);
+  const resolvedCreate = createSemId === '__new__'
+    ? { year: createNewYear, season: createNewSeason }
+    : (() => { const s = localSemesters.find(x => x.id === createSemId); return { year: s?.year ?? createNewYear, season: s?.season ?? '' }; })();
+  const autoName      = buildAutoName(resolvedCreate.year, resolvedCreate.season, createDays, createTime, createCourse, createTeacher);
   const computedWeeks = computeWeeks(createStart, createEnd);
 
   function toggleDay(day: string) {
@@ -180,9 +185,11 @@ export default function ClassesPage() {
   function handleCreateClass() {
     if (createDays.length === 0 || !createCourse || !createTeacher || !createTeamLead) return;
 
-    let sem = localSemesters.find(s => s.year === createYear && s.season === createSeason);
+    let sem = createSemId !== '__new__'
+      ? localSemesters.find(s => s.id === createSemId)
+      : localSemesters.find(s => s.year === resolvedCreate.year && s.season === resolvedCreate.season);
     if (!sem) {
-      sem = { id: `sem-${Date.now()}`, campus_id: 'campus-001', year: createYear, season: createSeason, courses: [] };
+      sem = { id: `sem-${Date.now()}`, campus_id: 'campus-001', year: resolvedCreate.year, season: resolvedCreate.season, courses: [] };
       setLocalSemesters(p => [...p, sem!]);
     }
 
@@ -208,15 +215,17 @@ export default function ClassesPage() {
     };
     setLocalClasses(p => [...p, newClass]);
     setSelectedClass(newClass);
-    setExpanded(p => ({ ...p, [`${createYear}년 ${createSeason}`]: true }));
+    setExpanded(p => ({ ...p, [`${resolvedCreate.year}년 ${resolvedCreate.season}`]: true }));
     setShowCreate(false);
+    setCreateSemId(localSemesters[0]?.id ?? '__new__');
+    setCreateNewYear(new Date().getFullYear()); setCreateNewSeason('');
     setCreateDays([]); setCreateTime('09:00'); setCreateCourse('');
     setCreateTeacher(''); setCreateTeamLead('');
   }
 
   function openEdit(cls: Class) {
-    const sem = localSemesters.find(s => s.id === cls.semester_id);
-    if (sem) { setEditYear(sem.year); setEditSeason(sem.season); }
+    setEditSemId(cls.semester_id ?? localSemesters[0]?.id ?? '__new__');
+    setEditNewYear(new Date().getFullYear()); setEditNewSeason('');
     const parts = cls.schedule.split(' ');
     setEditDays(parts[0]?.split('·') ?? []);
     setEditTime(parts[1] ?? '09:00');
@@ -236,16 +245,21 @@ export default function ClassesPage() {
 
   function handleEditClass() {
     if (!selectedClass || editDays.length === 0 || !editCourse || !editTeacher || !editTeamLead) return;
-    let sem = localSemesters.find(s => s.year === editYear && s.season === editSeason);
+    const resolvedEdit = editSemId === '__new__'
+      ? { year: editNewYear, season: editNewSeason }
+      : (() => { const s = localSemesters.find(x => x.id === editSemId); return { year: s?.year ?? editNewYear, season: s?.season ?? '' }; })();
+    let sem = editSemId !== '__new__'
+      ? localSemesters.find(s => s.id === editSemId)
+      : localSemesters.find(s => s.year === editNewYear && s.season === editNewSeason);
     if (!sem) {
-      sem = { id: `sem-${Date.now()}`, campus_id: 'campus-001', year: editYear, season: editSeason, courses: [] };
+      sem = { id: `sem-${Date.now()}`, campus_id: 'campus-001', year: resolvedEdit.year, season: resolvedEdit.season, courses: [] };
       setLocalSemesters(p => [...p, sem!]);
     }
     const updated: Class = {
       ...selectedClass,
       semester_id: sem.id,
       course: editCourse,
-      name: buildAutoName(editYear, editSeason, editDays, editTime, editCourse, editTeacher),
+      name: buildAutoName(resolvedEdit.year, resolvedEdit.season, editDays, editTime, editCourse, editTeacher),
       teacher: editTeacher,
       team_lead: editTeamLead,
       capacity: editCapacity,
@@ -260,7 +274,7 @@ export default function ClassesPage() {
     };
     setLocalClasses(p => p.map(c => c.id === selectedClass.id ? updated : c));
     setSelectedClass(updated);
-    setExpanded(p => ({ ...p, [`${editYear}년 ${editSeason}`]: true }));
+    setExpanded(p => ({ ...p, [`${resolvedEdit.year}년 ${resolvedEdit.season}`]: true }));
     setShowEdit(false);
   }
 
@@ -363,8 +377,7 @@ export default function ClassesPage() {
                       <div className="px-6 py-2 text-xs text-[#787774]">
                         반이 없습니다.{' '}
                         <button className="text-[#FF6C37] underline" onClick={() => {
-                          setCreateYear(sem.year);
-                          setCreateSeason(sem.season);
+                          setCreateSemId(sem.id);
                           setShowCreate(true);
                         }}>+ 반 추가</button>
                       </div>
@@ -544,22 +557,35 @@ export default function ClassesPage() {
         }
       >
         <div className="space-y-4">
-          {/* 연도 + 시즌 */}
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="연도"
-              type="number"
-              min={2020}
-              value={String(createYear)}
-              onChange={e => setCreateYear(Number(e.target.value))}
+          {/* 그룹 선택 */}
+          <div>
+            <Select
+              label="그룹 (학기)"
+              value={createSemId}
+              onChange={e => setCreateSemId(e.target.value)}
+              options={[
+                ...localSemesters.map(s => ({ value: s.id, label: `${s.year}년 ${s.season}` })),
+                { value: '__new__', label: '＋ 새 그룹 만들기' },
+              ]}
             />
-            <Input
-              label="구분명"
-              type="text"
-              placeholder="예: 봄학기"
-              value={createSeason}
-              onChange={e => setCreateSeason(e.target.value)}
-            />
+            {createSemId === '__new__' && (
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                <Input
+                  label="연도"
+                  type="number"
+                  min={2020}
+                  value={String(createNewYear)}
+                  onChange={e => setCreateNewYear(Number(e.target.value))}
+                />
+                <Input
+                  label="구분명"
+                  type="text"
+                  placeholder="예: 봄학기"
+                  value={createNewSeason}
+                  onChange={e => setCreateNewSeason(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           {/* 요일 */}
@@ -731,22 +757,35 @@ export default function ClassesPage() {
         }
       >
         <div className="space-y-4">
-          {/* 연도 + 시즌 */}
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="연도"
-              type="number"
-              min={2020}
-              value={String(editYear)}
-              onChange={e => setEditYear(Number(e.target.value))}
+          {/* 그룹 선택 */}
+          <div>
+            <Select
+              label="그룹 (학기)"
+              value={editSemId}
+              onChange={e => setEditSemId(e.target.value)}
+              options={[
+                ...localSemesters.map(s => ({ value: s.id, label: `${s.year}년 ${s.season}` })),
+                { value: '__new__', label: '＋ 새 그룹 만들기' },
+              ]}
             />
-            <Input
-              label="구분명"
-              type="text"
-              placeholder="예: 여름, 1학기, 특강"
-              value={editSeason}
-              onChange={e => setEditSeason(e.target.value)}
-            />
+            {editSemId === '__new__' && (
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                <Input
+                  label="연도"
+                  type="number"
+                  min={2020}
+                  value={String(editNewYear)}
+                  onChange={e => setEditNewYear(Number(e.target.value))}
+                />
+                <Input
+                  label="구분명"
+                  type="text"
+                  placeholder="예: 여름, 1학기, 특강"
+                  value={editNewSeason}
+                  onChange={e => setEditNewSeason(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           {/* 요일 */}
