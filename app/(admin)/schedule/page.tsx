@@ -79,11 +79,11 @@ export default function SchedulePage() {
     : semClasses.filter(c => c.teacher === teacherFilter);
 
   // 주간 모드 — 활성 주차(미선택 시 첫 수업 주) + 그 주의 세션
-  const earliestStart = filteredClasses.reduce(
+  const earliestStart = semClasses.reduce(
     (min, c) => (c.start_date < min ? c.start_date : min),
     '9999-12-31',
   );
-  const activeWeek = weekStart ?? defaultWeekStart(filteredClasses, semGroups, earliestStart);
+  const activeWeek = weekStart ?? defaultWeekStart(semClasses, semGroups, earliestStart);
   const weekSessions = resolveWeekSessions(filteredClasses, semGroups, sessions, activeWeek);
 
   function handleBlockClick(
@@ -347,7 +347,10 @@ function WeekGridView({
   dates: string[];
   onBlockClick: (e: React.MouseEvent<HTMLDivElement>, cls: Class, group: ClassGroup, session: Session) => void;
 }) {
-  const times = TIME_AXIS;
+  // 고정 09~18 축 + 축에 없는 세션 시간(보강/특강 등)도 누락 없이 표시
+  const extraTimes = [...new Set(sessions.map(s => fmtSlot(s.start_time)))]
+    .filter(t => !(TIME_AXIS as readonly string[]).includes(t));
+  const times = [...TIME_AXIS, ...extraTimes].sort();
   const gridCols = `52px repeat(${dates.length}, 1fr)`;
   const classOf = (id: string) => classes.find(c => c.id === id);
   const groupOf = (cls: Class | undefined) =>
