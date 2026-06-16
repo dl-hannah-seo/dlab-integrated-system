@@ -83,6 +83,20 @@ export interface Class {
   enrolled_count: number;
 }
 
+// ── 세션 (주차별 실제 수업 1회 — 정기 편성에서 파생 + 변동) ──────
+export interface Session {
+  id: string;
+  class_id: string;              // 파생 원본 정기 반 (Class.id)
+  date: string;                  // 'YYYY-MM-DD'
+  start_time: string;            // 'HHMM'
+  end_time?: string;             // 'HHMM' (선택)
+  type: '정규' | '보강' | '휴강' | '특강';
+  teacher?: string;              // 변경 시 override (없으면 Class.teacher)
+  room?: string;                 // 강의실 변경 표시 (선택)
+  replaces_session_id?: string;  // 보강이 대체하는 휴강 세션 (선택)
+  memo?: string;                 // 사유/비고
+}
+
 export const classes: Class[] = [
   {
     id: 'cl-01', campus_id: 'campus-001', class_group_id: 'cg-01',
@@ -158,6 +172,17 @@ export const classes: Class[] = [
     schedule: '토 10:00', payment_method: '매월', payment_due_day: 1,
     tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 0,
   },
+];
+
+// ── 변동 세션 예시 (2026-07-06 ~ 07-11 주) ──────────────────────
+// 정규 세션은 generateRegularSessions가 자동 생성하므로 여기엔 예외만 둔다.
+export const sessions: Session[] = [
+  // 화 16:00 파이썬(cl-04) 휴강
+  { id: 'ses-01', class_id: 'cl-04', date: '2026-07-07', start_time: '1600', type: '휴강', memo: '강사 출장' },
+  // 토 15:00 파이썬(cl-04) 보강 — 위 휴강 대체
+  { id: 'ses-02', class_id: 'cl-04', date: '2026-07-11', start_time: '1500', type: '보강', replaces_session_id: 'ses-01', memo: '7/7 휴강 보강' },
+  // 토 13:00 맞춤수업(cl-03) 특강
+  { id: 'ses-03', class_id: 'cl-03', date: '2026-07-11', start_time: '1300', type: '특강', memo: '여름 특강' },
 ];
 
 // ── 학생 ──────────────────────────────────────────────────────
@@ -451,7 +476,7 @@ export function getActiveEnrollments(studentId: string) {
 
 // ── 오늘 시범 회차 (시나리오 1 시연용) ────────────────────────
 // 오늘 = 2026-06-14. 시연은 토 09:00반과 화목 16:00반을 중심으로.
-export interface Session {
+export interface ClassSession {
   id: string;
   class_id: string;
   session_date: string;
@@ -459,7 +484,7 @@ export interface Session {
   session_no: number;
 }
 
-export const todaySessions: Session[] = [
+export const todaySessions: ClassSession[] = [
   { id: 'sess-01', class_id: 'cl-01', session_date: '2026-06-14', start_time: '09:00', session_no: 3 },
   { id: 'sess-02', class_id: 'cl-02', session_date: '2026-06-14', start_time: '10:00', session_no: 3 },
   { id: 'sess-03', class_id: 'cl-03', session_date: '2026-06-14', start_time: '11:00', session_no: 3 },
@@ -773,8 +798,8 @@ function classStartTime(classId: string): string {
   return m ? m[1] : '09:00';
 }
 
-function buildAttendanceHistory(): { sessionHistory: Session[]; attendanceHistory: Attendance[] } {
-  const pastSessions: Session[] = [];
+function buildAttendanceHistory(): { sessionHistory: ClassSession[]; attendanceHistory: Attendance[] } {
+  const pastSessions: ClassSession[] = [];
   const records: Attendance[] = [];
 
   CURRENT_CLASS_IDS.forEach(classId => {
@@ -820,7 +845,7 @@ function buildAttendanceHistory(): { sessionHistory: Session[]; attendanceHistor
 
 export const { sessionHistory, attendanceHistory } = buildAttendanceHistory();
 
-const sessionById: Record<string, Session> = {};
+const sessionById: Record<string, ClassSession> = {};
 sessionHistory.forEach(s => { sessionById[s.id] = s; });
 
 function weekStartISO(iso: string): string {
@@ -876,7 +901,7 @@ export function getMonthlyAttendanceTrend(records: Attendance[], months = 4): Tr
 }
 
 export interface MatrixCell {
-  session: Session;
+  session: ClassSession;
   status: AttendanceStatus;
   record?: Attendance;
 }
@@ -885,7 +910,7 @@ export interface MatrixRow {
   cells: MatrixCell[];
 }
 export interface ClassMatrix {
-  sessions: Session[];
+  sessions: ClassSession[];
   rows: MatrixRow[];
 }
 
