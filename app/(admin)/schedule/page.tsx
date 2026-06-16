@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { classes, classGroups, semesters, Class, ClassGroup } from '@/lib/mock-data';
+import { classes, classGroups, semesters, sessions, Class, ClassGroup, Session } from '@/lib/mock-data';
+import { parseDays, koWeekday, addDays, weekDates, resolveWeekSessions, defaultWeekStart } from '@/lib/sessions';
 
 // ── 헬퍼 ────────────────────────────────────────────────────────
 const DAY_ORDER = ['월', '화', '수', '목', '금', '토'] as const;
@@ -13,14 +14,6 @@ const TIME_AXIS = [
   '14:00', '15:00', '16:00', '17:00', '18:00',
 ] as const;
 
-function parseDays(dayGroup: string): string[] {
-  const map: Record<string, string[]> = {
-    '토': ['토'],
-    '화목': ['화', '목'],
-    '월수금': ['월', '수', '금'],
-  };
-  return map[dayGroup] ?? [...dayGroup];
-}
 
 function fmtSlot(slot: string): string {
   return `${slot.slice(0, 2)}:${slot.slice(2)}`;
@@ -44,14 +37,29 @@ function blockColor(dayGroup: string) {
   return { block: '#3B82F6', colBg: '#F0F7FF', headerText: '#3B82F6' };
 }
 
-type Popover = { cls: Class; group: ClassGroup; top: number; left: number };
+function fmtDateLabel(dateISO: string): string {
+  const [, m, d] = dateISO.split('-');
+  return `${koWeekday(dateISO)} ${+m}/${+d}`;
+}
+
+function sessionVisual(type: Session['type'], group: ClassGroup | undefined) {
+  switch (type) {
+    case '보강': return { bg: '#FF6C37', badge: '보강', cancelled: false };
+    case '특강': return { bg: '#8B5CF6', badge: '특강', cancelled: false };
+    case '휴강': return { bg: '#B9B9B7', badge: '휴강', cancelled: true };
+    default:     return { bg: group ? blockColor(group.day_group).block : '#3B82F6', badge: null, cancelled: false };
+  }
+}
+
+type Popover = { cls: Class; group: ClassGroup; session?: Session; top: number; left: number };
 
 // ── 메인 ────────────────────────────────────────────────────────
 export default function SchedulePage() {
   const [selectedSemId, setSelectedSemId] = useState('sem-01');
+  const [scheduleMode, setScheduleMode] = useState<'template' | 'week'>('week');
   const [view, setView] = useState<'grid' | 'card'>('grid');
   const [teacherFilter, setTeacherFilter] = useState('전체');
-  const [dayFilter, setDayFilter] = useState('전체');
+  const [weekStart, setWeekStart] = useState<string | null>(null);
   const [popover, setPopover] = useState<Popover | null>(null);
 
   // 선택된 학기의 반 목록
@@ -65,28 +73,28 @@ export default function SchedulePage() {
   // 담임(선생님) 선택지 — 필터로 줄어들지 않도록 학기 전체 기준
   const teacherOptions = [...new Set(semClasses.map(c => c.teacher))];
 
-  // 담임·요일 필터 적용
-  const filteredClasses = semClasses.filter(c => {
-    if (teacherFilter !== '전체' && c.teacher !== teacherFilter) return false;
-    if (dayFilter !== '전체') {
-      const g = semGroups.find(x => x.id === c.class_group_id);
-      if (!g || !parseDays(g.day_group).includes(dayFilter)) return false;
-    }
-    return true;
-  });
+  // 담임 필터 적용
+  const filteredClasses = teacherFilter === '전체'
+    ? semClasses
+    : semClasses.filter(c => c.teacher === teacherFilter);
 
-  // 그리드에 표시할 요일 — 요일 선택 시 해당 열만
-  const gridDays = dayFilter === '전체' ? [...DAY_ORDER] : [dayFilter];
-  const hasFilter = teacherFilter !== '전체' || dayFilter !== '전체';
+  // 주간 모드 — 활성 주차(미선택 시 첫 수업 주) + 그 주의 세션
+  const earliestStart = semClasses.reduce(
+    (min, c) => (c.start_date < min ? c.start_date : min),
+    '9999-12-31',
+  );
+  const activeWeek = weekStart ?? defaultWeekStart(semClasses, semGroups, earliestStart);
+  const weekSessions = resolveWeekSessions(filteredClasses, semGroups, sessions, activeWeek);
 
   function handleBlockClick(
     e: React.MouseEvent<HTMLDivElement>,
     cls: Class,
     group: ClassGroup,
+    session?: Session,
   ) {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
-    setPopover({ cls, group, top: rect.bottom + 8, left: Math.min(rect.left, window.innerWidth - 240) });
+    setPopover({ cls, group, session, top: rect.bottom + 8, left: Math.min(rect.left, window.innerWidth - 240) });
   }
 
   return (
@@ -103,13 +111,27 @@ export default function SchedulePage() {
           {/* 학기 선택 */}
           <select
             value={selectedSemId}
-            onChange={e => setSelectedSemId(e.target.value)}
+            onChange={e => { setSelectedSemId(e.target.value); setWeekStart(null); }}
             className="text-sm border border-[#E9E9E7] rounded-lg px-3 py-1.5 text-[#37352F] bg-white focus:outline-none"
           >
             {semesters.map(s => (
               <option key={s.id} value={s.id}>{s.year} {s.season}학기</option>
             ))}
           </select>
+          {/* 정기/주간 모드 토글 */}
+          <div className="flex bg-[#F7F7F5] border border-[#E9E9E7] rounded-lg p-0.5">
+            {([['template', '정기 편성'], ['week', '주간(실제)']] as const).map(([m, label]) => (
+              <button
+                key={m}
+                onClick={() => setScheduleMode(m)}
+                className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${
+                  scheduleMode === m ? 'bg-white text-[#37352F] shadow-sm' : 'text-[#787774]'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           {/* 뷰 토글 */}
           <div className="flex bg-[#F7F7F5] border border-[#E9E9E7] rounded-lg p-0.5">
             {(['grid', 'card'] as const).map(v => (
@@ -127,7 +149,7 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      {/* 필터 바 — 담임별 · 요일별 조회 */}
+      {/* 필터 바 — 담임별 조회 */}
       <div className="mb-4 flex items-center gap-2">
         <select
           value={teacherFilter}
@@ -139,19 +161,9 @@ export default function SchedulePage() {
             <option key={t} value={t}>{t} 선생님</option>
           ))}
         </select>
-        <select
-          value={dayFilter}
-          onChange={e => setDayFilter(e.target.value)}
-          className="text-sm border border-[#E9E9E7] rounded-lg px-3 py-1.5 text-[#37352F] bg-white focus:outline-none"
-        >
-          <option value="전체">요일 전체</option>
-          {DAY_ORDER.map(d => (
-            <option key={d} value={d}>{d}요일</option>
-          ))}
-        </select>
-        {hasFilter && (
+        {teacherFilter !== '전체' && (
           <button
-            onClick={() => { setTeacherFilter('전체'); setDayFilter('전체'); }}
+            onClick={() => setTeacherFilter('전체')}
             className="text-sm text-[#787774] hover:text-[#37352F] px-2 py-1.5"
           >
             초기화
@@ -162,19 +174,50 @@ export default function SchedulePage() {
         </span>
       </div>
 
+      {/* 주차 선택기 — 주간 모드에서만 */}
+      {scheduleMode === 'week' && (
+        <div className="mb-4 flex items-center gap-3">
+          <button
+            onClick={() => setWeekStart(addDays(activeWeek, -7))}
+            className="px-2 py-1 text-sm border border-[#E9E9E7] rounded-md text-[#787774] hover:text-[#37352F]"
+            aria-label="이전 주"
+          >
+            ◀
+          </button>
+          <span className="text-sm font-medium text-[#37352F]">
+            {fmtDateLabel(activeWeek).slice(2)} ~ {fmtDateLabel(addDays(activeWeek, 5)).slice(2)}
+          </span>
+          <button
+            onClick={() => setWeekStart(addDays(activeWeek, 7))}
+            className="px-2 py-1 text-sm border border-[#E9E9E7] rounded-md text-[#787774] hover:text-[#37352F]"
+            aria-label="다음 주"
+          >
+            ▶
+          </button>
+        </div>
+      )}
+
       {/* 뷰 렌더링 */}
-      {view === 'grid' && (
+      {scheduleMode === 'template' && view === 'grid' && (
         <GridView
           semClasses={filteredClasses}
           semGroups={semGroups}
-          days={gridDays}
           onBlockClick={handleBlockClick}
         />
       )}
-      {view === 'card' && (
+      {scheduleMode === 'template' && view === 'card' && (
         <CardView
           semClasses={filteredClasses}
           semGroups={semGroups}
+          onBlockClick={handleBlockClick}
+        />
+      )}
+      {scheduleMode === 'week' && (
+        <WeekGridView
+          sessions={weekSessions}
+          classes={filteredClasses}
+          groups={semGroups}
+          dates={weekDates(activeWeek)}
           onBlockClick={handleBlockClick}
         />
       )}
@@ -191,17 +234,15 @@ export default function SchedulePage() {
 function GridView({
   semClasses,
   semGroups,
-  days,
   onBlockClick,
 }: {
   semClasses: Class[];
   semGroups: ClassGroup[];
-  days: string[];
   onBlockClick: (e: React.MouseEvent<HTMLDivElement>, cls: Class, group: ClassGroup) => void;
 }) {
   // 고정 시간 축 (09~18)
   const times = TIME_AXIS;
-  const gridCols = `52px repeat(${days.length}, 1fr)`;
+  const gridCols = `52px repeat(${DAY_ORDER.length}, 1fr)`;
 
   // 셀 맵: { day: { time: Array<{ cls, group }> } } — 한 칸에 복수 반 누적
   const cellMap: Record<string, Record<string, { cls: Class; group: ClassGroup }[]>> = {};
@@ -227,7 +268,7 @@ function GridView({
       {/* 요일 헤더 */}
       <div className="grid border-b border-[#E9E9E7]" style={{ gridTemplateColumns: gridCols }}>
         <div className="bg-[#F7F7F5] px-3 py-3" />
-        {days.map(day => {
+        {DAY_ORDER.map(day => {
           const isSat = day === '토';
           return (
             <div
@@ -259,7 +300,7 @@ function GridView({
           </div>
 
           {/* 요일 셀 — 같은 시간대에 복수 반이면 세로로 누적 */}
-          {days.map(day => {
+          {DAY_ORDER.map(day => {
             const cells = cellMap[day]?.[time] ?? [];
             const isSat = day === '토';
             return (
@@ -280,6 +321,123 @@ function GridView({
                       <p className="text-xs font-semibold text-white leading-tight">{cls.course}</p>
                       <p className="text-xs text-white/80 mt-0.5">{cls.teacher}</p>
                       <p className="text-xs text-white/70">{cls.enrolled_count}명</p>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── 주간(실제) 그리드 뷰 ────────────────────────────────────────
+function WeekGridView({
+  sessions,
+  classes,
+  groups,
+  dates,
+  onBlockClick,
+}: {
+  sessions: Session[];
+  classes: Class[];
+  groups: ClassGroup[];
+  dates: string[];
+  onBlockClick: (e: React.MouseEvent<HTMLDivElement>, cls: Class, group: ClassGroup, session: Session) => void;
+}) {
+  // 고정 09~18 축 + 축에 없는 세션 시간(보강/특강 등)도 누락 없이 표시
+  const extraTimes = [...new Set(sessions.map(s => fmtSlot(s.start_time)))]
+    .filter(t => !(TIME_AXIS as readonly string[]).includes(t));
+  const times = [...TIME_AXIS, ...extraTimes].sort();
+  const gridCols = `52px repeat(${dates.length}, 1fr)`;
+  const classOf = (id: string) => classes.find(c => c.id === id);
+  const groupOf = (cls: Class | undefined) =>
+    cls ? groups.find(g => g.id === cls.class_group_id) : undefined;
+
+  // 셀 맵: { date: { time: Session[] } }
+  const cellMap: Record<string, Record<string, Session[]>> = {};
+  for (const s of sessions) {
+    const time = fmtSlot(s.start_time);
+    ((cellMap[s.date] ??= {})[time] ??= []).push(s);
+  }
+
+  if (sessions.length === 0) {
+    return (
+      <div className="bg-white border border-[#E9E9E7] rounded-lg px-5 py-12 text-center text-sm text-[#787774]">
+        이 주에는 편성된 수업이 없습니다.
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white border border-[#E9E9E7] rounded-lg overflow-hidden">
+      {/* 날짜 헤더 */}
+      <div className="grid border-b border-[#E9E9E7]" style={{ gridTemplateColumns: gridCols }}>
+        <div className="bg-[#F7F7F5] px-3 py-3" />
+        {dates.map(date => {
+          const isSat = koWeekday(date) === '토';
+          return (
+            <div
+              key={date}
+              className="px-2 py-3 text-center text-sm font-semibold border-l border-[#E9E9E7]"
+              style={{ background: isSat ? '#FFF8F5' : '#F7F7F5', color: isSat ? '#FF6C37' : '#787774' }}
+            >
+              {fmtDateLabel(date)}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 시간대 행 */}
+      {times.map((time, idx) => (
+        <div
+          key={time}
+          className="grid border-[#E9E9E7]"
+          style={{
+            gridTemplateColumns: gridCols,
+            borderBottomWidth: idx < times.length - 1 ? 1 : 0,
+            borderBottomStyle: 'solid',
+            minHeight: 68,
+          }}
+        >
+          <div className="px-3 py-3 bg-[#F7F7F5] border-r border-[#E9E9E7] flex items-center">
+            <span className="text-xs font-semibold text-[#787774]">{time}</span>
+          </div>
+
+          {dates.map(date => {
+            const cells = cellMap[date]?.[time] ?? [];
+            const isSat = koWeekday(date) === '토';
+            return (
+              <div
+                key={date}
+                className="border-l border-[#E9E9E7] p-1.5 space-y-1"
+                style={{ background: isSat && cells.length === 0 ? '#FFFBF9' : undefined }}
+              >
+                {cells.map(s => {
+                  const cls = classOf(s.class_id);
+                  const group = groupOf(cls);
+                  if (!cls || !group) return null;
+                  const vis = sessionVisual(s.type, group);
+                  return (
+                    <div
+                      key={s.id}
+                      onClick={e => onBlockClick(e, cls, group, s)}
+                      className={`rounded-md px-2 py-1.5 cursor-pointer hover:opacity-90 transition-opacity ${
+                        vis.cancelled ? 'line-through' : ''
+                      }`}
+                      style={{ background: vis.bg, opacity: vis.cancelled ? 0.6 : 1 }}
+                    >
+                      <div className="flex items-center gap-1">
+                        {vis.badge && (
+                          <span className="text-[10px] font-bold bg-white/30 text-white rounded px-1 leading-tight">
+                            {vis.badge}
+                          </span>
+                        )}
+                        <p className="text-xs font-semibold text-white leading-tight">{cls.course}</p>
+                      </div>
+                      <p className="text-xs text-white/80 mt-0.5">{s.teacher ?? cls.teacher}</p>
                     </div>
                   );
                 })}
@@ -377,7 +535,7 @@ function ClassPopover({
   popover: Popover;
   onClose: () => void;
 }) {
-  const { cls, group, top, left } = popover;
+  const { cls, group, session, top, left } = popover;
   const color = blockColor(group.day_group);
 
   return (
@@ -401,8 +559,18 @@ function ClassPopover({
 
       {/* 팝오버 내용 */}
       <div className="px-4 py-3 space-y-1.5 text-sm text-[#37352F]">
-        <p>📅 {dayLabel(group.day_group)} {fmtSlot(group.time_slot)}</p>
-        <p>👨‍🏫 {cls.teacher} 선생님</p>
+        {session ? (
+          <>
+            <p>📅 {fmtDateLabel(session.date)} {fmtSlot(session.start_time)}</p>
+            <p>🏷️ {session.type}{session.memo ? ` · ${session.memo}` : ''}</p>
+            <p>👨‍🏫 {(session.teacher ?? cls.teacher)} 선생님</p>
+          </>
+        ) : (
+          <>
+            <p>📅 {dayLabel(group.day_group)} {fmtSlot(group.time_slot)}</p>
+            <p>👨‍🏫 {cls.teacher} 선생님</p>
+          </>
+        )}
         <p>
           👥 {cls.enrolled_count}명{' '}
           <span className="text-[#787774]">/ 정원 {cls.capacity}명</span>

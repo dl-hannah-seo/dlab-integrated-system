@@ -1,0 +1,140 @@
+erDiagram
+  CAMPUS ||--o{ SEMESTER : "운영"
+  CAMPUS ||--o{ STUDENT : "소속"
+  SEMESTER ||--o{ CLASS_GROUP : "포함"
+  CLASS_GROUP ||--o{ CLAZZ : "포함"
+  SEMESTER ||--o{ CLAZZ : "범위(옵션)"
+  CLAZZ ||--o{ STUDENT : "현재 반배정"
+  STUDENT ||--o{ GUARDIAN : "보호자"
+  STUDENT ||--o{ ENROLLMENT : "수강신청"
+  CLAZZ ||--o{ ENROLLMENT : "수강신청"
+  STUDENT ||--o{ INVOICE : "청구대상"
+  CLAZZ ||--o{ INVOICE : "청구반"
+  ENROLLMENT ||--o{ INVOICE : "청구근거"
+  INVOICE ||--o{ PAYMENT : "수납"
+  STUDENT ||--o{ PAYMENT : "납부자"
+
+  CAMPUS {
+    string id PK
+    string name
+    string payment_link_url
+  }
+
+  SEMESTER {
+    string id PK
+    string campus_id FK
+    number year
+    string season
+    string_arr courses
+    enum status "예정/진행중/종료, optional"
+  }
+
+  CLASS_GROUP {
+    string id PK
+    string campus_id FK
+    string semester_id FK
+    number year
+    string season
+    string day_group
+    string time_slot
+  }
+
+  CLAZZ["CLASS (반)"] {
+    string id PK
+    string campus_id FK
+    string class_group_id FK
+    string semester_id FK "optional"
+    string course
+    string name
+    string teacher
+    string team_lead
+    number capacity
+    date start_date
+    date end_date
+    number weeks "optional"
+    string schedule
+    enum payment_method "매월/일시"
+    number payment_due_day
+    number tuition_fee
+    number material_fee
+    number content_fee
+    number enrolled_count
+  }
+
+  STUDENT {
+    string id PK
+    string campus_id FK
+    string class_id FK
+    string name
+    string grade
+    string school
+    string parent_phone "모, 키오스크 인증키"
+    string student_phone
+    enum status "재원/퇴원/휴원"
+    date first_enrolled_at
+    string source "유입경로"
+    number points
+    number streak
+    string title
+    enum gender "남/여, optional"
+    string division "학부, optional"
+    string father_phone "부, optional"
+    string other_guardian_phone "optional"
+    string other_guardian_relation "optional"
+    string school_type "optional"
+    string special_note "optional"
+    string memo "optional"
+    string_arr sibling_ids "재원형제, optional"
+    string virtual_account "가상계좌, optional"
+    string scholarship_type "장학유형, optional"
+  }
+
+  GUARDIAN {
+    string id PK
+    string student_id FK
+    enum relation "모/부"
+    string name
+    string phone
+  }
+
+  ENROLLMENT {
+    string id PK
+    string student_id FK
+    string class_id FK
+    date started_at
+    date ended_at "nullable"
+    string end_reason "nullable"
+  }
+
+  INVOICE {
+    string id PK
+    string student_id FK
+    string class_id FK
+    string enrollment_id FK
+    string billing_month "YYYY-MM"
+    enum status "완납/미납/부분납/환불"
+    number tuition_amount
+    number material_amount
+    number content_amount
+    number discount_amount
+    date due_date
+  }
+
+  PAYMENT {
+    string id PK
+    string invoice_id FK
+    string student_id FK
+    number card_amount
+    number cash_amount
+    enum method "카드/현금/계좌이체/PG"
+    string card_type "카드사"
+    string card_detail "일반/체크/기업, optional"
+    boolean cash_receipt
+    string cash_receipt_no "optional"
+    number amount
+    datetime paid_at
+    string cancellation_no "취소번호, optional"
+    string special_note "optional"
+    string terminal_id "결제단말기, optional"
+    string collector "수납자, optional"
+  }
