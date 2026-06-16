@@ -9,9 +9,9 @@ import {
   formatDuration,
   type CartLine,
 } from './marketplace';
-import type { LessonProduct } from './mock-data';
+import type { LessonProduct, LessonCategory } from './mock-data';
 
-const p = (id: string, priceWon: number, category = '파이썬'): LessonProduct => ({
+const p = (id: string, priceWon: number, category: LessonCategory = '파이썬'): LessonProduct => ({
   id, title: id, category, type: '교안', instructor: '강사', level: '입문',
   lessons: 1, durationMin: 60, rating: 4.5, students: 10, skills: [],
   priceWon, thumbnailEmoji: '🐍',
