@@ -339,11 +339,11 @@ export default function PaymentsPage() {
             <p className="text-xs font-medium text-[#37352F] mb-1.5">현금영수증</p>
             <div className="flex gap-4">
               <label className="flex items-center gap-1.5 text-sm text-[#37352F] cursor-pointer">
-                <Input type="radio" name="cash_receipt" value="발행" defaultChecked className="accent-[#FF6C37] w-auto" />
+                <input type="radio" name="cash_receipt" value="발행" defaultChecked className="accent-[#FF6C37]" />
                 발행
               </label>
               <label className="flex items-center gap-1.5 text-sm text-[#37352F] cursor-pointer">
-                <Input type="radio" name="cash_receipt" value="미발행" className="accent-[#FF6C37] w-auto" />
+                <input type="radio" name="cash_receipt" value="미발행" className="accent-[#FF6C37]" />
                 미발행
               </label>
             </div>
