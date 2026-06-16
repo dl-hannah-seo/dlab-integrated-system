@@ -229,7 +229,7 @@ export default function PaymentsPage() {
                       },
                     },
                     {
-                      key: 'invoice_id',
+                      key: 'status',
                       header: '상태',
                       render: r => {
                         const inv = invoices.find(i => i.id === String(r.invoice_id));
