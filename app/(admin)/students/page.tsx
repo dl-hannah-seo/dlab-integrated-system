@@ -5,10 +5,13 @@ import {
   students as initialStudents,
   classes,
   enrollments as initialEnrollments,
+  consultations as initialConsultations,
   getInvoiceByStudent,
   payments,
   Student,
   Enrollment,
+  Consultation,
+  ConsultMethod,
 } from '@/lib/mock-data';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -17,6 +20,7 @@ import { Table } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { DeleteButton } from '@/components/ui/DeleteButton';
+import { consultationsOf, nextConsultId, addConsultation, updateConsultation, removeConsultation } from '@/lib/consultations';
 
 const DIVISIONS = ['전체', '유치부', '초등부', '중등부', '고등부'];
 const GRADES = ['전체', '5세', '6세', '7세', '초1', '초2', '초3', '초4', '초5', '초6', '중1', '중2', '중3', '고1', '고2', '고3'];
@@ -33,10 +37,11 @@ const MSG_TARGETS = [
   { value: '부', label: '아버지 (부)' },
   { value: '본인', label: '학생 본인' },
 ];
-const DETAIL_TABS = ['기본정보', '수강이력', '수납이력'] as const;
+const DETAIL_TABS = ['기본정보', '수강이력', '수납이력', '상담이력'] as const;
 type DetailTab = (typeof DETAIL_TABS)[number];
 
 const TEACHERS = Array.from(new Set(classes.map(c => c.teacher)));
+const CONSULT_METHODS: ConsultMethod[] = ['전화', '대면', '문자·카톡', '기타'];
 
 function formatMoney(n: number) { return n.toLocaleString('ko-KR') + '원'; }
 
@@ -148,6 +153,47 @@ export default function StudentsPage() {
   const [editForm, setEditForm] = useState<Student | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  // 상담이력 (탭 내 인라인 CRUD)
+  const [localConsultations, setLocalConsultations] = useState<Consultation[]>(initialConsultations);
+  const emptyConsultForm = { date: today, method: '전화' as ConsultMethod, counselor: '', content: '' };
+  const [consultForm, setConsultForm] = useState(emptyConsultForm);
+  const [editingConsultId, setEditingConsultId] = useState<string | null>(null);
+  const [consultEdit, setConsultEdit] = useState<{ date: string; method: ConsultMethod; counselor: string; content: string }>(emptyConsultForm);
+  const [confirmDeleteConsult, setConfirmDeleteConsult] = useState<string | null>(null);
+
+  function resetConsultState() {
+    setConsultForm({ ...emptyConsultForm });
+    setEditingConsultId(null);
+    setConfirmDeleteConsult(null);
+  }
+  function addConsult() {
+    if (!detailStudent || !consultForm.content.trim()) return;
+    const id = nextConsultId(localConsultations, detailStudent.id);
+    setLocalConsultations(prev => addConsultation(prev, {
+      id, student_id: detailStudent.id,
+      date: consultForm.date, method: consultForm.method,
+      counselor: consultForm.counselor.trim(), content: consultForm.content.trim(),
+    }));
+    setConsultForm({ ...emptyConsultForm });
+  }
+  function startEditConsult(c: Consultation) {
+    setConfirmDeleteConsult(null);
+    setEditingConsultId(c.id);
+    setConsultEdit({ date: c.date, method: c.method, counselor: c.counselor, content: c.content });
+  }
+  function saveEditConsult() {
+    if (!editingConsultId || !consultEdit.content.trim()) return;
+    setLocalConsultations(prev => updateConsultation(prev, editingConsultId, {
+      date: consultEdit.date, method: consultEdit.method,
+      counselor: consultEdit.counselor.trim(), content: consultEdit.content.trim(),
+    }));
+    setEditingConsultId(null);
+  }
+  function deleteConsult(id: string) {
+    setLocalConsultations(prev => removeConsultation(prev, id));
+    setConfirmDeleteConsult(null);
+  }
+
   const classOptions = [
     { value: '전체', label: '전체 반' },
     ...classes.map(c => ({ value: c.id, label: c.name })),
@@ -207,11 +253,13 @@ export default function StudentsPage() {
     setEditMode(false);
     setEditForm({ ...s });
     setConfirmDelete(false);
+    resetConsultState();
   }
   function closeDetail() {
     setDetailStudent(null);
     setEditMode(false);
     setConfirmDelete(false);
+    resetConsultState();
   }
   function startEdit() {
     if (!detailStudent) return;
@@ -488,6 +536,96 @@ export default function StudentsPage() {
               </div>
             );
           })}
+        </div>
+      );
+    }
+
+    // 상담이력 (탭 자체가 상시 인라인 편집 가능)
+    if (detailTab === '상담이력') {
+      const list = consultationsOf(localConsultations, s.id);
+      const methodBadge: Record<ConsultMethod, 'primary' | 'success' | 'warn' | 'default'> = {
+        '전화': 'primary', '대면': 'success', '문자·카톡': 'warn', '기타': 'default',
+      };
+      return (
+        <div className="space-y-4">
+          {/* 신규 상담 입력폼 */}
+          <div className="bg-[#F7F7F5] rounded-lg p-4 space-y-3">
+            <p className="text-xs font-semibold text-[#787774]">상담 기록 추가</p>
+            <div className="grid grid-cols-3 gap-3">
+              <Input label="상담일자" type="date" value={consultForm.date}
+                onChange={e => setConsultForm(f => ({ ...f, date: e.target.value }))} />
+              <Select label="상담유형" value={consultForm.method}
+                onChange={e => setConsultForm(f => ({ ...f, method: e.target.value as ConsultMethod }))}
+                options={CONSULT_METHODS.map(m => ({ value: m, label: m }))} />
+              <div>
+                <Input label="상담자" list="consult-counselor-options" placeholder="이름 입력"
+                  value={consultForm.counselor}
+                  onChange={e => setConsultForm(f => ({ ...f, counselor: e.target.value }))} />
+                <datalist id="consult-counselor-options">
+                  {TEACHERS.map(t => <option key={t} value={t} />)}
+                </datalist>
+              </div>
+            </div>
+            <Textarea label="상담내용" rows={3} value={consultForm.content}
+              placeholder="상담 내용을 입력하세요"
+              onChange={e => setConsultForm(f => ({ ...f, content: e.target.value }))} />
+            <div className="flex justify-end">
+              <Button size="sm" onClick={addConsult} disabled={!consultForm.content.trim()}>추가</Button>
+            </div>
+          </div>
+
+          {/* 기록 목록 (최신순) */}
+          {list.length === 0 ? (
+            <p className="text-sm text-[#787774]">등록된 상담 이력이 없습니다.</p>
+          ) : (
+            <div className="space-y-2">
+              {list.map(c => editingConsultId === c.id ? (
+                <div key={c.id} className="border border-[#FF6C37]/40 rounded-lg p-4 space-y-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    <Input label="상담일자" type="date" value={consultEdit.date}
+                      onChange={e => setConsultEdit(f => ({ ...f, date: e.target.value }))} />
+                    <Select label="상담유형" value={consultEdit.method}
+                      onChange={e => setConsultEdit(f => ({ ...f, method: e.target.value as ConsultMethod }))}
+                      options={CONSULT_METHODS.map(m => ({ value: m, label: m }))} />
+                    <div>
+                      <Input label="상담자" list="consult-counselor-options"
+                        value={consultEdit.counselor}
+                        onChange={e => setConsultEdit(f => ({ ...f, counselor: e.target.value }))} />
+                    </div>
+                  </div>
+                  <Textarea label="상담내용" rows={3} value={consultEdit.content}
+                    onChange={e => setConsultEdit(f => ({ ...f, content: e.target.value }))} />
+                  <div className="flex justify-end gap-2">
+                    <Button variant="secondary" size="sm" onClick={() => setEditingConsultId(null)}>취소</Button>
+                    <Button size="sm" onClick={saveEditConsult} disabled={!consultEdit.content.trim()}>저장</Button>
+                  </div>
+                </div>
+              ) : (
+                <div key={c.id} className="border border-[#E9E9E7] rounded-lg px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-[#37352F] tabular-nums">{c.date}</span>
+                      <Badge variant={methodBadge[c.method]}>{c.method}</Badge>
+                      {c.counselor && <span className="text-xs text-[#787774]">{c.counselor}</span>}
+                    </div>
+                    {confirmDeleteConsult === c.id ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-[#787774]">삭제할까요?</span>
+                        <button onClick={() => deleteConsult(c.id)} className="text-xs text-[#EB5757] font-medium hover:underline">삭제</button>
+                        <button onClick={() => setConfirmDeleteConsult(null)} className="text-xs text-[#787774] hover:underline">취소</button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => startEditConsult(c)} className="text-xs text-[#787774] hover:text-[#37352F] hover:underline">수정</button>
+                        <DeleteButton className="text-xs" onClick={() => setConfirmDeleteConsult(c.id)}>삭제</DeleteButton>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-sm text-[#37352F] mt-2 whitespace-pre-line">{c.content}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       );
     }
