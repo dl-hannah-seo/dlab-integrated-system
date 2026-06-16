@@ -78,12 +78,14 @@ describe('filterRows', () => {
   };
   const rows = buildRows('2026-06', TODAY, data);
   it('상태로 거른다', () => {
-    expect(filterRows(rows, { status: '미납', search: '' })).toHaveLength(1);
-    expect(filterRows(rows, { status: '전체', search: '' })).toHaveLength(2);
+    expect(filterRows(rows, { status: '미납' })).toHaveLength(1);
+    expect(filterRows(rows, { status: '전체' })).toHaveLength(2);
   });
-  it('이름/반으로 검색한다', () => {
-    expect(filterRows(rows, { status: '전체', search: '완납' })).toHaveLength(1);
-    expect(filterRows(rows, { status: '전체', search: 'A반' })).toHaveLength(2);
+  it('학생 이름으로 검색한다', () => {
+    expect(filterRows(rows, { studentName: '완납' })).toHaveLength(1);
+  });
+  it('반이름으로 필터링한다', () => {
+    expect(filterRows(rows, { className: 'A반' })).toHaveLength(2);
   });
 });
 
