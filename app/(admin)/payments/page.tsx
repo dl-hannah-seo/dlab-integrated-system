@@ -174,7 +174,7 @@ export default function PaymentsPage() {
                 </div>
                 <div className="bg-[#F7F7F5] rounded-lg p-3 text-center">
                   <p className="text-xs text-[#787774]">납입 상태</p>
-                  <Badge variant={studentInvoices[0]?.status === '완납' ? 'paid' : 'unpaid'} className="text-sm mt-1">
+                  <Badge variant={studentInvoices[0]?.status === '완납' ? 'paid' : studentInvoices[0]?.status === '환불' ? 'primary' : 'unpaid'} className="text-sm mt-1">
                     {studentInvoices[0]?.status ?? '미생성'}
                   </Badge>
                 </div>
@@ -234,7 +234,7 @@ export default function PaymentsPage() {
                       render: r => {
                         const inv = invoices.find(i => i.id === String(r.invoice_id));
                         return (
-                          <Badge variant={inv?.status === '완납' ? 'paid' : 'unpaid'}>
+                          <Badge variant={inv?.status === '완납' ? 'paid' : inv?.status === '환불' ? 'primary' : 'unpaid'}>
                             {inv?.status ?? '-'}
                           </Badge>
                         );
