@@ -358,6 +358,18 @@ export const guardians: Guardian[] = students.map((s, i) => ({
   phone: s.parent_phone,
 }));
 
+// ── 데모 배포용 개인정보 마스킹 ──────────────────────────────────
+// 팀 시연 시 실제 개인정보로 오인되지 않도록 모든 전화번호를 더미 번호로 통일.
+// (값이 있는 번호만 덮어쓰고, 미등록(빈 값)은 그대로 둔다)
+const DEMO_PHONE = '010-1234-5678';
+[...students, ...withdrawnStudents].forEach(s => {
+  s.parent_phone = DEMO_PHONE;
+  if (s.student_phone) s.student_phone = DEMO_PHONE;
+  if (s.father_phone) s.father_phone = DEMO_PHONE;
+  if (s.other_guardian_phone) s.other_guardian_phone = DEMO_PHONE;
+});
+guardians.forEach(g => { g.phone = DEMO_PHONE; });
+
 // ── 수강 신청 ──────────────────────────────────────────────────
 export interface Enrollment {
   id: string;
