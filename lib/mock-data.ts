@@ -907,3 +907,36 @@ export function getClassMatrix(classId: string, records: Attendance[], maxSessio
   }));
   return { sessions, rows };
 }
+
+// ── 교안 마켓플레이스 (LMS 스토어프론트) ──────────────────────
+export type LessonType = '교안' | '강의';
+export type LessonLevel = '입문' | '초급' | '중급';
+export type LessonCategory = '파이썬' | '아두이노·로보틱스' | 'AI·데이터' | '웹·앱';
+
+export interface LessonProduct {
+  id: string;
+  title: string;
+  category: LessonCategory;
+  type: LessonType;
+  instructor: string;
+  level: LessonLevel;
+  lessons: number;           // 차시 수
+  durationMin: number;       // 총 강의시간(분)
+  rating: number;            // 0~5 (소수 1자리)
+  students: number;          // 수강생 수
+  skills: string[];          // 스킬 칩
+  priceWon: number;          // 가격(원)
+  thumbnailEmoji: string;    // 썸네일 placeholder
+  badge?: '베스트' | '신규';
+}
+
+export const lessonProducts: LessonProduct[] = [
+  { id: 'lp-01', title: '파이썬 첫걸음: 스크래치에서 코드로', category: '파이썬', type: '교안', instructor: '김도윤', level: '입문', lessons: 12, durationMin: 360, rating: 4.8, students: 1240, skills: ['Python', '알고리즘 기초'], priceWon: 49000, thumbnailEmoji: '🐍', badge: '베스트' },
+  { id: 'lp-02', title: '파이썬 알고리즘 트레이닝', category: '파이썬', type: '강의', instructor: '이서연', level: '중급', lessons: 20, durationMin: 720, rating: 4.7, students: 530, skills: ['Python', '자료구조'], priceWon: 89000, thumbnailEmoji: '🧮' },
+  { id: 'lp-03', title: '아두이노로 만드는 스마트홈', category: '아두이노·로보틱스', type: '교안', instructor: '박지훈', level: '초급', lessons: 16, durationMin: 480, rating: 4.9, students: 870, skills: ['Arduino', '회로'], priceWon: 69000, thumbnailEmoji: '🔌', badge: '베스트' },
+  { id: 'lp-04', title: '라인트레이서 로봇 제작', category: '아두이노·로보틱스', type: '강의', instructor: '최민준', level: '중급', lessons: 14, durationMin: 560, rating: 4.6, students: 310, skills: ['로보틱스', '센서'], priceWon: 79000, thumbnailEmoji: '🤖', badge: '신규' },
+  { id: 'lp-05', title: '처음 만나는 AI: 머신러닝 놀이터', category: 'AI·데이터', type: '교안', instructor: '정하늘', level: '입문', lessons: 10, durationMin: 300, rating: 4.8, students: 1520, skills: ['AI', '데이터'], priceWon: 59000, thumbnailEmoji: '🧠', badge: '신규' },
+  { id: 'lp-06', title: '데이터 분석 with 파이썬', category: 'AI·데이터', type: '강의', instructor: '김도윤', level: '중급', lessons: 18, durationMin: 650, rating: 4.7, students: 640, skills: ['Python', '데이터'], priceWon: 99000, thumbnailEmoji: '📊' },
+  { id: 'lp-07', title: '웹의 시작: HTML/CSS 교안', category: '웹·앱', type: '교안', instructor: '이서연', level: '입문', lessons: 12, durationMin: 380, rating: 4.5, students: 980, skills: ['HTML', 'CSS'], priceWon: 45000, thumbnailEmoji: '🌐' },
+  { id: 'lp-08', title: '나만의 앱 만들기: 앱인벤터', category: '웹·앱', type: '강의', instructor: '박지훈', level: '초급', lessons: 15, durationMin: 500, rating: 4.7, students: 420, skills: ['앱개발', '블록코딩'], priceWon: 65000, thumbnailEmoji: '📱', badge: '신규' },
+];
