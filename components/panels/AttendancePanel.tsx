@@ -45,8 +45,14 @@ export function AttendancePanel() {
   const processedStudents = classStudents.filter(s => !attendedIds.has(s.id) && !!attendanceOverrides[s.id]);
   const pendingStudents = classStudents.filter(s => !attendedIds.has(s.id) && !attendanceOverrides[s.id]);
 
+  // 미도착 + 결석/지각 처리 학생만 문자 대상 (수동 출석은 제외)
+  const smsTargets = [
+    ...pendingStudents,
+    ...processedStudents.filter(s => attendanceOverrides[s.id] !== 'attend'),
+  ];
+
   function handleSendSms() {
-    const targets = [...pendingStudents, ...processedStudents];
+    const targets = smsTargets;
     openSms({
       recipients: targets.map(s => ({ studentId: s.id, name: s.name, phone: s.parent_phone })),
       template: 'absence',
@@ -118,11 +124,15 @@ export function AttendancePanel() {
                 <div key={s.id} className="flex items-center justify-between px-3 py-2 bg-[#F7F7F5] rounded-lg">
                   <span className="text-sm text-[#37352F]">{s.name}</span>
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                    attendanceOverrides[s.id] === 'late'
-                      ? 'bg-[#FFF8E6] text-[#D9A80A]'
-                      : 'bg-[#FDECEA] text-[#EB5757]'
+                    attendanceOverrides[s.id] === 'attend'
+                      ? 'bg-[#EDF7F5] text-[#0F7B6C]'
+                      : attendanceOverrides[s.id] === 'late'
+                        ? 'bg-[#FFF8E6] text-[#D9A80A]'
+                        : 'bg-[#FDECEA] text-[#EB5757]'
                   }`}>
-                    {attendanceOverrides[s.id] === 'late' ? '지각' : '결석'}
+                    {attendanceOverrides[s.id] === 'attend'
+                      ? '출석'
+                      : attendanceOverrides[s.id] === 'late' ? '지각' : '결석'}
                   </span>
                 </div>
               ))}
@@ -145,6 +155,12 @@ export function AttendancePanel() {
                   <span className="text-sm font-medium text-[#37352F]">{s.name}</span>
                   <div className="flex gap-1.5">
                     <button
+                      onClick={() => setOverride(s.id, 'attend')}
+                      className="px-2.5 py-1 text-xs rounded-md bg-[#EDF7F5] text-[#0F7B6C] border border-[#0F7B6C]/30 hover:bg-[#0F7B6C]/10 transition-colors"
+                    >
+                      출석
+                    </button>
+                    <button
                       onClick={() => setOverride(s.id, 'late')}
                       className="px-2.5 py-1 text-xs rounded-md bg-[#FFF8E6] text-[#D9A80A] border border-[#D9A80A]/30 hover:bg-[#D9A80A]/10 transition-colors"
                     >
@@ -163,18 +179,20 @@ export function AttendancePanel() {
           </div>
         )}
 
-        {/* 전원 출석 */}
-        {pendingStudents.length === 0 && processedStudents.length === 0 && attendedStudents.length > 0 && (
+        {/* 전원 출석 (미도착·결석·지각 없음) */}
+        {pendingStudents.length === 0 &&
+          smsTargets.length === 0 &&
+          attendedStudents.length + processedStudents.length > 0 && (
           <div className="text-center py-4 text-sm text-[#0F7B6C] font-medium">
             🎉 전원 출석 완료
           </div>
         )}
 
         {/* 문자발송 연동 */}
-        {(pendingStudents.length > 0 || processedStudents.length > 0) && (
+        {smsTargets.length > 0 && (
           <div className="pt-2 border-t border-[#E9E9E7]">
             <Button className="w-full" variant="secondary" onClick={handleSendSms}>
-              미도착/결석 {pendingStudents.length + processedStudents.length}명 문자발송
+              미도착/결석 {smsTargets.length}명 문자발송
             </Button>
           </div>
         )}

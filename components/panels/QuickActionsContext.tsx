@@ -15,7 +15,7 @@ export interface SmsConfig {
   template: SmsTemplate;
 }
 
-export type AttendanceOverride = 'late' | 'absent';
+export type AttendanceOverride = 'attend' | 'late' | 'absent';
 
 interface QuickActionsCtx {
   activePanel: 'attendance' | 'sms' | null;
