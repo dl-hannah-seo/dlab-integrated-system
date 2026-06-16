@@ -175,6 +175,8 @@ export interface Student {
   special_note?: string;       // 특이사항 (특성)
   memo?: string;               // 메모
   sibling_ids?: string[];      // 재원형제
+  virtual_account?: string;    // 가상계좌
+  scholarship_type?: string;   // 장학유형
 }
 
 export interface Guardian {
@@ -284,6 +286,14 @@ export const students: Student[] = [
   { id: 's-77', campus_id: 'campus-001', name: '나도윤', grade: '중2', school: '역삼중', parent_phone: '010-9012-3458', student_phone: '010-9012-0022', status: '재원', first_enrolled_at: '2024-07-15', source: '현수막', points: 1380, class_id: 'cl-06', streak: 11, title: '스트릭 마스터' },
   { id: 's-78', campus_id: 'campus-001', name: '나서윤', grade: '초6', school: '강남초', parent_phone: '010-0123-4569', student_phone: '', status: '재원', first_enrolled_at: '2025-03-02', source: '인스타그램', points: 820, class_id: 'cl-06', streak: 7, title: '열정 코더' },
 ];
+
+// 상세 패널 표시용 보강 샘플 (가상계좌·장학·형제)
+const _paymentDemoAugment: Record<string, Partial<Student>> = {
+  's-06': { virtual_account: '1002-756-123456', scholarship_type: '형제할인', sibling_ids: ['s-07'] },
+  's-07': { sibling_ids: ['s-06'] },
+  's-02': { virtual_account: '1002-756-654321' },
+};
+students.forEach(s => Object.assign(s, _paymentDemoAugment[s.id]));
 
 // ── 레거시 보강 필드 채우기 (학부·부 연락처·특성·재원형제) ──
 function deriveDivision(grade: string): string {
@@ -491,19 +501,25 @@ export interface Payment {
   cancellation_no?: string;    // 취소번호
   special_note?: string;       // 특이사항
   terminal_id?: string;        // 결제단말기
+  collector?: string;          // 수납자 (원장님/리암/키오스크/온라인결제)
 }
 
-// 62/78 = 79.5% ≈ 79% 결제 완료 (나머지 16명 미납)
+// 62/78 ≈ 79% 완납, 14 미납, 2 예정, 2 환불
 function buildInvoices(): { invoices: Invoice[]; payments: Payment[] } {
   const invoices: Invoice[] = [];
   const payments: Payment[] = [];
   const unpaidIds = new Set(['s-06', 's-09', 's-12', 's-14', 's-20', 's-24', 's-27', 's-33', 's-39', 's-40', 's-44', 's-48', 's-52', 's-56', 's-67', 's-72']);
+  const scheduledIds = new Set(['s-09', 's-14']); // 미납 중 납기 도래 예정 → '예정'으로 파생
+  const refundIds = new Set(['s-02', 's-05']);    // 완납 후 환불 처리(음수 수납)
+  const collectors = ['원장님', '리암', '키오스크', '온라인결제'];
 
   students.forEach((s, i) => {
     const cls = classes.find(c => c.id === s.class_id)!;
     const total = cls.tuition_fee + cls.material_fee + cls.content_fee;
-    const isPaid = !unpaidIds.has(s.id);
+    const discount = i % 10 === 0 ? 20000 : 0;
+    const status: InvoiceStatus = refundIds.has(s.id) ? '환불' : unpaidIds.has(s.id) ? '미납' : '완납';
     const invoiceId = `inv-${s.id}`;
+    const dueDate = scheduledIds.has(s.id) ? '2026-06-30' : '2026-06-01';
 
     invoices.push({
       id: invoiceId,
@@ -511,32 +527,49 @@ function buildInvoices(): { invoices: Invoice[]; payments: Payment[] } {
       class_id: s.class_id,
       enrollment_id: `enr-${s.id}`,
       billing_month: '2026-06',
-      status: isPaid ? '완납' : '미납',
+      status,
       tuition_amount: cls.tuition_fee,
       material_amount: cls.material_fee,
       content_amount: cls.content_fee,
-      discount_amount: i % 10 === 0 ? 20000 : 0,
-      due_date: '2026-06-01',
+      discount_amount: discount,
+      due_date: dueDate,
     });
 
-    if (isPaid) {
+    if (status === '완납') {
       const methods: PayMethod[] = ['카드', '카드', '카드', '카드', '카드', '현금', '계좌이체'];
       const method = methods[i % methods.length];
       payments.push({
         id: `pay-${s.id}`,
         invoice_id: invoiceId,
         student_id: s.id,
-        card_amount: method === '카드' ? total - (i % 10 === 0 ? 20000 : 0) : 0,
+        card_amount: method === '카드' ? total - discount : 0,
         cash_amount: method === '현금' ? total : 0,
         method,
         card_type: method === '카드' ? ['국민', '신한', '삼성', '현대'][i % 4] + '카드' : '',
         card_detail: method === '카드' ? ['일반', '체크', '기업'][i % 3] : undefined,
         cash_receipt: method === '현금' && i % 2 === 0,
         cash_receipt_no: method === '현금' && i % 2 === 0 ? `CR${String(20260600 + i).padStart(10, '0')}` : undefined,
-        amount: total - (i % 10 === 0 ? 20000 : 0),
+        amount: total - discount,
         paid_at: `2026-06-0${(i % 9) + 1}T10:00:00`,
+        collector: collectors[i % collectors.length],
+      });
+    } else if (status === '환불') {
+      payments.push({
+        id: `pay-${s.id}`,
+        invoice_id: invoiceId,
+        student_id: s.id,
+        card_amount: -(total - discount),
+        cash_amount: 0,
+        method: '카드',
+        card_type: '삼성카드',
+        cash_receipt: false,
+        amount: -(total - discount),
+        paid_at: '2026-06-05T10:00:00',
+        cancellation_no: `C${String(10000000 + i).padStart(8, '0')}`,
+        collector: collectors[i % collectors.length],
       });
     }
+    // 미납·예정: payment 없음
   });
 
   return { invoices, payments };
