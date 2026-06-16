@@ -70,6 +70,7 @@ export default function AttendancePage() {
     return { total, attend, absent, pending, rate: denom ? Math.round((attend / denom) * 100) : 0 };
   }, [todayRecords]);
 
+  const todayLabel = `${Number(TODAY.slice(5, 7))}/${Number(TODAY.slice(8, 10))}`;
   const targetClasses = classFilter === '전체' ? CURRENT_CLASSES : CURRENT_CLASSES.filter(c => c.id === classFilter);
 
   return (
@@ -82,9 +83,9 @@ export default function AttendancePage() {
       {/* 오늘 요약 KPI */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {[
-          { label: '출석', value: kpi.attend, color: 'text-[#0F7B6C]', bg: 'bg-[#EDF7F5]', note: '오늘 (6/14)' },
-          { label: '미도착', value: kpi.pending, color: 'text-[#787774]', bg: 'bg-[#F7F7F5]', note: '오늘 (6/14)' },
-          { label: '결석', value: kpi.absent, color: 'text-[#EB5757]', bg: 'bg-[#FDECEA]', note: '오늘 (6/14)' },
+          { label: '출석', value: kpi.attend, color: 'text-[#0F7B6C]', bg: 'bg-[#EDF7F5]', note: `오늘 (${todayLabel})` },
+          { label: '미도착', value: kpi.pending, color: 'text-[#787774]', bg: 'bg-[#F7F7F5]', note: `오늘 (${todayLabel})` },
+          { label: '결석', value: kpi.absent, color: 'text-[#EB5757]', bg: 'bg-[#FDECEA]', note: `오늘 (${todayLabel})` },
           { label: '출석률', value: `${kpi.rate}%`, color: 'text-[#37352F]', bg: 'bg-white', note: '오늘 · 미도착 제외' },
         ].map(item => (
           <Card key={item.label} className={`!p-0 ${item.bg}`}>

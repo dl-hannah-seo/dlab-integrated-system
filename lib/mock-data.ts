@@ -54,6 +54,8 @@ export const classGroups: ClassGroup[] = [
   { id: 'cg-04', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름', day_group: '화목', time_slot: '1600' },
   { id: 'cg-05', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름', day_group: '화목', time_slot: '1700' },
   { id: 'cg-06', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름', day_group: '화목', time_slot: '1800' },
+  // 토 10:00 동시간대 2개 반 (한 칸 누적 표시 예시)
+  { id: 'cg-09', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름', day_group: '토', time_slot: '1000' },
   { id: 'cg-07', campus_id: 'campus-001', semester_id: 'sem-02', year: 2025, season: '봄', day_group: '토', time_slot: '0900' },
   { id: 'cg-08', campus_id: 'campus-001', semester_id: 'sem-02', year: 2025, season: '봄', day_group: '토', time_slot: '1000' },
 ];
@@ -129,6 +131,15 @@ export const classes: Class[] = [
     start_date: '2026-07-07', end_date: '2026-09-01', weeks: 8,
     schedule: '화·목 18:00', payment_method: '일시', payment_due_day: 1,
     tuition_fee: 200000, material_fee: 50000, content_fee: 30000, enrolled_count: 4,
+  },
+  // 토 10:00 동시간대 2개 반 (한 칸 누적 표시 예시) — cg-09
+  {
+    id: 'cl-09', campus_id: 'campus-001', class_group_id: 'cg-09',
+    course: '아두이노', name: '2026여름토1000/아두이노/허빈',
+    teacher: '허빈', team_lead: '케이', capacity: 12,
+    start_date: '2026-07-05', end_date: '2026-08-30', weeks: 8,
+    schedule: '토 10:00', payment_method: '일시', payment_due_day: 1,
+    tuition_fee: 200000, material_fee: 50000, content_fee: 30000, enrolled_count: 7,
   },
   // ── 2025 봄 (종강) — 과거 수강 이력용 ──
   {
@@ -395,6 +406,25 @@ Object.entries(MULTI_CLASS_DEMO).forEach(([sid, extra]) => {
     enrollments.push({ id: `enr-${sid}-x${i}`, student_id: sid, class_id: cid, started_at: '2026-03-02', ended_at: null, end_reason: null });
   });
 });
+
+// ── 원생별 상담이력 ─────────────────────────────────────────
+export type ConsultMethod = '전화' | '대면' | '문자·카톡' | '기타';
+
+export interface Consultation {
+  id: string;
+  student_id: string;
+  date: string;        // 상담일자 YYYY-MM-DD
+  method: ConsultMethod;
+  counselor: string;   // 상담자
+  content: string;     // 상담내용
+}
+
+// 일부 학생 샘플 (빈 상태/채워진 상태 모두 확인용)
+export const consultations: Consultation[] = [
+  { id: 'cons-s-01-1', student_id: 's-01', date: '2026-03-12', method: '대면', counselor: '김지원', content: '신학기 학습 목표 상담. 알고리즘 심화에 관심 많음.' },
+  { id: 'cons-s-01-2', student_id: 's-01', date: '2026-05-20', method: '전화', counselor: '김지원', content: '어머니와 진도 관련 통화. 다음 달 심화반 이동 희망.' },
+  { id: 'cons-s-02-1', student_id: 's-02', date: '2026-04-03', method: '문자·카톡', counselor: '박서준', content: '결석 후속 안내. 보강 일정 카톡으로 공유함.' },
+];
 
 // 학생의 현재(진행 중) 수강 등록 — 등록시작일 표시·필터용
 export function getCurrentEnrollment(studentId: string) {
@@ -741,12 +771,12 @@ function buildAttendanceHistory(): { sessionHistory: Session[]; attendanceHistor
     const dates: string[] = [];
     if (TWICE_WEEKLY.has(classId)) {
       for (let w = HISTORY_WEEKS; w >= 1; w--) {
-        dates.push(shiftDate(TODAY, -7 * w - 2)); // 화 가정
-        dates.push(shiftDate(TODAY, -7 * w));     // 목 가정
+        dates.push(shiftDate(TODAY, -7 * w - 2)); // 주중 1회차 (오늘 기준 -2일)
+        dates.push(shiftDate(TODAY, -7 * w));     // 주중 2회차 (오늘과 같은 요일)
       }
     } else {
       for (let w = HISTORY_WEEKS; w >= 1; w--) {
-        dates.push(shiftDate(TODAY, -7 * w));     // 토 가정
+        dates.push(shiftDate(TODAY, -7 * w));     // 주 1회차 (오늘과 같은 요일)
       }
     }
     dates.forEach((date, i) => {
