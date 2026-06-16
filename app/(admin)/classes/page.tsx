@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { classes, classGroups, semesters as mockSemesters, students, enrollments, Class, Semester, Enrollment } from '@/lib/mock-data';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -88,6 +88,15 @@ export default function ClassesPage() {
   const [pendingUnenroll, setPendingUnenroll] = useState<{ id: string; name: string } | null>(null);
 
   const today = new Date().toISOString().slice(0, 10);
+
+  // 시간표(/schedule) 팝오버 등에서 ?selected=<반ID> 로 진입 시 해당 반 미리 선택
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('selected');
+    if (!id) return;
+    const target = localClasses.find(c => c.id === id);
+    if (target) setSelectedClass(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const enrolledStudents = selectedClass
     ? localEnrollments
