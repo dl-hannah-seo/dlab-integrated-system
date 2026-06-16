@@ -1,16 +1,23 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { SlidePanel } from '@/components/panels/SlidePanel';
 import { useQuickActions } from '@/components/panels/QuickActionsContext';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
 import { AttendanceDot } from '@/components/ui/Badge';
 import { classes, todaySessions, initialAttendance, getStudentsByClass } from '@/lib/mock-data';
+// DEMO ONLY ↓↓↓
+import { useAttendanceDemo } from '@/components/panels/useAttendanceDemo';
+// DEMO ONLY ↑↑↑
 
 export function AttendancePanel() {
   const { activePanel, close, openSms, attendanceOverrides, setOverride } = useQuickActions();
   const open = activePanel === 'attendance';
+
+  // DEMO ONLY ↓↓↓
+  const demo = useAttendanceDemo(open);
+  // DEMO ONLY ↑↑↑
 
   const todayClasses = useMemo(
     () => classes.filter(c => todaySessions.some(s => s.class_id === c.id)),
@@ -23,9 +30,16 @@ export function AttendancePanel() {
   const session = todaySessions.find(s => s.class_id === selectedClassId);
   const classStudents = useMemo(() => getStudentsByClass(selectedClassId), [selectedClassId]);
 
+  // DEMO ONLY ↓↓↓ — 반 변경 시 데모 초기화
+  useEffect(() => { demo.reset(); }, [selectedClassId, demo.reset]);
+  // DEMO ONLY ↑↑↑
+
   const attendedIds = new Set(
     initialAttendance.filter(a => a.status === 'attend').map(a => a.student_id)
   );
+  // DEMO ONLY ↓↓↓ — 데모 점등 학생을 출석에 합침
+  demo.demoAttendedIds.forEach(id => attendedIds.add(id));
+  // DEMO ONLY ↑↑↑
 
   const attendedStudents = classStudents.filter(s => attendedIds.has(s.id));
   const processedStudents = classStudents.filter(s => !attendedIds.has(s.id) && !!attendanceOverrides[s.id]);
@@ -54,6 +68,26 @@ export function AttendancePanel() {
             수업시작 {session.start_time} · 담당 {selectedClass?.teacher}
           </p>
         )}
+
+        {/* DEMO ONLY ↓↓↓ — 시연 재생 컨트롤 (추후 삭제) */}
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-[#FF6C37]/40 bg-[#FFF8F5]">
+          <span className="text-[10px] font-semibold text-[#FF6C37] uppercase tracking-wider">시연</span>
+          <button
+            onClick={demo.play}
+            disabled={demo.isPlaying || demo.isComplete}
+            className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-md bg-[#FF6C37] text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#E85A27] transition-colors"
+          >
+            ▶ {demo.isPlaying ? '시연 중…' : '출석 시연'}
+          </button>
+          <button
+            onClick={demo.reset}
+            className="flex items-center gap-1 px-2.5 py-1 text-xs rounded-md border border-[#E9E9E7] text-[#787774] hover:bg-white transition-colors"
+          >
+            ↺ 초기화
+          </button>
+          <span className="ml-auto text-xs text-[#787774]">{demo.playedCount}/{demo.totalCount}</span>
+        </div>
+        {/* DEMO ONLY ↑↑↑ */}
 
         {/* 키오스크 출석 완료 */}
         {attendedStudents.length > 0 && (
