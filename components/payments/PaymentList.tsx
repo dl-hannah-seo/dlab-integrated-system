@@ -37,6 +37,7 @@ export function PaymentList({ rows, mode, selectedIds, onToggle, onRowClick }: P
             <div key={r.inv.id} className="grid grid-cols-[40px_1.4fr_1.3fr_1.4fr_1fr] gap-0 px-4 py-3 text-sm items-center hover:bg-[#F7F7F5]">
               <input
                 type="checkbox"
+                aria-label={`${r.student.name} 선택`}
                 checked={selectedIds.has(r.student.id)}
                 onChange={() => onToggle(r.student.id)}
                 className="accent-[#FF6C37] w-4 h-4"
