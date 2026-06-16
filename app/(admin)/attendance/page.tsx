@@ -1,31 +1,76 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { classes, students, initialAttendance } from '@/lib/mock-data';
+import {
+  classes,
+  students,
+  initialAttendance,
+  attendanceHistory,
+  TODAY,
+  type Attendance,
+  type AttendanceStatus,
+  type Class,
+} from '@/lib/mock-data';
 import { Card } from '@/components/ui/Card';
-import { Badge, AttendanceDot } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Input';
+import { AttendanceTrend } from '@/components/attendance/AttendanceTrend';
+import { ClassRecordModal } from '@/components/attendance/ClassRecordModal';
+
+// 현재 학기(2026 여름) 진행 반만
+const CURRENT_CLASSES = classes.filter(c => ['cl-01', 'cl-02', 'cl-03', 'cl-04', 'cl-05', 'cl-06'].includes(c.id));
 
 export default function AttendancePage() {
+  const [records, setRecords] = useState<Attendance[]>(() => [...attendanceHistory, ...initialAttendance]);
   const [classFilter, setClassFilter] = useState('전체');
+  const [openClass, setOpenClass] = useState<Class | null>(null);
 
-  const targetClasses = classFilter === '전체' ? classes : classes.filter(c => c.id === classFilter);
+  function updateStatus(sessionId: string, studentId: string, status: AttendanceStatus, absenceReason: string | null) {
+    setRecords(prev => {
+      const idx = prev.findIndex(r => r.session_id === sessionId && r.student_id === studentId);
+      if (idx >= 0) {
+        const next = [...prev];
+        const rec = next[idx];
+        next[idx] = {
+          ...rec,
+          status,
+          source: 'manual',
+          absence_reason: status === 'absent' ? absenceReason : null,
+          checked_in_at: (status === 'attend' || status === 'makeup') ? (rec.checked_in_at ?? `${TODAY}T09:00:00`) : null,
+        };
+        return next;
+      }
+      // 오늘 미기록 셀 등 — 신규 레코드 생성
+      return [...prev, {
+        id: `ah-${sessionId}-${studentId}`,
+        session_id: sessionId,
+        enrollment_id: `enr-${studentId}`,
+        student_id: studentId,
+        status,
+        source: 'manual',
+        checked_in_at: (status === 'attend' || status === 'makeup') ? `${TODAY}T09:00:00` : null,
+        absence_reason: status === 'absent' ? absenceReason : null,
+      }];
+    });
+  }
 
-  const attendanceStats = useMemo(() => {
-    const total = initialAttendance.length;
-    const attend = initialAttendance.filter(a => a.status === 'attend').length;
-    const absent = initialAttendance.filter(a => a.status === 'absent').length;
-    const pending = initialAttendance.filter(a => a.status === 'pending').length;
-    return { total, attend, absent, pending, rate: Math.round((attend / total) * 100) };
-  }, []);
+  // 오늘 KPI — 오늘 회차 레코드 기준.
+  // 오늘 회차는 todaySessions(id가 'sess-'로 시작). initialAttendance(sess-01) 및
+  // 오늘 셀 편집으로 생성된 레코드(session_id 'sess-0X')가 여기 포함된다.
+  const todayRecords = useMemo(
+    () => records.filter(r => r.session_id.startsWith('sess-')),
+    [records],
+  );
 
-  // 과거 주간 mock 출결률
-  const weeklyStats = [
-    { week: '5/26주', rate: 92, attend: 71, total: 78 },
-    { week: '6/2주',  rate: 88, attend: 69, total: 78 },
-    { week: '6/9주',  rate: 95, attend: 74, total: 78 },
-    { week: '6/14',   rate: attendanceStats.attend > 0 ? Math.round((attendanceStats.attend / attendanceStats.total) * 100) : 21, attend: attendanceStats.attend, total: attendanceStats.total },
-  ];
+  const kpi = useMemo(() => {
+    const total = todayRecords.length;
+    const attend = todayRecords.filter(r => r.status === 'attend' || r.status === 'makeup').length;
+    const absent = todayRecords.filter(r => r.status === 'absent').length;
+    const pending = todayRecords.filter(r => r.status === 'pending').length;
+    const denom = attend + absent;
+    return { total, attend, absent, pending, rate: denom ? Math.round((attend / denom) * 100) : 0 };
+  }, [todayRecords]);
+
+  const targetClasses = classFilter === '전체' ? CURRENT_CLASSES : CURRENT_CLASSES.filter(c => c.id === classFilter);
 
   return (
     <div>
@@ -34,13 +79,13 @@ export default function AttendancePage() {
         <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 출석/결석/보강 이력</p>
       </div>
 
-      {/* 이번 주 요약 */}
+      {/* 오늘 요약 KPI */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {[
-          { label: '출석', value: attendanceStats.attend, color: 'text-[#0F7B6C]', bg: 'bg-[#EDF7F5]' },
-          { label: '미도착', value: attendanceStats.pending, color: 'text-[#787774]', bg: 'bg-[#F7F7F5]' },
-          { label: '결석', value: attendanceStats.absent, color: 'text-[#EB5757]', bg: 'bg-[#FDECEA]' },
-          { label: '출석률', value: `${attendanceStats.rate}%`, color: 'text-[#37352F]', bg: 'bg-white' },
+          { label: '출석', value: kpi.attend, color: 'text-[#0F7B6C]', bg: 'bg-[#EDF7F5]' },
+          { label: '미도착', value: kpi.pending, color: 'text-[#787774]', bg: 'bg-[#F7F7F5]' },
+          { label: '결석', value: kpi.absent, color: 'text-[#EB5757]', bg: 'bg-[#FDECEA]' },
+          { label: '출석률', value: `${kpi.rate}%`, color: 'text-[#37352F]', bg: 'bg-white' },
         ].map(item => (
           <Card key={item.label} className={`!p-0 ${item.bg}`}>
             <div className="px-5 py-4 text-center">
@@ -52,48 +97,41 @@ export default function AttendancePage() {
         ))}
       </div>
 
-      {/* 주간 출석률 추이 */}
-      <Card title="주간 출석률 추이" className="mb-6">
-        <div className="flex items-end gap-5 h-28">
-          {weeklyStats.map(w => {
-            const pct = w.rate;
-            return (
-              <div key={w.week} className="flex-1 flex flex-col items-center gap-1.5">
-                <span className="text-xs font-medium text-[#37352F]">{pct}%</span>
-                <div className="w-full rounded-t-md" style={{ height: `${(pct / 100) * 80}px`, background: '#FF6C37', opacity: w.week === '6/14' ? 1 : 0.4 }} />
-                <span className="text-xs text-[#787774]">{w.week}</span>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
+      {/* 출석률 추이 */}
+      <AttendanceTrend records={records} />
 
-      {/* 반별 출결 현황 */}
+      {/* 반 필터 */}
       <div className="flex gap-3 mb-4">
         <Select
           value={classFilter}
           onChange={e => setClassFilter(e.target.value)}
           options={[
             { value: '전체', label: '전체 반' },
-            ...classes.map(c => ({ value: c.id, label: c.schedule + ' ' + c.course })),
+            ...CURRENT_CLASSES.map(c => ({ value: c.id, label: c.schedule + ' ' + c.course })),
           ]}
           className="w-48"
         />
       </div>
 
+      {/* 반별 카드 (클릭 → 기록부 모달) */}
       <div className="space-y-3">
         {targetClasses.map(cls => {
-          const classStudents = students.filter(s => s.class_id === cls.id);
-          const attRecords = initialAttendance.filter(a => classStudents.some(s => s.id === a.student_id));
-          const attendCount = attRecords.filter(a => a.status === 'attend').length;
-          const absentCount = attRecords.filter(a => a.status === 'absent').length;
-          const pendingCount = attRecords.filter(a => a.status === 'pending').length;
-          const totalInClass = classStudents.length;
-          const pct = totalInClass > 0 ? Math.round((attendCount / totalInClass) * 100) : 0;
+          const classStudentIds = new Set(students.filter(s => s.class_id === cls.id).map(s => s.id));
+          // 그 반의 오늘 회차 레코드로 요약 (없으면 미기록)
+          const todayCls = records.filter(r => classStudentIds.has(r.student_id) && r.session_id.startsWith('sess-'));
+          const attendCount = todayCls.filter(r => r.status === 'attend' || r.status === 'makeup').length;
+          const absentCount = todayCls.filter(r => r.status === 'absent').length;
+          const pendingCount = todayCls.filter(r => r.status === 'pending').length;
+          const denom = attendCount + absentCount;
+          const pct = denom ? Math.round((attendCount / denom) * 100) : 0;
 
           return (
-            <div key={cls.id} className="bg-white border border-[#E9E9E7] rounded-lg overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-3 border-b border-[#E9E9E7] bg-[#F7F7F5]">
+            <button
+              key={cls.id}
+              onClick={() => setOpenClass(cls)}
+              className="w-full text-left bg-white border border-[#E9E9E7] rounded-lg px-5 py-4 hover:border-[#FF6C37]/50 hover:bg-[#FFFBFA] transition-colors"
+            >
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-semibold text-[#37352F]">{cls.schedule}</span>
                   <span className="text-sm text-[#37352F]">{cls.course}</span>
@@ -103,32 +141,23 @@ export default function AttendancePage() {
                   <span className="text-[#0F7B6C]">출석 {attendCount}</span>
                   <span className="text-[#787774]">미도착 {pendingCount}</span>
                   <span className="text-[#EB5757]">결석 {absentCount}</span>
-                  <span className="font-semibold text-[#37352F]">{pct}%</span>
+                  <span className="font-semibold text-[#37352F]">{denom ? `${pct}%` : '미기록'}</span>
+                  <span className="text-[#BEBDBA]">›</span>
                 </div>
               </div>
-              <div className="px-5 py-3 flex flex-wrap gap-1.5">
-                {classStudents.map(s => {
-                  const att = attRecords.find(a => a.student_id === s.id);
-                  const status = att?.status ?? 'pending';
-                  return (
-                    <div key={s.id} className="flex items-center gap-1 text-xs text-[#37352F]">
-                      <AttendanceDot status={status} />
-                      <span>{s.name}</span>
-                    </div>
-                  );
-                })}
-                {/* 출결 미기록 원생 (cl-02~cl-06은 오늘 미기록) */}
-                {attRecords.length === 0 && classStudents.map(s => (
-                  <div key={s.id} className="flex items-center gap-1 text-xs text-[#787774]">
-                    <AttendanceDot status="pending" />
-                    <span>{s.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            </button>
           );
         })}
       </div>
+
+      {openClass && (
+        <ClassRecordModal
+          cls={openClass}
+          records={records}
+          onClose={() => setOpenClass(null)}
+          onEdit={updateStatus}
+        />
+      )}
     </div>
   );
 }
