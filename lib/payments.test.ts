@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  deriveViewStatus, classTotal, buildRows, filterRows, computeSummary, isUnpaidMode,
+  deriveViewStatus, classTotal, buildRows, filterRows, computeSummary, isUnpaidMode, fmt,
 } from './payments';
 import type { Invoice, Payment, Student, Class } from './mock-data';
 
@@ -40,6 +40,14 @@ describe('deriveViewStatus', () => {
 describe('classTotal', () => {
   it('세 항목 합', () => {
     expect(classTotal(cls)).toBe(396000);
+  });
+});
+
+describe('fmt', () => {
+  it('천 단위 구분 + 원 접미사', () => {
+    expect(fmt(396000)).toBe('396,000원');
+    expect(fmt(-752400)).toBe('-752,400원');
+    expect(fmt(0)).toBe('0원');
   });
 });
 
