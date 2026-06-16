@@ -911,11 +911,12 @@ export function getClassMatrix(classId: string, records: Attendance[], maxSessio
 // ── 교안 마켓플레이스 (LMS 스토어프론트) ──────────────────────
 export type LessonType = '교안' | '강의';
 export type LessonLevel = '입문' | '초급' | '중급';
+export type LessonCategory = '파이썬' | '아두이노·로보틱스' | 'AI·데이터' | '웹·앱';
 
 export interface LessonProduct {
   id: string;
   title: string;
-  category: string;          // '파이썬' | '아두이노·로보틱스' | 'AI·데이터' | '웹·앱'
+  category: LessonCategory;
   type: LessonType;
   instructor: string;
   level: LessonLevel;

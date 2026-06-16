@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { lessonProducts, LessonProduct } from '@/lib/mock-data';
+import { lessonProducts, type LessonProduct } from '@/lib/mock-data';
 import {
   filterByCategory, addToCart, setQty, removeFromCart,
   cartCount, cartTotal, formatDuration, type CartLine,
