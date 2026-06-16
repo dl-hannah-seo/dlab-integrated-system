@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { classes, classGroups, semesters, Class, ClassGroup } from '@/lib/mock-data';
+import { classes, classGroups, semesters, sessions, Class, ClassGroup, Session } from '@/lib/mock-data';
+import { parseDays, koWeekday, addDays, weekDates, resolveWeekSessions, defaultWeekStart } from '@/lib/sessions';
 
 // ── 헬퍼 ────────────────────────────────────────────────────────
 const DAY_ORDER = ['월', '화', '수', '목', '금', '토'] as const;
@@ -13,14 +14,6 @@ const TIME_AXIS = [
   '14:00', '15:00', '16:00', '17:00', '18:00',
 ] as const;
 
-function parseDays(dayGroup: string): string[] {
-  const map: Record<string, string[]> = {
-    '토': ['토'],
-    '화목': ['화', '목'],
-    '월수금': ['월', '수', '금'],
-  };
-  return map[dayGroup] ?? [...dayGroup];
-}
 
 function fmtSlot(slot: string): string {
   return `${slot.slice(0, 2)}:${slot.slice(2)}`;
@@ -44,13 +37,15 @@ function blockColor(dayGroup: string) {
   return { block: '#3B82F6', colBg: '#F0F7FF', headerText: '#3B82F6' };
 }
 
-type Popover = { cls: Class; group: ClassGroup; top: number; left: number };
+type Popover = { cls: Class; group: ClassGroup; session?: Session; top: number; left: number };
 
 // ── 메인 ────────────────────────────────────────────────────────
 export default function SchedulePage() {
   const [selectedSemId, setSelectedSemId] = useState('sem-01');
+  const [scheduleMode, setScheduleMode] = useState<'template' | 'week'>('week');
   const [view, setView] = useState<'grid' | 'card'>('grid');
   const [teacherFilter, setTeacherFilter] = useState('전체');
+  const [weekStart, setWeekStart] = useState<string | null>(null);
   const [popover, setPopover] = useState<Popover | null>(null);
 
   // 선택된 학기의 반 목록
@@ -69,14 +64,23 @@ export default function SchedulePage() {
     ? semClasses
     : semClasses.filter(c => c.teacher === teacherFilter);
 
+  // 주간 모드 — 활성 주차(미선택 시 첫 수업 주) + 그 주의 세션
+  const earliestStart = filteredClasses.reduce(
+    (min, c) => (c.start_date < min ? c.start_date : min),
+    '9999-12-31',
+  );
+  const activeWeek = weekStart ?? defaultWeekStart(filteredClasses, semGroups, earliestStart);
+  const weekSessions = resolveWeekSessions(filteredClasses, semGroups, sessions, activeWeek);
+
   function handleBlockClick(
     e: React.MouseEvent<HTMLDivElement>,
     cls: Class,
     group: ClassGroup,
+    session?: Session,
   ) {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
-    setPopover({ cls, group, top: rect.bottom + 8, left: Math.min(rect.left, window.innerWidth - 240) });
+    setPopover({ cls, group, session, top: rect.bottom + 8, left: Math.min(rect.left, window.innerWidth - 240) });
   }
 
   return (
@@ -93,13 +97,27 @@ export default function SchedulePage() {
           {/* 학기 선택 */}
           <select
             value={selectedSemId}
-            onChange={e => setSelectedSemId(e.target.value)}
+            onChange={e => { setSelectedSemId(e.target.value); setWeekStart(null); }}
             className="text-sm border border-[#E9E9E7] rounded-lg px-3 py-1.5 text-[#37352F] bg-white focus:outline-none"
           >
             {semesters.map(s => (
               <option key={s.id} value={s.id}>{s.year} {s.season}학기</option>
             ))}
           </select>
+          {/* 정기/주간 모드 토글 */}
+          <div className="flex bg-[#F7F7F5] border border-[#E9E9E7] rounded-lg p-0.5">
+            {([['template', '정기 편성'], ['week', '주간(실제)']] as const).map(([m, label]) => (
+              <button
+                key={m}
+                onClick={() => setScheduleMode(m)}
+                className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${
+                  scheduleMode === m ? 'bg-white text-[#37352F] shadow-sm' : 'text-[#787774]'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           {/* 뷰 토글 */}
           <div className="flex bg-[#F7F7F5] border border-[#E9E9E7] rounded-lg p-0.5">
             {(['grid', 'card'] as const).map(v => (
