@@ -691,3 +691,174 @@ export function getUnpaidStudents() {
 export function getInvoiceByStudent(studentId: string) {
   return invoices.filter(inv => inv.student_id === studentId);
 }
+
+// ─────────────────────────────────────────────────────────────
+// 출결현황 페이지 — 추이·매트릭스용 결정적 출결 이력 백필
+// 오늘(2026-06-14) 이전 회차를 결정적으로 생성. todaySessions/initialAttendance는 보존.
+// (프로젝트 규칙상 Math.random() 금지 → 학생 id·회차 인덱스 기반 고정 패턴)
+// ─────────────────────────────────────────────────────────────
+export const TODAY = '2026-06-14';
+const HISTORY_WEEKS = 16; // 월별 4개월·주간 8주 충당
+const CURRENT_CLASS_IDS = ['cl-01', 'cl-02', 'cl-03', 'cl-04', 'cl-05', 'cl-06'];
+const TWICE_WEEKLY = new Set(['cl-04', 'cl-05', 'cl-06']); // 화·목 (주 2회)
+
+function shiftDate(iso: string, days: number): string {
+  const d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function hashString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+// 학생·회차 기반 결정적 상태 (대부분 출석, 소수 결석·보강; streak 높을수록 출석↑)
+function deriveHistStatus(student: Student, sessionIndex: number): AttendanceStatus {
+  const r = (hashString(student.id) + sessionIndex * 37) % 100;
+  const absentThreshold = Math.max(2, 11 - Math.floor(student.streak / 3));
+  if (r < absentThreshold) return 'absent';
+  if (r < absentThreshold + 3) return 'makeup';
+  return 'attend';
+}
+
+function classStartTime(classId: string): string {
+  const cls = classes.find(c => c.id === classId);
+  const m = cls?.schedule.match(/(\d{1,2}:\d{2})/);
+  return m ? m[1] : '09:00';
+}
+
+function buildAttendanceHistory(): { sessionHistory: Session[]; attendanceHistory: Attendance[] } {
+  const pastSessions: Session[] = [];
+  const records: Attendance[] = [];
+
+  CURRENT_CLASS_IDS.forEach(classId => {
+    const classStudents = students.filter(s => s.class_id === classId);
+    // 과거 회차 날짜 (오래된→최신, 오늘 제외)
+    const dates: string[] = [];
+    if (TWICE_WEEKLY.has(classId)) {
+      for (let w = HISTORY_WEEKS; w >= 1; w--) {
+        dates.push(shiftDate(TODAY, -7 * w - 2)); // 화 가정
+        dates.push(shiftDate(TODAY, -7 * w));     // 목 가정
+      }
+    } else {
+      for (let w = HISTORY_WEEKS; w >= 1; w--) {
+        dates.push(shiftDate(TODAY, -7 * w));     // 토 가정
+      }
+    }
+    dates.forEach((date, i) => {
+      const sessionId = `sh-${classId}-${i + 1}`;
+      pastSessions.push({
+        id: sessionId, class_id: classId, session_date: date,
+        start_time: classStartTime(classId), session_no: i + 1,
+      });
+      classStudents.forEach(s => {
+        const status = deriveHistStatus(s, i + 1);
+        records.push({
+          id: `ah-${sessionId}-${s.id}`,
+          session_id: sessionId,
+          enrollment_id: `enr-${s.id}`,
+          student_id: s.id,
+          status,
+          checked_in_at: status === 'attend' || status === 'makeup' ? `${date}T${classStartTime(classId)}:00` : null,
+          source: 'kiosk',
+          absence_reason: status === 'absent' ? '개인 사정' : null,
+        });
+      });
+    });
+  });
+
+  // 오늘 회차(todaySessions)를 최신 컬럼으로 합침. 오늘 출결은 initialAttendance(cl-01)만 존재.
+  const sessionHistory = [...pastSessions, ...todaySessions];
+  return { sessionHistory, attendanceHistory: records };
+}
+
+export const { sessionHistory, attendanceHistory } = buildAttendanceHistory();
+
+const sessionById: Record<string, Session> = {};
+sessionHistory.forEach(s => { sessionById[s.id] = s; });
+
+function weekStartISO(iso: string): string {
+  const d = new Date(iso + 'T00:00:00');
+  const day = (d.getDay() + 6) % 7; // 월요일=0
+  d.setDate(d.getDate() - day);
+  return d.toISOString().slice(0, 10);
+}
+
+export interface TrendPoint {
+  key: string;
+  label: string;
+  rate: number;   // 출석률(%) — (출석+보강)/(출석+보강+결석)
+  attend: number; // 출석+보강
+  total: number;  // 미도착 제외 분모
+}
+
+// 오늘(진행 중) 회차는 추이에서 제외 — 미완료라 왜곡 방지
+function aggregateTrend(
+  records: Attendance[],
+  keyOf: (date: string) => string,
+  labelOf: (key: string) => string,
+  take: number,
+): TrendPoint[] {
+  const buckets: Record<string, { attend: number; total: number }> = {};
+  records.forEach(r => {
+    const sess = sessionById[r.session_id];
+    if (!sess || sess.session_date === TODAY) return;
+    if (r.status === 'pending') return;
+    const k = keyOf(sess.session_date);
+    if (!buckets[k]) buckets[k] = { attend: 0, total: 0 };
+    if (r.status === 'attend' || r.status === 'makeup') buckets[k].attend += 1;
+    buckets[k].total += 1;
+  });
+  return Object.keys(buckets).sort().slice(-take).map(k => ({
+    key: k,
+    label: labelOf(k),
+    rate: buckets[k].total ? Math.round((buckets[k].attend / buckets[k].total) * 100) : 0,
+    attend: buckets[k].attend,
+    total: buckets[k].total,
+  }));
+}
+
+export function getWeeklyAttendanceTrend(records: Attendance[], weeks = 8): TrendPoint[] {
+  return aggregateTrend(records, weekStartISO,
+    k => `${Number(k.slice(5, 7))}/${Number(k.slice(8, 10))}주`, weeks);
+}
+
+export function getMonthlyAttendanceTrend(records: Attendance[], months = 4): TrendPoint[] {
+  return aggregateTrend(records, d => d.slice(0, 7),
+    k => `${Number(k.slice(5, 7))}월`, months);
+}
+
+export interface MatrixCell {
+  session: Session;
+  status: AttendanceStatus;
+  record?: Attendance;
+}
+export interface MatrixRow {
+  student: Student;
+  cells: MatrixCell[];
+}
+export interface ClassMatrix {
+  sessions: Session[];
+  rows: MatrixRow[];
+}
+
+// 반별 학생×회차 매트릭스 (최근 maxSessions 회차, 오늘 포함)
+export function getClassMatrix(classId: string, records: Attendance[], maxSessions = 8): ClassMatrix {
+  const sessions = sessionHistory
+    .filter(s => s.class_id === classId)
+    .sort((a, b) => a.session_date.localeCompare(b.session_date))
+    .slice(-maxSessions);
+  const classStudents = students.filter(s => s.class_id === classId);
+  const recByKey: Record<string, Attendance> = {};
+  records.forEach(r => { recByKey[`${r.session_id}:${r.student_id}`] = r; });
+  const rows: MatrixRow[] = classStudents.map(student => ({
+    student,
+    cells: sessions.map(session => {
+      const rec = recByKey[`${session.id}:${student.id}`];
+      return { session, status: (rec?.status ?? 'pending') as AttendanceStatus, record: rec };
+    }),
+  }));
+  return { sessions, rows };
+}
