@@ -90,8 +90,8 @@ export function Sidebar() {
           })}
         </ul>
 
-        {/* 키오스크 링크 */}
-        <div className="mt-4 pt-4 border-t border-[#E9E9E7]">
+        {/* 외부 화면 링크 (새 탭) */}
+        <div className="mt-4 pt-4 border-t border-[#E9E9E7] space-y-0.5">
           <Link
             href="/kiosk"
             target="_blank"
@@ -100,7 +100,17 @@ export function Sidebar() {
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
-            키오스크 화면
+            출석·포인트 키오스크
+          </Link>
+          <Link
+            href="/marketplace"
+            target="_blank"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-[#787774] hover:bg-[#EFEFEE] transition-colors"
+          >
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            교안 마켓플레이스
           </Link>
         </div>
 
