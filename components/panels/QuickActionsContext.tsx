@@ -18,9 +18,10 @@ export interface SmsConfig {
 export type AttendanceOverride = 'attend' | 'late' | 'absent';
 
 interface QuickActionsCtx {
-  activePanel: 'attendance' | 'sms' | null;
+  activePanel: 'attendance' | 'sms' | 'recording' | null;
   openAttendance: () => void;
   openSms: (config?: SmsConfig) => void;
+  openRecording: () => void;
   close: () => void;
   smsConfig: SmsConfig | null;
   attendanceOverrides: Record<string, AttendanceOverride>;
@@ -30,7 +31,7 @@ interface QuickActionsCtx {
 const QuickActionsContext = createContext<QuickActionsCtx | null>(null);
 
 export function QuickActionsProvider({ children }: { children: React.ReactNode }) {
-  const [activePanel, setActivePanel] = useState<'attendance' | 'sms' | null>(null);
+  const [activePanel, setActivePanel] = useState<'attendance' | 'sms' | 'recording' | null>(null);
   const [smsConfig, setSmsConfig] = useState<SmsConfig | null>(null);
   const [attendanceOverrides, setAttendanceOverrides] = useState<Record<string, AttendanceOverride>>({});
 
@@ -41,6 +42,8 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
     setActivePanel('sms');
   }, []);
 
+  const openRecording = useCallback(() => setActivePanel('recording'), []);
+
   const close = useCallback(() => setActivePanel(null), []);
 
   const setOverride = useCallback((studentId: string, status: AttendanceOverride) => {
@@ -49,7 +52,7 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
 
   return (
     <QuickActionsContext.Provider value={{
-      activePanel, openAttendance, openSms, close,
+      activePanel, openAttendance, openSms, openRecording, close,
       smsConfig, attendanceOverrides, setOverride,
     }}>
       {children}

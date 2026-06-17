@@ -2,6 +2,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { QuickActionsProvider } from '@/components/panels/QuickActionsContext';
 import { AttendancePanel } from '@/components/panels/AttendancePanel';
 import { SmsPanel } from '@/components/panels/SmsPanel';
+import { RecordingPanel } from '@/components/panels/RecordingPanel';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -15,6 +16,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </main>
         <AttendancePanel />
         <SmsPanel />
+        <RecordingPanel />
       </QuickActionsProvider>
     </div>
   );
