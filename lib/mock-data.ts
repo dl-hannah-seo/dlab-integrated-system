@@ -213,10 +213,11 @@ export interface Student {
   status: StudentStatus;
   first_enrolled_at: string;
   source: string;              // 유입경로
-  points: number;
+  points: number;              // 누적 포인트 (레벨·랭킹용)
   class_id: string;
   streak: number;
   title: string;
+  balance?: number;            // 사용 가능 포인트 (상점 차감 대상) — 없으면 points에서 파생
   // ── 레거시 원생 자료 보강 필드 (옵셔널) ──
   gender?: '남' | '여';        // 성별
   division?: string;           // 학부 (유치부/초등부/중등부)
@@ -769,6 +770,22 @@ export const products: Product[] = [
   { id: 'prod-04', campus_id: 'campus-001', name: '에어팟 충전 케이스', category: '전자기기', price_dp: 12000, stock: 2, image_url: '/demo/airpods.png', requires_approval: true },
   { id: 'prod-05', campus_id: 'campus-001', name: '문구 세트', category: '학용품', price_dp: 800, stock: 30, image_url: '/demo/stationery.png', requires_approval: false },
   { id: 'prod-06', campus_id: 'campus-001', name: '아이스크림 쿠폰', category: '식음료', price_dp: 300, stock: 50, image_url: '/demo/icecream.png', requires_approval: false },
+];
+
+// ── 키오스크 포인트 상점 아이템 (출석 후 화면) ──────────────────
+export interface KioskShopItem {
+  id: string;
+  icon: string;
+  name: string;
+  cost: number;
+}
+
+export const kioskShopItems: KioskShopItem[] = [
+  { id: 'ks-01', icon: '🍭', name: '간식 교환권', cost: 200 },
+  { id: 'ks-02', icon: '🎮', name: '게임 시간 30분', cost: 300 },
+  { id: 'ks-03', icon: '📓', name: '디랩 노트', cost: 150 },
+  { id: 'ks-04', icon: '🏆', name: '특별 수업 참가권', cost: 500 },
+  { id: 'ks-05', icon: '🎁', name: '디랩 굿즈 키트', cost: 800 },
 ];
 
 // ── 칭호 ──────────────────────────────────────────────────────
