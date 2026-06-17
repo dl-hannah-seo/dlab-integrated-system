@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   deriveViewStatus, classTotal, buildRows, filterRows, computeSummary, isUnpaidMode, fmt,
+  daysOverdue, rowsForTab, tabSummary,
 } from './payments';
 import type { Invoice, Payment, Student, Class } from './mock-data';
 
@@ -128,5 +129,59 @@ describe('isUnpaidMode', () => {
     expect(isUnpaidMode('전체')).toBe(false);
     expect(isUnpaidMode('완납')).toBe(false);
     expect(isUnpaidMode('환불')).toBe(false);
+  });
+});
+
+describe('daysOverdue', () => {
+  it('납기 지난 일수를 센다', () => {
+    expect(daysOverdue('2026-06-01', '2026-06-16')).toBe(15);
+  });
+  it('납기가 미래면 0', () => {
+    expect(daysOverdue('2026-06-30', '2026-06-16')).toBe(0);
+  });
+  it('당일이면 0', () => {
+    expect(daysOverdue('2026-06-16', '2026-06-16')).toBe(0);
+  });
+});
+
+describe('rowsForTab / tabSummary', () => {
+  const data = {
+    classes: [cls],
+    students: ['s1', 's2', 's3', 's4', 's5'].map((id, i) => stu(id, '학생' + i)),
+    invoices: [
+      inv('i1', 's1', '완납', '2026-06-01'),
+      inv('i2', 's2', '완납', '2026-06-01'),
+      inv('i3', 's3', '환불', '2026-06-01'),
+      inv('i4', 's4', '미납', '2026-06-01'),
+      inv('i5', 's5', '미납', '2026-06-30'),
+    ],
+    payments: [
+      pay('p1', 'i1', 's1', '카드', 396000),
+      pay('p2', 'i2', 's2', '현금', 396000),
+      pay('p3', 'i3', 's3', '카드', -396000),
+    ],
+  };
+  const rows = buildRows('2026-06', TODAY, data);
+
+  it('완납 탭은 완납+환불을 포함한다', () => {
+    expect(rowsForTab(rows, '완납')).toHaveLength(3);
+  });
+  it('미납 탭은 미납만', () => {
+    expect(rowsForTab(rows, '미납')).toHaveLength(1);
+  });
+  it('예정 탭은 예정만', () => {
+    expect(rowsForTab(rows, '예정')).toHaveLength(1);
+  });
+  it('완납 탭 요약: 양수 합계와 환불 분리', () => {
+    const s = tabSummary(rowsForTab(rows, '완납'));
+    expect(s.count).toBe(3);
+    expect(s.total).toBe(792000);
+    expect(s.refund).toBe(-396000);
+  });
+  it('미납 탭 요약: 대상금액 합, 환불 0', () => {
+    const s = tabSummary(rowsForTab(rows, '미납'));
+    expect(s.count).toBe(1);
+    expect(s.total).toBe(396000);
+    expect(s.refund).toBe(0);
   });
 });
