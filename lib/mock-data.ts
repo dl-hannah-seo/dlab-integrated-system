@@ -60,14 +60,48 @@ export const classGroups: ClassGroup[] = [
   { id: 'cg-08', campus_id: 'campus-001', semester_id: 'sem-02', year: 2025, season: '봄학기', day_group: '토', time_slot: '1000' },
 ];
 
+// ── 과목 마스터 ───────────────────────────────────────────────
+export interface Subject {
+  id: string;
+  name: string;
+  order?: number;
+}
+
+export const subjects: Subject[] = [
+  { id: 'sub-python',  name: '파이썬',   order: 1 },
+  { id: 'sub-arduino', name: '아두이노', order: 2 },
+  { id: 'sub-custom',  name: '맞춤수업', order: 3 },
+  { id: 'sub-scratch', name: '스크래치', order: 4 },
+];
+
+// ── 강사 ──────────────────────────────────────────────────────
+export interface Teacher {
+  id: string;
+  campus_id: string;
+  name: string;
+  subject_ids: string[];         // 가르칠 수 있는 과목 = "강사 수준"
+  phone?: string;
+  status: '재직' | '휴직' | '퇴직';
+}
+
+export const teachers: Teacher[] = [
+  { id: 'tch-ron',   campus_id: 'campus-001', name: '론',   subject_ids: ['sub-python'],                status: '재직' },
+  { id: 'tch-seed',  campus_id: 'campus-001', name: '씨드', subject_ids: ['sub-python', 'sub-arduino'], status: '재직' },
+  { id: 'tch-ruth',  campus_id: 'campus-001', name: '루스', subject_ids: ['sub-custom'],                status: '재직' },
+  { id: 'tch-liam',  campus_id: 'campus-001', name: '리암', subject_ids: ['sub-python'],                status: '재직' },
+  { id: 'tch-hobin', campus_id: 'campus-001', name: '허빈', subject_ids: ['sub-custom', 'sub-arduino'], status: '재직' },
+];
+
 // ── 반 ──────────────────────────────────────────────────────
 export interface Class {
   id: string;
   campus_id: string;
   class_group_id: string;
   course: string;
+  subject_id: string;            // 과목 마스터 참조 (매칭 기준). course는 표시용 문자열로 유지.
   name: string;
   teacher: string;
+  teacher_id?: string;           // 강사 마스터 참조. teacher는 표시용 이름으로 유지.
   team_lead: string;
   capacity: number;
   semester_id?: string;
@@ -81,6 +115,7 @@ export interface Class {
   material_fee: number;
   content_fee: number;
   enrolled_count: number;
+  room?: string;                 // 고정 강의실 (반 배치도 열 — 자유 입력, 미입력 시 '미배정')
 }
 
 // ── 세션 (주차별 실제 수업 1회 — 정기 편성에서 파생 + 변동) ──────
@@ -100,74 +135,74 @@ export interface Session {
 export const classes: Class[] = [
   {
     id: 'cl-01', campus_id: 'campus-001', class_group_id: 'cg-01',
-    course: '파이썬 기초', name: '2026여름학기토0900/파이썬기초/론',
-    teacher: '론', team_lead: '케이', capacity: 15,
+    course: '파이썬 기초', subject_id: 'sub-python', name: '2026여름학기토0900/파이썬기초/론',
+    teacher: '론', teacher_id: 'tch-ron', team_lead: '케이', capacity: 15,
     start_date: '2026-06-07', end_date: '2026-08-30', weeks: 8,
     schedule: '토 09:00', payment_method: '매월', payment_due_day: 1,
-    tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 14,
+    tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 14, room: '1강의실',
   },
   {
     id: 'cl-02', campus_id: 'campus-001', class_group_id: 'cg-02',
-    course: '파이썬 기초', name: '2026여름학기토1000/파이썬기초/씨드',
-    teacher: '씨드', team_lead: '케이', capacity: 15,
+    course: '파이썬 기초', subject_id: 'sub-python', name: '2026여름학기토1000/파이썬기초/씨드',
+    teacher: '씨드', teacher_id: 'tch-seed', team_lead: '케이', capacity: 15,
     start_date: '2026-06-07', end_date: '2026-08-30', weeks: 8,
     schedule: '토 10:00', payment_method: '매월', payment_due_day: 1,
-    tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 15,
+    tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 15, room: '2강의실',
   },
   {
     id: 'cl-03', campus_id: 'campus-001', class_group_id: 'cg-03',
-    course: '맞춤수업', name: '2026여름학기토1100/맞춤수업/루스',
-    teacher: '루스', team_lead: '케이', capacity: 12,
+    course: '맞춤수업', subject_id: 'sub-custom', name: '2026여름학기토1100/맞춤수업/루스',
+    teacher: '루스', teacher_id: 'tch-ruth', team_lead: '케이', capacity: 12,
     start_date: '2026-06-07', end_date: '2026-08-30', weeks: 8,
     schedule: '토 11:00', payment_method: '일시', payment_due_day: 1,
-    tuition_fee: 220000, material_fee: 30000, content_fee: 0, enrolled_count: 11,
+    tuition_fee: 220000, material_fee: 30000, content_fee: 0, enrolled_count: 11, room: '1강의실',
   },
   {
     id: 'cl-04', campus_id: 'campus-001', class_group_id: 'cg-04',
-    course: '파이썬 기초', name: '2026여름학기화목1600/파이썬기초/리암',
-    teacher: '리암', team_lead: '케이', capacity: 18,
+    course: '파이썬 기초', subject_id: 'sub-python', name: '2026여름학기화목1600/파이썬기초/리암',
+    teacher: '리암', teacher_id: 'tch-liam', team_lead: '케이', capacity: 18,
     start_date: '2026-06-10', end_date: '2026-09-01', weeks: 8,
     schedule: '화·목 16:00', payment_method: '매월', payment_due_day: 1,
-    tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 18,
+    tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 18, room: '1강의실',
   },
   {
     id: 'cl-05', campus_id: 'campus-001', class_group_id: 'cg-05',
-    course: '맞춤수업', name: '2026여름학기화목1700/맞춤수업/허빈',
-    teacher: '허빈', team_lead: '케이', capacity: 18,
+    course: '맞춤수업', subject_id: 'sub-custom', name: '2026여름학기화목1700/맞춤수업/허빈',
+    teacher: '허빈', teacher_id: 'tch-hobin', team_lead: '케이', capacity: 18,
     start_date: '2026-06-10', end_date: '2026-09-01', weeks: 8,
     schedule: '화·목 17:00', payment_method: '매월', payment_due_day: 1,
-    tuition_fee: 220000, material_fee: 30000, content_fee: 0, enrolled_count: 16,
+    tuition_fee: 220000, material_fee: 30000, content_fee: 0, enrolled_count: 16, room: '2강의실',
   },
   {
     id: 'cl-06', campus_id: 'campus-001', class_group_id: 'cg-06',
-    course: '아두이노', name: '2026여름학기화목1800/아두이노/씨드',
-    teacher: '씨드', team_lead: '케이', capacity: 12,
+    course: '아두이노', subject_id: 'sub-arduino', name: '2026여름학기화목1800/아두이노/씨드',
+    teacher: '씨드', teacher_id: 'tch-seed', team_lead: '케이', capacity: 12,
     start_date: '2026-06-10', end_date: '2026-09-01', weeks: 8,
     schedule: '화·목 18:00', payment_method: '일시', payment_due_day: 1,
-    tuition_fee: 200000, material_fee: 50000, content_fee: 30000, enrolled_count: 4,
+    tuition_fee: 200000, material_fee: 50000, content_fee: 30000, enrolled_count: 4, room: '3강의실',
   },
   // 토 10:00 동시간대 2개 반 (한 칸 누적 표시 예시) — cg-09
   {
     id: 'cl-09', campus_id: 'campus-001', class_group_id: 'cg-09',
-    course: '아두이노', name: '2026여름학기토1000/아두이노/허빈',
-    teacher: '허빈', team_lead: '케이', capacity: 12,
+    course: '아두이노', subject_id: 'sub-arduino', name: '2026여름학기토1000/아두이노/허빈',
+    teacher: '허빈', teacher_id: 'tch-hobin', team_lead: '케이', capacity: 12,
     start_date: '2026-06-07', end_date: '2026-08-30', weeks: 8,
     schedule: '토 10:00', payment_method: '일시', payment_due_day: 1,
-    tuition_fee: 200000, material_fee: 50000, content_fee: 30000, enrolled_count: 7,
+    tuition_fee: 200000, material_fee: 50000, content_fee: 30000, enrolled_count: 7, room: '3강의실',
   },
   // ── 2025 봄 (종강) — 과거 수강 이력용 ──
   {
     id: 'cl-07', campus_id: 'campus-001', class_group_id: 'cg-07', semester_id: 'sem-02',
-    course: '파이썬 기초', name: '2025봄학기토0900/파이썬기초/씨드',
-    teacher: '씨드', team_lead: '케이', capacity: 15,
+    course: '파이썬 기초', subject_id: 'sub-python', name: '2025봄학기토0900/파이썬기초/씨드',
+    teacher: '씨드', teacher_id: 'tch-seed', team_lead: '케이', capacity: 15,
     start_date: '2025-03-08', end_date: '2025-06-28', weeks: 16,
     schedule: '토 09:00', payment_method: '매월', payment_due_day: 1,
     tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 0,
   },
   {
     id: 'cl-08', campus_id: 'campus-001', class_group_id: 'cg-08', semester_id: 'sem-02',
-    course: '맞춤수업', name: '2025봄학기토1000/맞춤수업/루스',
-    teacher: '루스', team_lead: '케이', capacity: 15,
+    course: '맞춤수업', subject_id: 'sub-custom', name: '2025봄학기토1000/맞춤수업/루스',
+    teacher: '루스', teacher_id: 'tch-ruth', team_lead: '케이', capacity: 15,
     start_date: '2025-03-08', end_date: '2025-06-28', weeks: 16,
     schedule: '토 10:00', payment_method: '매월', payment_due_day: 1,
     tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 0,
@@ -230,6 +265,10 @@ export interface Student {
   sibling_ids?: string[];      // 재원형제
   virtual_account?: string;    // 가상계좌
   scholarship_type?: string;   // 장학유형
+  // ── 현금영수증 발행정보 (원생별 고정 참조값) ──
+  cash_receipt_enabled?: boolean;                       // 발행 / 미발행
+  cash_receipt_purpose?: '소득공제용' | '지출증빙용';   // 용도 (발행 시)
+  cash_receipt_number?: string;                         // 발행 대상 번호 (휴대폰·사업자번호 등)
 }
 
 export interface Guardian {
@@ -250,8 +289,8 @@ function makePhone(last4: string) { return `010-${last4.slice(0, 4)}-${last4.sli
 // 78명 학생 데이터
 export const students: Student[] = [
   // ── 토 09:00반 (cl-01) 14명 ──
-  { id: 's-01', campus_id: 'campus-001', name: '김민준', grade: '초5', school: '강남초', parent_phone: '010-1234-5678', student_phone: '010-9876-5432', status: '재원', first_enrolled_at: '2025-01-10', source: '지인소개', points: 1240, class_id: 'cl-01', streak: 12, title: '스트릭 마스터' },
-  { id: 's-02', campus_id: 'campus-001', name: '이서연', grade: '초6', school: '대치초', parent_phone: '010-2345-6789', student_phone: '', status: '재원', first_enrolled_at: '2025-03-02', source: '인스타그램', points: 980, class_id: 'cl-01', streak: 8, title: '성실한 예비 모험가' },
+  { id: 's-01', campus_id: 'campus-001', name: '김민준', grade: '초5', school: '강남초', parent_phone: '010-1234-5678', student_phone: '010-9876-5432', status: '재원', first_enrolled_at: '2025-01-10', source: '지인소개', points: 1240, class_id: 'cl-01', streak: 12, title: '스트릭 마스터', cash_receipt_enabled: true, cash_receipt_purpose: '소득공제용', cash_receipt_number: '010-1234-5678' },
+  { id: 's-02', campus_id: 'campus-001', name: '이서연', grade: '초6', school: '대치초', parent_phone: '010-2345-6789', student_phone: '', status: '재원', first_enrolled_at: '2025-03-02', source: '인스타그램', points: 980, class_id: 'cl-01', streak: 8, title: '성실한 예비 모험가', cash_receipt_enabled: true, cash_receipt_purpose: '지출증빙용', cash_receipt_number: '123-45-67890' },
   { id: 's-03', campus_id: 'campus-001', name: '박지호', grade: '초4', school: '수서초', parent_phone: '010-3456-7890', student_phone: '', status: '재원', first_enrolled_at: '2026-01-15', source: '블로그', points: 540, class_id: 'cl-01', streak: 3, title: '꾸준한 학습자' },
   { id: 's-04', campus_id: 'campus-001', name: '최수아', grade: '초5', school: '강남초', parent_phone: '010-4567-8901', student_phone: '', status: '재원', first_enrolled_at: '2025-07-20', source: '학교안내', points: 820, class_id: 'cl-01', streak: 6, title: '열정 코더' },
   { id: 's-05', campus_id: 'campus-001', name: '정도현', grade: '초6', school: '개포초', parent_phone: '010-5678-9012', student_phone: '', status: '재원', first_enrolled_at: '2025-03-02', source: '현수막', points: 1560, class_id: 'cl-01', streak: 15, title: '출석왕' },
