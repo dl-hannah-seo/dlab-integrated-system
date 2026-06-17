@@ -21,21 +21,27 @@ export default function KioskPage() {
   const [points, setPoints] = useState(0);    // 활성 학생 누적 포인트 (출석 +30 반영)
   const [balance, setBalance] = useState(0);   // 활성 학생 사용 가능 포인트 (시연 차감)
   const [checkinTime, setCheckinTime] = useState('');
+  const [confirmed, setConfirmed] = useState('');   // 확인 버튼으로 조회한 4자리
 
   // 힌트 칩: 키오스크 코드(원본 전화 뒤 4자리)에서 고유값 3개
   const hintCodes = [...new Set(students.map(s => kioskCodes[s.id]))].slice(0, 3);
 
-  // 번호를 누르는 즉시 코드가 일치(접두) 하는 학생 리스트를 오른쪽에 표시
-  const matches = digits.length > 0
+  // 4자리 입력 후 확인 버튼을 눌렀을 때만 일치 학생 리스트를 오른쪽에 표시
+  const matches = confirmed.length === 4
     ? students
-        .filter(s => kioskCodes[s.id].startsWith(digits))
+        .filter(s => kioskCodes[s.id] === confirmed)
         .sort((a, b) => a.name.localeCompare(b.name, 'ko'))
     : [];
 
   function press(key: string) {
+    setConfirmed('');   // 번호를 다시 만지면 이전 조회 결과는 닫는다
     if (key === 'clear') setDigits('');
     else if (key === 'back') setDigits(d => d.slice(0, -1));
     else if (digits.length < 4) setDigits(d => d + key);
+  }
+
+  function handleConfirm() {
+    if (digits.length === 4) setConfirmed(digits);
   }
 
   function checkIn(s: Student) {
@@ -242,11 +248,22 @@ export default function KioskPage() {
               className="h-16 rounded-xl text-xl font-bold text-white transition-all active:scale-95"
               style={{ background: 'var(--kiosk-orange)' }}>←</button>
           </div>
+
+          {/* 확인 버튼 — 4자리를 모두 입력해야 활성화 */}
+          <button onClick={handleConfirm} disabled={digits.length !== 4}
+            className="w-full h-14 mt-4 rounded-xl text-base font-extrabold transition-all active:scale-95"
+            style={{
+              background: digits.length === 4 ? 'var(--kiosk-orange)' : 'var(--kiosk-border)',
+              color: digits.length === 4 ? 'white' : 'var(--kiosk-muted)',
+              cursor: digits.length === 4 ? 'pointer' : 'not-allowed',
+            }}>
+            확인
+          </button>
         </div>
 
-        {/* 사이드 패널 */}
-        <div>
-          {digits.length === 0 ? (
+        {/* 사이드 패널 (상하 중앙 정렬) */}
+        <div className="h-full flex flex-col justify-center">
+          {!confirmed ? (
             <div className="rounded-3xl p-10 border flex flex-col items-center justify-center text-center min-h-[260px]"
               style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
               <div className="text-5xl kiosk-wave">👋</div>
