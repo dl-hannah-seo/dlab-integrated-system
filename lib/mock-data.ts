@@ -933,6 +933,57 @@ export function getClassMatrix(classId: string, records: Attendance[], maxSessio
   return { sessions, rows };
 }
 
+export interface AbsenceFocusEntry {
+  student: Student;
+  cls: Class;
+  absentCount: number;
+  countedSessions: number;
+  lastAbsentDate: string | null;
+}
+
+// 최근 maxSessions 회차(오늘 제외) 기준 학생별 결석 집계.
+// 결석 1회 이상만, 결석 횟수 내림차순(동률 시 최근 결석일 우선).
+export function getAbsenceFocusList(
+  records: Attendance[],
+  classIds: string[],
+  maxSessions = 8,
+): AbsenceFocusEntry[] {
+  const recByKey: Record<string, Attendance> = {};
+  records.forEach(r => { recByKey[`${r.session_id}:${r.student_id}`] = r; });
+
+  const entries: AbsenceFocusEntry[] = [];
+  classIds.forEach(classId => {
+    const cls = classes.find(c => c.id === classId);
+    if (!cls) return;
+    const sessions = sessionHistory
+      .filter(s => s.class_id === classId && s.session_date !== TODAY)
+      .sort((a, b) => a.session_date.localeCompare(b.session_date))
+      .slice(-maxSessions);
+    const classStudents = students.filter(s => s.class_id === classId);
+    classStudents.forEach(student => {
+      let absentCount = 0;
+      let lastAbsentDate: string | null = null;
+      sessions.forEach(session => {
+        const rec = recByKey[`${session.id}:${student.id}`];
+        if (rec?.status === 'absent') {
+          absentCount += 1;
+          if (!lastAbsentDate || session.session_date > lastAbsentDate) {
+            lastAbsentDate = session.session_date;
+          }
+        }
+      });
+      if (absentCount >= 1) {
+        entries.push({ student, cls, absentCount, countedSessions: sessions.length, lastAbsentDate });
+      }
+    });
+  });
+
+  return entries.sort((a, b) =>
+    b.absentCount - a.absentCount
+    || (b.lastAbsentDate ?? '').localeCompare(a.lastAbsentDate ?? ''),
+  );
+}
+
 // ── 교안 마켓플레이스 (LMS 스토어프론트) ──────────────────────
 export type LessonType = '교안' | '강의';
 export type LessonLevel = '입문' | '초급' | '중급';
