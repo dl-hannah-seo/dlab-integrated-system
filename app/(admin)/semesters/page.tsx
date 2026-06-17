@@ -40,7 +40,7 @@ export default function SemestersPage() {
 
   // 새 학기 폼
   const [formYear, setFormYear]               = useState(() => new Date().getFullYear());
-  const [formSeason, setFormSeason]           = useState('봄');
+  const [formSeason, setFormSeason]           = useState('봄학기');
   const [formCourses, setFormCourses]         = useState<string[]>([]);
   const [formCourseInput, setFormCourseInput] = useState('');
 
@@ -205,7 +205,7 @@ export default function SemestersPage() {
             <Input
               label="구분명"
               type="text"
-              placeholder="예: 여름, 1학기, 특강"
+              placeholder="예: 여름학기, 봄학기"
               value={formSeason}
               onChange={e => setFormSeason(e.target.value)}
             />
@@ -274,7 +274,7 @@ export default function SemestersPage() {
               <Input
                 label="구분명"
                 type="text"
-                placeholder="예: 여름, 1학기, 특강"
+                placeholder="예: 여름학기, 봄학기"
                 value={editSeason}
                 onChange={e => setEditSeason(e.target.value)}
               />

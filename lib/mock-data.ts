@@ -32,8 +32,8 @@ export interface Semester {
 }
 
 export const semesters: Semester[] = [
-  { id: 'sem-01', campus_id: 'campus-001', year: 2026, season: '여름', courses: ['파이썬 기초', '맞춤수업', '아두이노'] },
-  { id: 'sem-02', campus_id: 'campus-001', year: 2025, season: '봄', courses: ['파이썬 기초', '맞춤수업'] },
+  { id: 'sem-01', campus_id: 'campus-001', year: 2026, season: '여름학기', courses: ['파이썬 기초', '맞춤수업', '아두이노'] },
+  { id: 'sem-02', campus_id: 'campus-001', year: 2025, season: '봄학기', courses: ['파이썬 기초', '맞춤수업'] },
 ];
 
 // ── 반 그룹 (학기>시간>반 3단 계층) ─────────────────────────
@@ -48,16 +48,16 @@ export interface ClassGroup {
 }
 
 export const classGroups: ClassGroup[] = [
-  { id: 'cg-01', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름', day_group: '토', time_slot: '0900' },
-  { id: 'cg-02', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름', day_group: '토', time_slot: '1000' },
-  { id: 'cg-03', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름', day_group: '토', time_slot: '1100' },
-  { id: 'cg-04', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름', day_group: '화목', time_slot: '1600' },
-  { id: 'cg-05', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름', day_group: '화목', time_slot: '1700' },
-  { id: 'cg-06', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름', day_group: '화목', time_slot: '1800' },
+  { id: 'cg-01', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름학기', day_group: '토', time_slot: '0900' },
+  { id: 'cg-02', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름학기', day_group: '토', time_slot: '1000' },
+  { id: 'cg-03', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름학기', day_group: '토', time_slot: '1100' },
+  { id: 'cg-04', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름학기', day_group: '화목', time_slot: '1600' },
+  { id: 'cg-05', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름학기', day_group: '화목', time_slot: '1700' },
+  { id: 'cg-06', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름학기', day_group: '화목', time_slot: '1800' },
   // 토 10:00 동시간대 2개 반 (한 칸 누적 표시 예시)
-  { id: 'cg-09', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름', day_group: '토', time_slot: '1000' },
-  { id: 'cg-07', campus_id: 'campus-001', semester_id: 'sem-02', year: 2025, season: '봄', day_group: '토', time_slot: '0900' },
-  { id: 'cg-08', campus_id: 'campus-001', semester_id: 'sem-02', year: 2025, season: '봄', day_group: '토', time_slot: '1000' },
+  { id: 'cg-09', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름학기', day_group: '토', time_slot: '1000' },
+  { id: 'cg-07', campus_id: 'campus-001', semester_id: 'sem-02', year: 2025, season: '봄학기', day_group: '토', time_slot: '0900' },
+  { id: 'cg-08', campus_id: 'campus-001', semester_id: 'sem-02', year: 2025, season: '봄학기', day_group: '토', time_slot: '1000' },
 ];
 
 // ── 반 ──────────────────────────────────────────────────────
@@ -100,7 +100,7 @@ export interface Session {
 export const classes: Class[] = [
   {
     id: 'cl-01', campus_id: 'campus-001', class_group_id: 'cg-01',
-    course: '파이썬 기초', name: '2026여름토0900/파이썬기초/론',
+    course: '파이썬 기초', name: '2026여름학기토0900/파이썬기초/론',
     teacher: '론', team_lead: '케이', capacity: 15,
     start_date: '2026-06-07', end_date: '2026-08-30', weeks: 8,
     schedule: '토 09:00', payment_method: '매월', payment_due_day: 1,
@@ -108,7 +108,7 @@ export const classes: Class[] = [
   },
   {
     id: 'cl-02', campus_id: 'campus-001', class_group_id: 'cg-02',
-    course: '파이썬 기초', name: '2026여름토1000/파이썬기초/씨드',
+    course: '파이썬 기초', name: '2026여름학기토1000/파이썬기초/씨드',
     teacher: '씨드', team_lead: '케이', capacity: 15,
     start_date: '2026-06-07', end_date: '2026-08-30', weeks: 8,
     schedule: '토 10:00', payment_method: '매월', payment_due_day: 1,
@@ -116,7 +116,7 @@ export const classes: Class[] = [
   },
   {
     id: 'cl-03', campus_id: 'campus-001', class_group_id: 'cg-03',
-    course: '맞춤수업', name: '2026여름토1100/맞춤수업/루스',
+    course: '맞춤수업', name: '2026여름학기토1100/맞춤수업/루스',
     teacher: '루스', team_lead: '케이', capacity: 12,
     start_date: '2026-06-07', end_date: '2026-08-30', weeks: 8,
     schedule: '토 11:00', payment_method: '일시', payment_due_day: 1,
@@ -124,7 +124,7 @@ export const classes: Class[] = [
   },
   {
     id: 'cl-04', campus_id: 'campus-001', class_group_id: 'cg-04',
-    course: '파이썬 기초', name: '2026여름화목1600/파이썬기초/리암',
+    course: '파이썬 기초', name: '2026여름학기화목1600/파이썬기초/리암',
     teacher: '리암', team_lead: '케이', capacity: 18,
     start_date: '2026-06-10', end_date: '2026-09-01', weeks: 8,
     schedule: '화·목 16:00', payment_method: '매월', payment_due_day: 1,
@@ -132,7 +132,7 @@ export const classes: Class[] = [
   },
   {
     id: 'cl-05', campus_id: 'campus-001', class_group_id: 'cg-05',
-    course: '맞춤수업', name: '2026여름화목1700/맞춤수업/허빈',
+    course: '맞춤수업', name: '2026여름학기화목1700/맞춤수업/허빈',
     teacher: '허빈', team_lead: '케이', capacity: 18,
     start_date: '2026-06-10', end_date: '2026-09-01', weeks: 8,
     schedule: '화·목 17:00', payment_method: '매월', payment_due_day: 1,
@@ -140,7 +140,7 @@ export const classes: Class[] = [
   },
   {
     id: 'cl-06', campus_id: 'campus-001', class_group_id: 'cg-06',
-    course: '아두이노', name: '2026여름화목1800/아두이노/씨드',
+    course: '아두이노', name: '2026여름학기화목1800/아두이노/씨드',
     teacher: '씨드', team_lead: '케이', capacity: 12,
     start_date: '2026-06-10', end_date: '2026-09-01', weeks: 8,
     schedule: '화·목 18:00', payment_method: '일시', payment_due_day: 1,
@@ -149,7 +149,7 @@ export const classes: Class[] = [
   // 토 10:00 동시간대 2개 반 (한 칸 누적 표시 예시) — cg-09
   {
     id: 'cl-09', campus_id: 'campus-001', class_group_id: 'cg-09',
-    course: '아두이노', name: '2026여름토1000/아두이노/허빈',
+    course: '아두이노', name: '2026여름학기토1000/아두이노/허빈',
     teacher: '허빈', team_lead: '케이', capacity: 12,
     start_date: '2026-06-07', end_date: '2026-08-30', weeks: 8,
     schedule: '토 10:00', payment_method: '일시', payment_due_day: 1,
@@ -158,7 +158,7 @@ export const classes: Class[] = [
   // ── 2025 봄 (종강) — 과거 수강 이력용 ──
   {
     id: 'cl-07', campus_id: 'campus-001', class_group_id: 'cg-07', semester_id: 'sem-02',
-    course: '파이썬 기초', name: '2025봄토0900/파이썬기초/씨드',
+    course: '파이썬 기초', name: '2025봄학기토0900/파이썬기초/씨드',
     teacher: '씨드', team_lead: '케이', capacity: 15,
     start_date: '2025-03-08', end_date: '2025-06-28', weeks: 16,
     schedule: '토 09:00', payment_method: '매월', payment_due_day: 1,
@@ -166,7 +166,7 @@ export const classes: Class[] = [
   },
   {
     id: 'cl-08', campus_id: 'campus-001', class_group_id: 'cg-08', semester_id: 'sem-02',
-    course: '맞춤수업', name: '2025봄토1000/맞춤수업/루스',
+    course: '맞춤수업', name: '2025봄학기토1000/맞춤수업/루스',
     teacher: '루스', team_lead: '케이', capacity: 15,
     start_date: '2025-03-08', end_date: '2025-06-28', weeks: 16,
     schedule: '토 10:00', payment_method: '매월', payment_due_day: 1,

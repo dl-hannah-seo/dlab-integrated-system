@@ -59,7 +59,7 @@ export interface FilterOptions {
   status?: StatusFilter;
   studentName?: string;
   className?: string;
-  /** classes 페이지와 동일한 그룹명 형식: "{year}년 {season}" (예: "2026년 여름") */
+  /** classes 페이지와 동일한 그룹명 형식: "{year}년 {season}" (예: "2026년 여름학기") */
   groupName?: string;
   paymentMethod?: string;
   dateFrom?: string;

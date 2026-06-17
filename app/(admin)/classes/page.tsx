@@ -29,7 +29,7 @@ export default function ClassesPage() {
   const [localSemesters, setLocalSemesters] = useState<Semester[]>(mockSemesters);
 
   const [filterActive, setFilterActive] = useState(true);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({ '2026년 여름': true });
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({ '2026년 여름학기': true });
 
   const [showCreate, setShowCreate]     = useState(false);
   const [showClone, setShowClone]       = useState(false);
@@ -724,13 +724,13 @@ export default function ClassesPage() {
               label="복제 원본"
               value={cloneFrom}
               onChange={e => setCloneFrom(e.target.value)}
-              options={localSemesters.map(s => ({ value: s.id, label: `${s.year}년 ${s.season}학기` }))}
+              options={localSemesters.map(s => ({ value: s.id, label: `${s.year}년 ${s.season}` }))}
             />
             <Select
               label="복제 대상"
               value={cloneTo}
               onChange={e => setCloneTo(e.target.value)}
-              options={localSemesters.map(s => ({ value: s.id, label: `${s.year}년 ${s.season}학기` }))}
+              options={localSemesters.map(s => ({ value: s.id, label: `${s.year}년 ${s.season}` }))}
             />
           </div>
           <Input label="복제 후 수강 시작일" type="date" value={cloneStart} onChange={e => setCloneStart(e.target.value)} />
@@ -780,7 +780,7 @@ export default function ClassesPage() {
                 <Input
                   label="구분명"
                   type="text"
-                  placeholder="예: 여름, 1학기, 특강"
+                  placeholder="예: 여름학기, 봄학기"
                   value={editNewSeason}
                   onChange={e => setEditNewSeason(e.target.value)}
                 />
@@ -870,7 +870,7 @@ export default function ClassesPage() {
             <Input
               label="구분명"
               type="text"
-              placeholder="예: 여름, 1학기, 특강"
+              placeholder="예: 여름학기, 봄학기"
               value={editSemSeason}
               onChange={e => setEditSemSeason(e.target.value)}
             />
