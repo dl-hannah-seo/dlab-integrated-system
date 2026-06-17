@@ -55,7 +55,7 @@ const adminNav: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { openAttendance, openSms } = useQuickActions();
+  const { openAttendance, openSms, openRecording } = useQuickActions();
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-60 bg-[#F7F7F5] border-r border-[#E9E9E7] flex flex-col z-10">
@@ -140,6 +140,17 @@ export function Sidebar() {
               </svg>
             </span>
             문자 발송
+          </button>
+          <button
+            onClick={openRecording}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-[#37352F] hover:bg-[#FFF1EC] hover:text-[#FF6C37] transition-colors group"
+          >
+            <span className="text-[#787774] group-hover:text-[#FF6C37]">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-14 0m7 7v3m0-3a4 4 0 01-4-4V7a4 4 0 118 0v4a4 4 0 01-4 4z" />
+              </svg>
+            </span>
+            AI 녹음
           </button>
         </div>
 

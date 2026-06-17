@@ -38,7 +38,7 @@ function fmtMoney(n: number) {
 }
 
 export default function DashboardPage() {
-  const { openAttendance, openSms } = useQuickActions();
+  const { openAttendance, openSms, openRecording } = useQuickActions();
 
   // 오늘 수업 (현재 학기 + 오늘 요일)
   const todayClasses = classes.filter(
@@ -141,6 +141,15 @@ export default function DashboardPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                 </svg>
                 문자 발송
+              </button>
+              <button
+                onClick={openRecording}
+                className="flex flex-1 items-center justify-center gap-2 rounded-md bg-white px-3 py-2.5 text-sm font-medium text-[#37352F] shadow-sm transition-colors hover:bg-[#FFF8F5]"
+              >
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#FF6C37" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-14 0m7 7v3m0-3a4 4 0 01-4-4V7a4 4 0 118 0v4a4 4 0 01-4 4z" />
+                </svg>
+                AI 녹음
               </button>
             </div>
           </div>
