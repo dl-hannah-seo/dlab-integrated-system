@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { classes, classGroups, semesters as mockSemesters, students, enrollments, Class, Semester, Enrollment } from '@/lib/mock-data';
+import { classes, classGroups, semesters as mockSemesters, students, enrollments, subjects, teachers, Class, Semester, Enrollment } from '@/lib/mock-data';
+import { eligibleTeachers } from '@/lib/teacher-matching';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
@@ -42,9 +43,10 @@ export default function ClassesPage() {
   const [createNewSeason, setCreateNewSeason] = useState('');
   const [createDays, setCreateDays]           = useState<string[]>([]);
   const [createTime, setCreateTime]           = useState('09:00');
-  const [createCourse, setCreateCourse]       = useState('');
-  const [createTeacher, setCreateTeacher]     = useState('');
+  const [createSubjectId, setCreateSubjectId] = useState('');
+  const [createTeacherId, setCreateTeacherId] = useState('');
   const [createTeamLead, setCreateTeamLead]   = useState('');
+  const [createRoom, setCreateRoom]           = useState('');
   const [createCapacity, setCreateCapacity]   = useState(15);
   const [createStart, setCreateStart]         = useState('');
   const [createEnd, setCreateEnd]             = useState('');
@@ -64,6 +66,7 @@ export default function ClassesPage() {
   const [editCourse, setEditCourse]       = useState('');
   const [editTeacher, setEditTeacher]     = useState('');
   const [editTeamLead, setEditTeamLead]   = useState('');
+  const [editRoom, setEditRoom]           = useState('');
   const [editCapacity, setEditCapacity]   = useState(15);
   const [editStart, setEditStart]         = useState('');
   const [editEnd, setEditEnd]             = useState('');
@@ -163,7 +166,10 @@ export default function ClassesPage() {
   const resolvedCreate = createSemId === '__new__'
     ? { year: createNewYear, season: createNewSeason }
     : (() => { const s = localSemesters.find(x => x.id === createSemId); return { year: s?.year ?? createNewYear, season: s?.season ?? '' }; })();
-  const autoName      = buildAutoName(resolvedCreate.year, resolvedCreate.season, createDays, createTime, createCourse, createTeacher);
+  const createSubjectName = subjects.find(s => s.id === createSubjectId)?.name ?? '';
+  const createTeacherName = teachers.find(t => t.id === createTeacherId)?.name ?? '';
+  const createEligibleTeachers = eligibleTeachers(createSubjectId, teachers);
+  const autoName      = buildAutoName(resolvedCreate.year, resolvedCreate.season, createDays, createTime, createSubjectName, createTeacherName);
   const computedWeeks = computeWeeks(createStart, createEnd);
 
   function toggleDay(day: string) {
@@ -183,7 +189,7 @@ export default function ClassesPage() {
   }
 
   function handleCreateClass() {
-    if (createDays.length === 0 || !createCourse || !createTeacher || !createTeamLead) return;
+    if (createDays.length === 0 || !createSubjectId || !createTeacherId || !createTeamLead) return;
 
     let sem = createSemId !== '__new__'
       ? localSemesters.find(s => s.id === createSemId)
@@ -198,10 +204,13 @@ export default function ClassesPage() {
       campus_id: 'campus-001',
       class_group_id: `cg-new-${Date.now()}`,
       semester_id: sem.id,
-      course: createCourse,
+      course: createSubjectName,
+      subject_id: createSubjectId,
       name: autoName,
-      teacher: createTeacher,
+      teacher: createTeacherName,
+      teacher_id: createTeacherId,
       team_lead: createTeamLead,
+      room: createRoom.trim() || undefined,
       capacity: createCapacity,
       start_date: createStart,
       end_date: createEnd,
@@ -219,8 +228,8 @@ export default function ClassesPage() {
     setShowCreate(false);
     setCreateSemId(localSemesters[0]?.id ?? '__new__');
     setCreateNewYear(new Date().getFullYear()); setCreateNewSeason('');
-    setCreateDays([]); setCreateTime('09:00'); setCreateCourse('');
-    setCreateTeacher(''); setCreateTeamLead('');
+    setCreateDays([]); setCreateTime('09:00'); setCreateSubjectId('');
+    setCreateTeacherId(''); setCreateTeamLead(''); setCreateRoom('');
   }
 
   function openEdit(cls: Class) {
@@ -232,6 +241,7 @@ export default function ClassesPage() {
     setEditCourse(cls.course);
     setEditTeacher(cls.teacher);
     setEditTeamLead(cls.team_lead);
+    setEditRoom(cls.room ?? '');
     setEditCapacity(cls.capacity);
     setEditStart(cls.start_date);
     setEditEnd(cls.end_date);
@@ -262,6 +272,7 @@ export default function ClassesPage() {
       name: buildAutoName(resolvedEdit.year, resolvedEdit.season, editDays, editTime, editCourse, editTeacher),
       teacher: editTeacher,
       team_lead: editTeamLead,
+      room: editRoom.trim() || undefined,
       capacity: editCapacity,
       start_date: editStart,
       end_date: editEnd,
@@ -514,6 +525,7 @@ export default function ClassesPage() {
                 {[
                   { label: '담임', value: selectedClass.teacher },
                   { label: '팀장', value: selectedClass.team_lead },
+                  { label: '강의실', value: selectedClass.room || '미배정' },
                   { label: '수강 기간', value: `${selectedClass.start_date} ~ ${selectedClass.end_date}` },
                   { label: '납입기준일', value: `매월 ${selectedClass.payment_due_day}일` },
                   { label: '수납방식', value: selectedClass.payment_method },
@@ -550,7 +562,7 @@ export default function ClassesPage() {
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowCreate(false)}>취소</Button>
-            <Button onClick={handleCreateClass} disabled={createDays.length === 0 || !createCourse || !createTeacher || !createTeamLead}>
+            <Button onClick={handleCreateClass} disabled={createDays.length === 0 || !createSubjectId || !createTeacherId || !createTeamLead}>
               반 생성
             </Button>
           </>
@@ -612,23 +624,26 @@ export default function ClassesPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <Input label="시작 시간" type="time" value={createTime} onChange={e => setCreateTime(e.target.value)} />
-            <Input
-              label="과정"
-              type="text"
-              placeholder="예: 파이썬 기초"
-              value={createCourse}
-              onChange={e => setCreateCourse(e.target.value)}
+            <Select
+              label="과정(과목)"
+              value={createSubjectId}
+              onChange={e => { setCreateSubjectId(e.target.value); setCreateTeacherId(''); }}
+              options={[{ value: '', label: '과목 선택' }, ...subjects.map(s => ({ value: s.id, label: s.name }))]}
             />
           </div>
 
           {/* 담임 + 책임 연구원 */}
           <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="담임"
-              type="text"
-              placeholder="예: 메튜"
-              value={createTeacher}
-              onChange={e => setCreateTeacher(e.target.value)}
+            <Select
+              label="담임 강사"
+              value={createTeacherId}
+              onChange={e => setCreateTeacherId(e.target.value)}
+              disabled={!createSubjectId}
+              options={
+                !createSubjectId
+                  ? [{ value: '', label: '과목을 먼저 선택하세요' }]
+                  : [{ value: '', label: '강사 선택' }, ...createEligibleTeachers.map(t => ({ value: t.id, label: t.name }))]
+              }
             />
             <Input
               label="팀장"
@@ -638,6 +653,14 @@ export default function ClassesPage() {
               onChange={e => setCreateTeamLead(e.target.value)}
             />
           </div>
+
+          <Input
+            label="강의실"
+            type="text"
+            placeholder="예: 1강의실 (미입력 시 배치도에서 '미배정')"
+            value={createRoom}
+            onChange={e => setCreateRoom(e.target.value)}
+          />
 
           <div className={`rounded-lg px-4 py-3 border ${autoName ? 'bg-[#F0FDF4] border-[#0F7B6C]/20' : 'bg-[#F7F7F5] border-[#E9E9E7]'}`}>
             <p className="text-xs text-[#787774] mb-1">자동 생성 반명</p>
@@ -816,6 +839,14 @@ export default function ClassesPage() {
             <Input label="담임" type="text" value={editTeacher} onChange={e => setEditTeacher(e.target.value)} />
             <Input label="팀장" type="text" value={editTeamLead} onChange={e => setEditTeamLead(e.target.value)} />
           </div>
+
+          <Input
+            label="강의실"
+            type="text"
+            placeholder="예: 1강의실 (미입력 시 배치도에서 '미배정')"
+            value={editRoom}
+            onChange={e => setEditRoom(e.target.value)}
+          />
 
           <div className="grid grid-cols-3 gap-3">
             <Input label="정원" type="number" value={String(editCapacity)} onChange={e => setEditCapacity(Number(e.target.value))} suffix="명" />

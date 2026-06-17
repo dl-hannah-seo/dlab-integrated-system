@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { classes, classGroups, sessions, Class, ClassGroup, Session } from '@/lib/mock-data';
 import { koWeekday, addDays, weekDates, mondayOf, resolveWeekSessions, defaultWeekStart } from '@/lib/sessions';
+import { PlacementBoard } from '@/components/schedule/PlacementBoard';
 
 // ── 헬퍼 ────────────────────────────────────────────────────────
 // 고정 시간 축: 수업 유무와 무관하게 09:00~18:00 항상 표시
@@ -73,6 +74,7 @@ type Popover = { cls: Class; group: ClassGroup; session?: Session; top: number; 
 
 // ── 메인 ────────────────────────────────────────────────────────
 export default function SchedulePage() {
+  const [view, setView] = useState<'week' | 'board'>('week');
   const [selectedTeachers, setSelectedTeachers] = useState<Set<string>>(new Set());
   const [weekStart, setWeekStart] = useState<string | null>(null);
   const [slideDir, setSlideDir] = useState<'left' | 'right'>('right');
@@ -121,6 +123,30 @@ export default function SchedulePage() {
 
   return (
     <div onClick={() => setPopover(null)}>
+      {/* 뷰 토글 — 주간 보기 / 강의실별 배치(반 배치도) */}
+      <div className="mb-4 inline-flex rounded-lg border border-[#E9E9E7] bg-white p-0.5">
+        <button
+          onClick={() => setView('week')}
+          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+            view === 'week' ? 'bg-[#FFF1EC] text-[#FF6C37] font-medium' : 'text-[#787774] hover:text-[#37352F]'
+          }`}
+        >
+          주간 보기
+        </button>
+        <button
+          onClick={() => setView('board')}
+          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+            view === 'board' ? 'bg-[#FFF1EC] text-[#FF6C37] font-medium' : 'text-[#787774] hover:text-[#37352F]'
+          }`}
+        >
+          강의실별 배치
+        </button>
+      </div>
+
+      {view === 'board' ? (
+        <PlacementBoard />
+      ) : (
+      <>
       {/* 컨트롤 바 — Google Calendar 스타일 */}
       <div className="mb-4 flex items-center gap-2">
         {/* 오늘 + 주차 네비게이션 + 월 라벨 */}
@@ -205,6 +231,8 @@ export default function SchedulePage() {
       {/* 팝오버 */}
       {popover && (
         <ClassPopover popover={popover} onClose={() => setPopover(null)} />
+      )}
+      </>
       )}
     </div>
   );
