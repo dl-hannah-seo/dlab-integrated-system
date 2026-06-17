@@ -3,10 +3,15 @@
 import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { StatusPopover } from '@/components/attendance/StatusPopover';
+import { SmsComposeModal } from '@/components/attendance/SmsComposeModal';
+import { MakeupScheduleModal } from '@/components/attendance/MakeupScheduleModal';
 import {
   type Attendance,
   type AttendanceStatus,
   type Class,
+  type Student,
+  type ClassSession,
+  addMakeupSession,
   getClassMatrix,
   TODAY,
 } from '@/lib/mock-data';
@@ -33,6 +38,20 @@ export function ClassRecordModal({ cls, records, onClose, onEdit }: ClassRecordM
   const matrix = getClassMatrix(cls.id, records, 8);
   // 편집 중인 셀: `${sessionId}:${studentId}`
   const [editing, setEditing] = useState<string | null>(null);
+  // 결석 후속 액션(문자/보강) 대상
+  const [action, setAction] = useState<{ type: 'sms' | 'makeup'; student: Student; session: ClassSession } | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
+
+  function flashMsg(m: string) {
+    setFlash(m);
+    setTimeout(() => setFlash(null), 3000);
+  }
+
+  function scheduleMakeup(student: Student, session: ClassSession, date: string, time: string, memo: string) {
+    addMakeupSession(cls.id, date, time, memo || `${student.name} 보강 (${mmdd(session.session_date)}회차 결석)`);
+    onEdit(session.id, student.id, 'makeup', null);
+    flashMsg(`${student.name} 보강 일정(${mmdd(date)} ${time})을 등록했습니다.`);
+  }
 
   // 반 요약 (오늘 제외 회차의 출석률)
   const flat = matrix.rows.flatMap(r => r.cells.filter(c => c.session.session_date !== TODAY));
@@ -42,6 +61,11 @@ export function ClassRecordModal({ cls, records, onClose, onEdit }: ClassRecordM
 
   return (
     <Modal open onClose={onClose} size="xl" title={`${cls.schedule} ${cls.course} · 담당 ${cls.teacher}`}>
+      {flash && (
+        <div className="mb-3 rounded-md bg-[#EDF7F5] border border-[#0F7B6C]/30 px-3 py-2 text-xs text-[#0F7B6C]">
+          {flash}
+        </div>
+      )}
       <div className="flex items-center gap-4 mb-4 text-xs text-[#787774]">
         <span>평균 출석률 <b className="text-[#37352F]">{avgRate}%</b></span>
         <span>회차 {matrix.sessions.length}</span>
@@ -101,6 +125,8 @@ export function ClassRecordModal({ cls, records, onClose, onEdit }: ClassRecordM
                             setEditing(null);
                           }}
                           onClose={() => setEditing(null)}
+                          onRequestSms={() => { setAction({ type: 'sms', student: row.student, session: cell.session }); setEditing(null); }}
+                          onRequestMakeup={() => { setAction({ type: 'makeup', student: row.student, session: cell.session }); setEditing(null); }}
                         />
                       )}
                     </td>
@@ -111,6 +137,25 @@ export function ClassRecordModal({ cls, records, onClose, onEdit }: ClassRecordM
           </tbody>
         </table>
       </div>
+
+      {action?.type === 'sms' && (
+        <SmsComposeModal
+          student={action.student}
+          cls={cls}
+          session={action.session}
+          onClose={() => setAction(null)}
+          onSent={flashMsg}
+        />
+      )}
+      {action?.type === 'makeup' && (
+        <MakeupScheduleModal
+          student={action.student}
+          cls={cls}
+          session={action.session}
+          onClose={() => setAction(null)}
+          onConfirm={(date, time, memo) => scheduleMakeup(action.student, action.session, date, time, memo)}
+        />
+      )}
     </Modal>
   );
 }

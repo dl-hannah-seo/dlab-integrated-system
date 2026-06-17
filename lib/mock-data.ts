@@ -185,6 +185,22 @@ export const sessions: Session[] = [
   { id: 'ses-03', class_id: 'cl-03', date: '2026-07-11', start_time: '1300', type: '특강', memo: '여름 특강' },
 ];
 
+// 결석 보강 일정 등록(데모) — 보강 세션을 일정에 추가하고 그 세션을 반환.
+// start_time은 'HHMM' (Session 규약). 'HH:MM' 입력도 허용해 정규화한다.
+export function addMakeupSession(classId: string, date: string, startTime: string, memo: string): Session {
+  const hhmm = startTime.replace(':', '').padStart(4, '0').slice(0, 4);
+  const s: Session = {
+    id: `ses-mk-${classId}-${date}-${sessions.length + 1}`,
+    class_id: classId,
+    date,
+    start_time: hhmm,
+    type: '보강',
+    memo,
+  };
+  sessions.push(s);
+  return s;
+}
+
 // ── 학생 ──────────────────────────────────────────────────────
 export interface Student {
   id: string;
@@ -444,6 +460,26 @@ Object.entries(MULTI_CLASS_DEMO).forEach(([sid, extra]) => {
   });
 });
 
+// 종강반(2025 봄 맞춤수업 cl-08) 과거 수강 이력 — 재배정 학생 일부 (cl-07과 분산 배정)
+students.forEach(s => {
+  if (Number(s.first_enrolled_at.slice(0, 4)) < 2025 && hashString(s.id) % 2 === 0) {
+    enrollments.push({
+      id: `enr-${s.id}-prev2`, student_id: s.id, class_id: 'cl-08',
+      started_at: s.first_enrolled_at, ended_at: '2025-06-28', end_reason: '학기 종료',
+    });
+  }
+});
+
+// 현재 학기 추가 수강반(2026 여름 토1000 아두이노 cl-09) — 현재 학생 일부가 복수 수강
+students.forEach(s => {
+  if (hashString(s.id) % 7 === 0) {
+    enrollments.push({
+      id: `enr-${s.id}-c09`, student_id: s.id, class_id: 'cl-09',
+      started_at: '2026-06-07', ended_at: null, end_reason: null,
+    });
+  }
+});
+
 // ── 원생별 상담이력 ─────────────────────────────────────────
 export type ConsultMethod = '전화' | '대면' | '문자·카톡' | '기타';
 
@@ -463,6 +499,26 @@ export const consultations: Consultation[] = [
   { id: 'cons-s-02-1', student_id: 's-02', date: '2026-04-03', method: '문자·카톡', counselor: '박서준', content: '결석 후속 안내. 보강 일정 카톡으로 공유함.' },
 ];
 
+// 문자·상담 발송 기록(데모) — 보낸 문자를 상담이력에 남기고 그 기록을 반환.
+export function logConsultation(
+  studentId: string,
+  content: string,
+  date: string,
+  method: ConsultMethod = '문자·카톡',
+  counselor = '시스템',
+): Consultation {
+  const c: Consultation = {
+    id: `cons-${studentId}-log-${consultations.length + 1}`,
+    student_id: studentId,
+    date,
+    method,
+    counselor,
+    content,
+  };
+  consultations.push(c);
+  return c;
+}
+
 // 학생의 현재(진행 중) 수강 등록 — 등록시작일 표시·필터용
 export function getCurrentEnrollment(studentId: string) {
   const list = enrollments.filter(e => e.student_id === studentId);
@@ -472,6 +528,14 @@ export function getCurrentEnrollment(studentId: string) {
 // 학생의 모든 진행 중 수강 반 (복수 반)
 export function getActiveEnrollments(studentId: string) {
   return enrollments.filter(e => e.student_id === studentId && e.ended_at === null);
+}
+
+// 반 명단 — 현재 배정 학생 우선, 없으면(종강반 등) 수강 이력(enrollments)으로 구성
+export function getClassRoster(classId: string): Student[] {
+  const current = students.filter(s => s.class_id === classId);
+  if (current.length > 0) return current;
+  const ids = new Set(enrollments.filter(e => e.class_id === classId).map(e => e.student_id));
+  return students.filter(s => ids.has(s.id));
 }
 
 // ── 오늘 시범 회차 (시나리오 1 시연용) ────────────────────────
@@ -838,6 +902,37 @@ function buildAttendanceHistory(): { sessionHistory: ClassSession[]; attendanceH
     });
   });
 
+  // ── 종강반·추가 수강반 회차·출결 (상세 조회용, 오늘 회차 없음) ──
+  // cl-07·cl-08: 2025 봄학기(종강) 16주. cl-09: 2026 여름 추가 수강반(최근 흐름).
+  const EXTRA: { classId: string; dates: string[] }[] = [
+    { classId: 'cl-07', dates: Array.from({ length: 16 }, (_, i) => shiftDate('2025-03-08', 7 * i)) },
+    { classId: 'cl-08', dates: Array.from({ length: 16 }, (_, i) => shiftDate('2025-03-08', 7 * i)) },
+    { classId: 'cl-09', dates: Array.from({ length: HISTORY_WEEKS }, (_, i) => shiftDate(TODAY, -7 * (HISTORY_WEEKS - i))) },
+  ];
+  EXTRA.forEach(({ classId, dates }) => {
+    const roster = getClassRoster(classId);
+    dates.forEach((date, i) => {
+      const sessionId = `sh-${classId}-${i + 1}`;
+      pastSessions.push({
+        id: sessionId, class_id: classId, session_date: date,
+        start_time: classStartTime(classId), session_no: i + 1,
+      });
+      roster.forEach(s => {
+        const status = deriveHistStatus(s, i + 1);
+        records.push({
+          id: `ah-${sessionId}-${s.id}`,
+          session_id: sessionId,
+          enrollment_id: `enr-${s.id}`,
+          student_id: s.id,
+          status,
+          checked_in_at: status === 'attend' || status === 'makeup' ? `${date}T${classStartTime(classId)}:00` : null,
+          source: 'kiosk',
+          absence_reason: status === 'absent' ? '개인 사정' : null,
+        });
+      });
+    });
+  });
+
   // 오늘 회차(todaySessions)를 최신 컬럼으로 합침. 오늘 출결은 initialAttendance(cl-01)만 존재.
   const sessionHistory = [...pastSessions, ...todaySessions];
   return { sessionHistory, attendanceHistory: records };
@@ -920,7 +1015,7 @@ export function getClassMatrix(classId: string, records: Attendance[], maxSessio
     .filter(s => s.class_id === classId)
     .sort((a, b) => a.session_date.localeCompare(b.session_date))
     .slice(-maxSessions);
-  const classStudents = students.filter(s => s.class_id === classId);
+  const classStudents = getClassRoster(classId);
   const recByKey: Record<string, Attendance> = {};
   records.forEach(r => { recByKey[`${r.session_id}:${r.student_id}`] = r; });
   const rows: MatrixRow[] = classStudents.map(student => ({
