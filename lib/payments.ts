@@ -119,3 +119,36 @@ export function computeSummary(rows: PaymentRow[]): Summary {
 export function isUnpaidMode(status: StatusFilter): boolean {
   return status === '미납' || status === '예정';
 }
+
+export type TabKey = '미납' | '완납' | '예정';
+
+/** 납기일(dueDate)과 기준일(today, 'YYYY-MM-DD') 차이 일수. 납기 전이면 0. */
+export function daysOverdue(dueDate: string, today: string): number {
+  const due = new Date(dueDate + 'T00:00:00').getTime();
+  const ref = new Date(today + 'T00:00:00').getTime();
+  const diff = Math.floor((ref - due) / 86400000);
+  return diff > 0 ? diff : 0;
+}
+
+/** 탭별 행 필터: 미납 / 완납+환불 / 예정 */
+export function rowsForTab(rows: PaymentRow[], tab: TabKey): PaymentRow[] {
+  if (tab === '완납') return rows.filter(r => r.status === '완납' || r.status === '환불');
+  return rows.filter(r => r.status === tab);
+}
+
+export interface TabSummary {
+  count: number;
+  /** 양수 금액 합 (완납 수납액 또는 미납/예정 대상금액) */
+  total: number;
+  /** 음수 합 (환불). 없으면 0 */
+  refund: number;
+}
+
+export function tabSummary(rows: PaymentRow[]): TabSummary {
+  let total = 0, refund = 0;
+  for (const r of rows) {
+    if (r.amount < 0) refund += r.amount;
+    else total += r.amount;
+  }
+  return { count: rows.length, total, refund };
+}

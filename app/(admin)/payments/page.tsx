@@ -3,23 +3,29 @@
 import { useState, useMemo } from 'react';
 import { students, classes, classGroups, invoices, payments, Student } from '@/lib/mock-data';
 import {
-  buildRows, filterRows, computeSummary, isUnpaidMode,
-  fmt, classTotal, StatusFilter,
+  buildRows, filterRows, computeSummary, rowsForTab, tabSummary,
+  fmt, classTotal, TabKey,
 } from '@/lib/payments';
 import { PaymentList } from '@/components/payments/PaymentList';
-import { DonutChart } from '@/components/ui/DonutChart';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input, Select } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { Table } from '@/components/ui/Table';
+import { useQuickActions } from '@/components/panels/QuickActionsContext';
 
 const TODAY = '2026-06-16';
 
+const TAB_DEFS: { key: TabKey; label: string }[] = [
+  { key: '미납', label: '미납 현황' },
+  { key: '완납', label: '완납 현황' },
+  { key: '예정', label: '청구·예정' },
+];
+
 export default function PaymentsPage() {
   const [monthFilter, setMonthFilter] = useState('2026-06');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('전체');
+  const [tabKey, setTabKey] = useState<TabKey>('미납');
   const [studentName, setStudentName] = useState('');
   const [groupFilter, setGroupFilter] = useState('');
   const [classFilter, setClassFilter] = useState('');
@@ -30,14 +36,20 @@ export default function PaymentsPage() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [activeTab, setActiveTab] = useState('전체');
   const [showPayModal, setShowPayModal] = useState(false);
-  const [showMsgModal, setShowMsgModal] = useState(false);
   const [paySuccess, setPaySuccess] = useState(false);
+  const { openSms } = useQuickActions();
 
   const allRows = useMemo(
     () => buildRows(monthFilter, TODAY, { invoices, students, classes, payments }),
     [monthFilter],
   );
   const summary = useMemo(() => computeSummary(allRows), [allRows]);
+  const tabCounts: Record<TabKey, number> = {
+    미납: summary.counts.미납,
+    완납: summary.counts.완납 + summary.counts.환불,
+    예정: summary.counts.예정,
+  };
+
   const groupOptions = useMemo(() => {
     const seen = new Set<string>();
     const opts = [{ value: '', label: '전체 그룹' }];
@@ -60,14 +72,19 @@ export default function PaymentsPage() {
     return opts;
   }, [allRows]);
 
-  const rows = useMemo(
-    () => filterRows(allRows, { status: statusFilter, studentName, className: classFilter, groupName: groupFilter, paymentMethod: methodFilter, dateFrom, dateTo }, classGroups),
-    [allRows, statusFilter, studentName, classFilter, groupFilter, methodFilter, dateFrom, dateTo],
+  const filtered = useMemo(
+    () => filterRows(allRows, {
+      studentName,
+      className: classFilter,
+      groupName: groupFilter,
+      paymentMethod: tabKey === '완납' ? methodFilter : '',
+      dateFrom: tabKey === '완납' ? dateFrom : '',
+      dateTo: tabKey === '완납' ? dateTo : '',
+    }, classGroups),
+    [allRows, studentName, classFilter, groupFilter, methodFilter, dateFrom, dateTo, tabKey],
   );
-  const unpaidMode = isUnpaidMode(statusFilter);
-  const paymentRate = summary.counts['전체'] > 0
-    ? Math.round((summary.counts['완납'] / summary.counts['전체']) * 100)
-    : 0;
+  const rows = useMemo(() => rowsForTab(filtered, tabKey), [filtered, tabKey]);
+  const sum = useMemo(() => tabSummary(rows), [rows]);
 
   const studentInvoices = useMemo(
     () => (selectedStudent ? invoices.filter(inv => inv.student_id === selectedStudent.id) : []),
@@ -89,9 +106,19 @@ export default function PaymentsPage() {
       return n;
     });
   }
+  function toggleAll(checked: boolean) {
+    setSelectedIds(checked ? new Set(rows.map(r => r.student.id)) : new Set());
+  }
   function handlePay() {
     setPaySuccess(true);
     setTimeout(() => { setPaySuccess(false); setShowPayModal(false); }, 1200);
+  }
+  function sendSms(targets: Student[]) {
+    if (targets.length === 0) return;
+    openSms({
+      recipients: targets.map(s => ({ studentId: s.id, name: s.name, phone: s.parent_phone })),
+      template: 'unpaid',
+    });
   }
 
   const selectedCount = selectedIds.size;
@@ -104,100 +131,72 @@ export default function PaymentsPage() {
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-[#37352F]">수납 관리</h1>
-        <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 조건별 수납 조회 · 미납/예정 관리</p>
+        <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 조건별 수납 조회 · 미납자 문자 발송</p>
       </div>
 
-      {/* KPI 요약 */}
-      <div className="grid grid-cols-3 gap-4 mb-4">
-        <div className="bg-white border border-[#E9E9E7] rounded-lg px-4 py-3">
-          <p className="text-xs text-[#787774] mb-1">이번 달 총수납</p>
-          <p className="text-2xl font-bold text-[#37352F] tabular-nums leading-none">{fmt(summary.totalPaid)}</p>
-        </div>
-        <div className="bg-white border border-[#E9E9E7] rounded-lg px-4 py-3">
-          <p className="text-xs text-[#787774] mb-1">완납 금액</p>
-          <p className="text-2xl font-bold text-[#0F7B6C] tabular-nums leading-none">{fmt(summary.card + summary.cashBank)}</p>
-        </div>
-        <div className="bg-white border border-[#E9E9E7] rounded-lg px-4 py-3">
-          <p className="text-xs text-[#787774] mb-1">미수금</p>
-          <p className="text-2xl font-bold text-[#EB5757] tabular-nums leading-none">{fmt(summary.unpaidTotal)}</p>
-        </div>
+      {/* 탭바 */}
+      <div className="flex gap-1 border-b border-[#E9E9E7] mb-4">
+        {TAB_DEFS.map(t => (
+          <button
+            key={t.key}
+            onClick={() => { setTabKey(t.key); setSelectedIds(new Set()); setSelectedStudent(null); }}
+            className={`px-4 py-2.5 text-sm -mb-px border-b-2 transition-colors ${tabKey === t.key ? 'border-[#FF6C37] text-[#FF6C37] font-semibold' : 'border-transparent text-[#787774] hover:text-[#37352F]'}`}
+          >
+            {t.label} <span className="tabular-nums">({tabCounts[t.key]})</span>
+          </button>
+        ))}
       </div>
-
-      {/* 수납 완료율 */}
-      {summary.counts['전체'] > 0 && (
-        <div className="bg-white border border-[#E9E9E7] rounded-lg px-5 py-4 mb-4">
-          <p className="text-sm font-semibold text-[#37352F] mb-3">
-            수납 완료율 <span className="text-[#FF6C37]">{paymentRate}%</span>
-          </p>
-          <DonutChart
-            slices={[
-              { label: '완납', amount: summary.counts['완납'], color: '#FF6C37' },
-              { label: '미납·예정', amount: summary.counts['미납'] + summary.counts['예정'], color: '#E9E9E7' },
-            ]}
-            size={120}
-          />
-          <p className="text-xs text-[#787774] mt-3 tabular-nums">
-            {summary.counts['완납']}명 완납 / {summary.counts['전체']}명 전체
-          </p>
-        </div>
-      )}
 
       {/* 필터 */}
-      <div className="bg-[#F7F7F5] border border-[#E9E9E7] rounded-lg p-3 mb-4 space-y-2">
-        <div className="flex gap-2 flex-wrap">
+      <div className="bg-white border border-[#E9E9E7] rounded-lg p-3 mb-4 space-y-2">
+        <div className="flex gap-2 flex-wrap items-center">
           <Input type="month" value={monthFilter} onChange={e => setMonthFilter(e.target.value)} className="w-36" />
           <Input placeholder="학생 이름" value={studentName} onChange={e => setStudentName(e.target.value)} className="w-36" />
           <Select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} options={groupOptions} className="w-36" />
           <Select value={classFilter} onChange={e => setClassFilter(e.target.value)} options={classOptions} className="w-56" />
-          <Select
-            value={statusFilter}
-            onChange={e => { setStatusFilter(e.target.value as StatusFilter); setSelectedIds(new Set()); }}
-            options={[
-              { value: '전체', label: '전체 상태' },
-              { value: '완납', label: '완납' },
-              { value: '미납', label: '미납' },
-              { value: '예정', label: '예정' },
-              { value: '환불', label: '환불' },
-            ]}
-            className="w-28"
-          />
-          <Select
-            value={methodFilter}
-            onChange={e => setMethodFilter(e.target.value)}
-            options={[
-              { value: '', label: '전체 결제수단' },
-              { value: '카드', label: '카드' },
-              { value: '현금', label: '현금' },
-              { value: '계좌이체', label: '계좌이체' },
-              { value: 'PG', label: 'PG' },
-            ]}
-            className="w-36"
-          />
-        </div>
-        <div className="flex gap-2 items-center flex-wrap">
-          <span className="text-xs text-[#787774] shrink-0">수납일</span>
-          <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-36" />
-          <span className="text-xs text-[#787774]">~</span>
-          <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-36" />
-          <span className="ml-auto text-sm text-[#787774]">{rows.length}건</span>
-          {unpaidMode ? (
-            <>
-              <Button size="sm" disabled={selectedCount === 0}
-                onClick={() => alert(`[발송 미리보기] 선택 ${selectedCount}명에게 결제 안내 문자를 발송합니다.`)}>
-                일괄 문자{selectedCount > 0 ? ` (${selectedCount})` : ''}
-              </Button>
-              <Button size="sm" variant="secondary" disabled={selectedCount === 0}
-                onClick={() => alert(`[인쇄 미리보기] 선택 ${selectedCount}명 교육회비통지서를 인쇄합니다.`)}>
-                통지서 인쇄
-              </Button>
-            </>
-          ) : (
-            <Button size="sm" variant="secondary"
-              onClick={() => alert('[엑셀 미리보기] 현재 목록을 엑셀로 저장합니다.')}>
-              엑셀 저장
-            </Button>
+          {tabKey === '완납' && (
+            <Select
+              value={methodFilter}
+              onChange={e => setMethodFilter(e.target.value)}
+              options={[
+                { value: '', label: '전체 결제수단' },
+                { value: '카드', label: '카드' },
+                { value: '현금', label: '현금' },
+                { value: '계좌이체', label: '계좌이체' },
+                { value: 'PG', label: 'PG' },
+              ]}
+              className="w-36"
+            />
           )}
         </div>
+        {tabKey === '완납' && (
+          <div className="flex gap-2 items-center flex-wrap">
+            <span className="text-xs text-[#787774] shrink-0">수납일</span>
+            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-36" />
+            <span className="text-xs text-[#787774]">~</span>
+            <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-36" />
+          </div>
+        )}
+      </div>
+
+      {/* 요약줄 */}
+      <div className="flex items-center justify-between mb-3 px-1">
+        <p className="text-sm text-[#787774]">
+          <span className="font-semibold text-[#37352F] tabular-nums">{sum.count}건</span>
+          {tabKey === '미납' && <> · 미납 합계 <span className="font-semibold text-[#EB5757] tabular-nums">{fmt(sum.total)}</span></>}
+          {tabKey === '완납' && (
+            <> · 수납 합계 <span className="font-semibold text-[#0F7B6C] tabular-nums">{fmt(sum.total)}</span>
+              {sum.refund < 0 && <span className="text-[#7C5CFF] tabular-nums"> (환불 {fmt(sum.refund)} 포함)</span>}
+            </>
+          )}
+          {tabKey === '예정' && <> · 예정 합계 <span className="font-semibold text-[#37352F] tabular-nums">{fmt(sum.total)}</span></>}
+        </p>
+        {tabKey === '미납' && (
+          <Button size="sm" disabled={selectedCount === 0}
+            onClick={() => sendSms(rows.filter(r => selectedIds.has(r.student.id)).map(r => r.student))}>
+            일괄 문자{selectedCount > 0 ? ` (${selectedCount})` : ''}
+          </Button>
+        )}
       </div>
 
       {selectedStudent ? (
@@ -248,7 +247,7 @@ export default function PaymentsPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="secondary" onClick={() => setShowMsgModal(true)}>결제 문자</Button>
+                  <Button size="sm" variant="secondary" onClick={() => sendSms([selectedStudent])}>결제 문자</Button>
                   <Button size="sm" variant="secondary"
                     onClick={() => alert(`[인쇄 미리보기] ${selectedStudent.name} 납입증명서를 인쇄합니다.`)}>
                     납입증명서 인쇄
@@ -357,13 +356,16 @@ export default function PaymentsPage() {
           </div>
         </div>
       ) : (
-        /* ── 현황 모드: 이중 목록 ── */
+        /* ── 현황 모드: 탭별 목록 ── */
         <PaymentList
           rows={rows}
-          mode={unpaidMode ? 'unpaid' : 'paid'}
+          tab={tabKey}
+          today={TODAY}
           selectedIds={selectedIds}
           onToggle={toggleId}
+          onToggleAll={toggleAll}
           onRowClick={r => setSelectedStudent(r.student)}
+          onSendMessage={r => sendSms([r.student])}
         />
       )}
 
@@ -379,7 +381,7 @@ export default function PaymentsPage() {
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <Input label="수강년월" type="month" defaultValue={monthFilter} />
-            <Input label="수납일자" type="date" defaultValue={new Date().toISOString().slice(0, 10)} />
+            <Input label="수납일자" type="date" defaultValue={TODAY} />
           </div>
           <div className="bg-[#F7F7F5] rounded-lg px-3 py-2 text-sm text-[#37352F]">
             <span className="text-xs text-[#787774] mr-2">수강기간</span>
@@ -408,7 +410,7 @@ export default function PaymentsPage() {
             <div className="bg-[#F7F7F5] border border-[#E9E9E7] rounded-lg px-3 py-2">
               <p className="text-xs text-[#787774] mb-0.5">누적수납</p>
               <p className="text-sm font-bold text-[#37352F] tabular-nums">
-                {fmt(studentPayments.reduce((sum, p) => sum + p.amount, 0))}
+                {fmt(studentPayments.reduce((s, p) => s + p.amount, 0))}
               </p>
             </div>
           </div>
@@ -432,11 +434,11 @@ export default function PaymentsPage() {
             <p className="text-xs font-medium text-[#37352F] mb-1.5">현금영수증</p>
             <div className="flex gap-4">
               <label className="flex items-center gap-1.5 text-sm text-[#37352F] cursor-pointer">
-                <input type="radio" name="cash_receipt" value="발행" defaultChecked className="accent-[#FF6C37]" />
+                <input type="radio" name="cash_receipt" value="발행" defaultChecked className="accent-[#FF6C37] w-4 h-4" />
                 발행
               </label>
               <label className="flex items-center gap-1.5 text-sm text-[#37352F] cursor-pointer">
-                <input type="radio" name="cash_receipt" value="미발행" className="accent-[#FF6C37]" />
+                <input type="radio" name="cash_receipt" value="미발행" className="accent-[#FF6C37] w-4 h-4" />
                 미발행
               </label>
             </div>
@@ -447,20 +449,6 @@ export default function PaymentsPage() {
               ✓ 수납 처리 완료. 청구서 상태가 완납으로 변경됩니다.
             </div>
           )}
-        </div>
-      </Modal>
-
-      {/* 결제 문자 모달 */}
-      <Modal open={showMsgModal} onClose={() => setShowMsgModal(false)} title={`결제 URL 문자 발송 — ${selectedStudent?.name}`}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setShowMsgModal(false)}>취소</Button>
-            <Button onClick={() => { setShowMsgModal(false); alert(`[발송 미리보기] ${selectedStudent?.name} 학부모님께 결제 링크 문자가 발송되었습니다.`); }}>발송</Button>
-          </>
-        }
-      >
-        <div className="border border-[#E9E9E7] rounded-lg p-4 bg-[#F7F7F5] text-sm text-[#37352F] whitespace-pre-line">
-          {`[D.LAB 판교] ${selectedStudent?.name} 학부모님,\n6월 수강료 미납 안내입니다.\n금액: ${fmt(totalAmount)}\n결제: https://pay.dlab.co.kr/pangyo\n\n문의: 02-000-0000`}
         </div>
       </Modal>
     </div>
