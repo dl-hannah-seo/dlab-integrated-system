@@ -1,11 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { students, classes, kioskShopItems, Student } from '@/lib/mock-data';
+import { students, classes, kioskShopItems, kioskCodes, Student } from '@/lib/mock-data';
 
 type Stage = 'input' | 'done';
 
-const last4 = (phone: string) => phone.replace(/\D/g, '').slice(-4);
 const levelOf = (points: number) => Math.floor(points / 300) + 1;
 // 사용 가능 포인트: 시드에 balance가 있으면 사용, 없으면 누적 포인트에서 파생
 const baseBalance = (s: Student) => s.balance ?? Math.round((s.points * 0.4) / 10) * 10;
@@ -23,11 +22,11 @@ export default function KioskPage() {
   const [balance, setBalance] = useState(0);   // 활성 학생 사용 가능 포인트 (시연 차감)
   const [checkinTime, setCheckinTime] = useState('');
 
-  // 힌트 칩: 실제 시드 데이터의 뒤 4자리에서 동적 생성
-  const hintCodes = students.slice(0, 3).map(s => last4(s.parent_phone));
+  // 힌트 칩: 키오스크 코드(원본 전화 뒤 4자리)에서 고유값 3개
+  const hintCodes = [...new Set(students.map(s => kioskCodes[s.id]))].slice(0, 3);
 
   const matches = digits.length === 4
-    ? students.filter(s => last4(s.parent_phone) === digits)
+    ? students.filter(s => kioskCodes[s.id] === digits)
     : [];
 
   function press(key: string) {
