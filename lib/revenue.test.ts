@@ -19,17 +19,17 @@ describe('ROYALTY_RATE', () => {
 describe('computeRevenue — 판교 mock-data 기준', () => {
   const r = computeRevenue(classes);
 
-  it('교육 매출 = Σ(수강료 × 재원 학생수) = 16,600,000', () => {
-    expect(r.eduRevenue).toBe(16_600_000);
+  it('교육 매출 = Σ(수강료 × 재원 학생수) = 6,500,000', () => {
+    expect(r.eduRevenue).toBe(6_500_000);
   });
-  it('로열티(6%) = 996,000', () => {
-    expect(r.royalty).toBe(996_000);
+  it('로열티(6%) = 390,000', () => {
+    expect(r.royalty).toBe(390_000);
   });
-  it('콘텐츠 사용료 합계 = 800,000', () => {
-    expect(r.contentTotal).toBe(800_000);
+  it('콘텐츠 사용료 합계 = 390,000', () => {
+    expect(r.contentTotal).toBe(390_000);
   });
-  it('본사 납부 합계 = 로열티 + 콘텐츠 = 1,796,000', () => {
-    expect(r.hqTotal).toBe(1_796_000);
+  it('본사 납부 합계 = 로열티 + 콘텐츠 = 780,000', () => {
+    expect(r.hqTotal).toBe(780_000);
   });
 });
 
@@ -37,8 +37,8 @@ describe('computeRevenue — 콘텐츠 청구 상세', () => {
   it('content_fee>0 반을 과목별로 묶어 2개 콘텐츠 행 생성', () => {
     const r = computeRevenue(classes);
     expect(r.contentRows).toEqual([
-      { content: '파이썬 기초', students: 47, unitPrice: 10_000, amount: 470_000 },
-      { content: '아두이노', students: 11, unitPrice: 30_000, amount: 330_000 },
+      { content: '파이썬 기초', students: 15, unitPrice: 10_000, amount: 150_000 },
+      { content: '아두이노', students: 8, unitPrice: 30_000, amount: 240_000 },
     ]);
   });
 
