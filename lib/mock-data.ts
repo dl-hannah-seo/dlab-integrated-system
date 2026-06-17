@@ -387,6 +387,12 @@ export const guardians: Guardian[] = students.map((s, i) => ({
 // ── 데모 배포용 개인정보 마스킹 ──────────────────────────────────
 // 팀 시연 시 실제 개인정보로 오인되지 않도록 모든 전화번호를 더미 번호로 통일.
 // (값이 있는 번호만 덮어쓰고, 미등록(빈 값)은 그대로 둔다)
+// 키오스크 인증 코드: 마스킹으로 전화번호가 통일되기 전, 원본 뒤 4자리를 보존한다.
+// (시연용 학생 식별자 — 마스킹은 그대로 두고 키오스크 매칭만 이 코드로 수행)
+export const kioskCodes: Record<string, string> = Object.fromEntries(
+  students.map(s => [s.id, s.parent_phone.replace(/\D/g, '').slice(-4)]),
+);
+
 const DEMO_PHONE = '010-1234-5678';
 [...students, ...withdrawnStudents].forEach(s => {
   s.parent_phone = DEMO_PHONE;
