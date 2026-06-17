@@ -25,8 +25,11 @@ export default function KioskPage() {
   // 힌트 칩: 키오스크 코드(원본 전화 뒤 4자리)에서 고유값 3개
   const hintCodes = [...new Set(students.map(s => kioskCodes[s.id]))].slice(0, 3);
 
-  const matches = digits.length === 4
-    ? students.filter(s => kioskCodes[s.id] === digits)
+  // 번호를 누르는 즉시 코드가 일치(접두) 하는 학생 리스트를 오른쪽에 표시
+  const matches = digits.length > 0
+    ? students
+        .filter(s => kioskCodes[s.id].startsWith(digits))
+        .sort((a, b) => a.name.localeCompare(b.name, 'ko'))
     : [];
 
   function press(key: string) {
@@ -92,7 +95,7 @@ export default function KioskPage() {
             {/* 환영 카드 */}
             <div className="flex items-center gap-4 rounded-2xl p-6"
               style={{ background: 'linear-gradient(135deg, var(--kiosk-orange), var(--kiosk-orange2))' }}>
-              <div className="text-4xl">🎉</div>
+              <div className="text-4xl kiosk-float">🎉</div>
               <div>
                 <div className="text-xl font-extrabold text-white">{active.name}, 환영해요!</div>
                 <div className="text-sm text-white/90 mt-0.5">{checkinTime} 입실 완료 · 오늘도 화이팅! 🚀</div>
@@ -243,46 +246,10 @@ export default function KioskPage() {
 
         {/* 사이드 패널 */}
         <div>
-          {matches.length > 0 ? (
-            <div className="rounded-3xl p-6 border" style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
-              <h2 className="text-lg font-extrabold text-white">학생 확인</h2>
-              <p className="text-sm mb-4" style={{ color: 'var(--kiosk-muted)' }}>본인이 맞으면 출석을 눌러요</p>
-              <div className="flex flex-col gap-3">
-                {matches.map(s => {
-                  const cls = classes.find(c => c.id === s.class_id);
-                  return (
-                    <div key={s.id} className="flex items-center gap-3 p-4 rounded-2xl border" style={{ background: 'var(--kiosk-card)', borderColor: 'var(--kiosk-border)' }}>
-                      <div className="w-11 h-11 flex items-center justify-center rounded-full font-bold"
-                        style={{ background: 'rgba(255,108,55,0.18)', color: 'var(--kiosk-orange)' }}>
-                        {s.name.charAt(1) || s.name[0]}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-bold text-white">{s.name}</div>
-                        <div className="text-sm" style={{ color: 'var(--kiosk-muted)' }}>
-                          {cls?.course} · Lv.{levelOf(s.points)} · {s.points}P
-                        </div>
-                      </div>
-                      <button onClick={() => checkIn(s)}
-                        className="px-5 h-11 rounded-xl font-bold text-white transition-all active:scale-95"
-                        style={{ background: 'var(--kiosk-orange)' }}>
-                        출석 확인
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : digits.length === 4 ? (
+          {digits.length === 0 ? (
             <div className="rounded-3xl p-10 border flex flex-col items-center justify-center text-center min-h-[260px]"
               style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
-              <div className="text-5xl">😅</div>
-              <div className="text-lg font-bold text-white mt-4">일치하는 학생이 없어요</div>
-              <div className="text-sm mt-1" style={{ color: 'var(--kiosk-muted)' }}>번호를 다시 확인해 주세요</div>
-            </div>
-          ) : (
-            <div className="rounded-3xl p-10 border flex flex-col items-center justify-center text-center min-h-[260px]"
-              style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
-              <div className="text-5xl">👋</div>
+              <div className="text-5xl kiosk-wave">👋</div>
               <div className="text-lg font-bold text-white mt-4 leading-snug">번호를 누르면<br />학생 정보가 여기에 나와요</div>
               <div className="flex gap-2 mt-4">
                 {hintCodes.map(code => (
@@ -290,6 +257,41 @@ export default function KioskPage() {
                     style={{ background: 'rgba(255,108,55,0.15)', color: 'var(--kiosk-orange)' }}>{code}</span>
                 ))}
               </div>
+            </div>
+          ) : matches.length > 0 ? (
+            <div className="rounded-3xl p-6 border" style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
+              <h2 className="text-lg font-extrabold text-white">학생 선택</h2>
+              <p className="text-sm mb-4" style={{ color: 'var(--kiosk-muted)' }}>이름을 누르면 바로 출석돼요 ({matches.length}명)</p>
+              <div className="flex flex-col gap-2.5 max-h-[420px] overflow-y-auto pr-1">
+                {matches.map(s => {
+                  const cls = classes.find(c => c.id === s.class_id);
+                  return (
+                    <button key={s.id} onClick={() => checkIn(s)}
+                      className="flex items-center gap-3 p-4 rounded-2xl border text-left transition-all hover:border-[var(--kiosk-orange)] active:scale-[0.99]"
+                      style={{ background: 'var(--kiosk-card)', borderColor: 'var(--kiosk-border)' }}>
+                      <div className="w-11 h-11 flex items-center justify-center rounded-full font-bold flex-shrink-0"
+                        style={{ background: 'rgba(255,108,55,0.18)', color: 'var(--kiosk-orange)' }}>
+                        {s.name.charAt(1) || s.name[0]}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-bold text-white">{s.name}</div>
+                        <div className="text-sm truncate" style={{ color: 'var(--kiosk-muted)' }}>
+                          {cls?.course} · Lv.{levelOf(s.points)} · {s.points}P
+                        </div>
+                      </div>
+                      <span className="px-3 h-9 inline-flex items-center rounded-xl font-bold text-white flex-shrink-0"
+                        style={{ background: 'var(--kiosk-orange)' }}>출석 →</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-3xl p-10 border flex flex-col items-center justify-center text-center min-h-[260px]"
+              style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
+              <div className="text-5xl">😅</div>
+              <div className="text-lg font-bold text-white mt-4">일치하는 학생이 없어요</div>
+              <div className="text-sm mt-1" style={{ color: 'var(--kiosk-muted)' }}>번호를 다시 확인해 주세요</div>
             </div>
           )}
         </div>
