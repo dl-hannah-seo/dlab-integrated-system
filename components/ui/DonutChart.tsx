@@ -26,10 +26,14 @@ export function DonutChart({
   slices,
   size = 140,
   showAmounts = false,
+  centerValue,
+  centerCaption,
 }: {
   slices: DonutSlice[];
   size?: number;
   showAmounts?: boolean;
+  centerValue?: string;
+  centerCaption?: string;
 }) {
   const cx = size / 2;
   const cy = size / 2;
@@ -53,6 +57,30 @@ export function DonutChart({
         {paths.map(p => (
           <path key={p.label} d={p.path} fill={p.color} />
         ))}
+        {centerValue && (
+          <text
+            x={cx}
+            y={centerCaption ? cy - 4 : cy}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="fill-[#37352F] font-bold"
+            style={{ fontSize: 22 }}
+          >
+            {centerValue}
+          </text>
+        )}
+        {centerValue && centerCaption && (
+          <text
+            x={cx}
+            y={cy + 16}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="fill-[#787774]"
+            style={{ fontSize: 10 }}
+          >
+            {centerCaption}
+          </text>
+        )}
       </svg>
       <div className="space-y-2.5 min-w-0 flex-1">
         {slices.map(slice => {
