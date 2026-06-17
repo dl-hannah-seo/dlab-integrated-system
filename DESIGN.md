@@ -208,7 +208,7 @@ const sizes = {
 
 ```tsx
 // 공통 베이스 (input 기준)
-'w-full border border-[#E9E9E7] rounded-md px-3 py-2 text-sm text-[#37352F]'
+'w-full bg-white border border-[#E9E9E7] rounded-md px-3 py-2 text-sm text-[#37352F]'
 + 'placeholder:text-[#787774]'
 + 'focus:outline-none focus:border-[#FF6C37] transition-colors'
 + 'disabled:bg-[#F7F7F5] disabled:text-[#787774]'
@@ -226,6 +226,13 @@ const sizes = {
 래퍼 구조: `flex flex-col gap-1` → label → input(relative wrap) → error
 
 Input은 `suffix` prop으로 우측 단위 텍스트(`원`, `%` 등)를 표시합니다.
+
+#### 입력 필드 배경 규칙 (필수)
+
+**모든 입력 필드(input·textarea·select)의 안쪽 배경은 무조건 흰색(`bg-white`)이다.** 회색 배경 컨테이너(`bg-[#F7F7F5]` 카드/소블록) 안에 들어가더라도 필드가 컨테이너 색을 비쳐 회색으로 보이면 안 된다. 따라서 `bg-white`는 공유 컴포넌트(`Input`/`Textarea`/`Select`)의 베이스 클래스에 항상 포함한다.
+
+- 인라인 raw `<input>`/`<textarea>`/`<select>`를 직접 쓸 때도 `bg-white`를 명시한다.
+- 유일한 예외는 **비활성(`disabled`) 상태**로, 이때만 `disabled:bg-[#F7F7F5]`로 회색 처리해 입력 불가를 시각적으로 알린다.
 
 ---
 
