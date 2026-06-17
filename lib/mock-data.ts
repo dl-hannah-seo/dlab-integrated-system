@@ -60,14 +60,48 @@ export const classGroups: ClassGroup[] = [
   { id: 'cg-08', campus_id: 'campus-001', semester_id: 'sem-02', year: 2025, season: '봄학기', day_group: '토', time_slot: '1000' },
 ];
 
+// ── 과목 마스터 ───────────────────────────────────────────────
+export interface Subject {
+  id: string;
+  name: string;
+  order?: number;
+}
+
+export const subjects: Subject[] = [
+  { id: 'sub-python',  name: '파이썬',   order: 1 },
+  { id: 'sub-arduino', name: '아두이노', order: 2 },
+  { id: 'sub-custom',  name: '맞춤수업', order: 3 },
+  { id: 'sub-scratch', name: '스크래치', order: 4 },
+];
+
+// ── 강사 ──────────────────────────────────────────────────────
+export interface Teacher {
+  id: string;
+  campus_id: string;
+  name: string;
+  subject_ids: string[];         // 가르칠 수 있는 과목 = "강사 수준"
+  phone?: string;
+  status: '재직' | '휴직' | '퇴직';
+}
+
+export const teachers: Teacher[] = [
+  { id: 'tch-ron',   campus_id: 'campus-001', name: '론',   subject_ids: ['sub-python'],                status: '재직' },
+  { id: 'tch-seed',  campus_id: 'campus-001', name: '씨드', subject_ids: ['sub-python', 'sub-arduino'], status: '재직' },
+  { id: 'tch-ruth',  campus_id: 'campus-001', name: '루스', subject_ids: ['sub-custom'],                status: '재직' },
+  { id: 'tch-liam',  campus_id: 'campus-001', name: '리암', subject_ids: ['sub-python'],                status: '재직' },
+  { id: 'tch-hobin', campus_id: 'campus-001', name: '허빈', subject_ids: ['sub-custom', 'sub-arduino'], status: '재직' },
+];
+
 // ── 반 ──────────────────────────────────────────────────────
 export interface Class {
   id: string;
   campus_id: string;
   class_group_id: string;
   course: string;
+  subject_id: string;            // 과목 마스터 참조 (매칭 기준). course는 표시용 문자열로 유지.
   name: string;
   teacher: string;
+  teacher_id?: string;           // 강사 마스터 참조. teacher는 표시용 이름으로 유지.
   team_lead: string;
   capacity: number;
   semester_id?: string;
@@ -100,48 +134,48 @@ export interface Session {
 export const classes: Class[] = [
   {
     id: 'cl-01', campus_id: 'campus-001', class_group_id: 'cg-01',
-    course: '파이썬 기초', name: '2026여름학기토0900/파이썬기초/론',
-    teacher: '론', team_lead: '케이', capacity: 15,
+    course: '파이썬 기초', subject_id: 'sub-python', name: '2026여름학기토0900/파이썬기초/론',
+    teacher: '론', teacher_id: 'tch-ron', team_lead: '케이', capacity: 15,
     start_date: '2026-06-07', end_date: '2026-08-30', weeks: 8,
     schedule: '토 09:00', payment_method: '매월', payment_due_day: 1,
     tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 14,
   },
   {
     id: 'cl-02', campus_id: 'campus-001', class_group_id: 'cg-02',
-    course: '파이썬 기초', name: '2026여름학기토1000/파이썬기초/씨드',
-    teacher: '씨드', team_lead: '케이', capacity: 15,
+    course: '파이썬 기초', subject_id: 'sub-python', name: '2026여름학기토1000/파이썬기초/씨드',
+    teacher: '씨드', teacher_id: 'tch-seed', team_lead: '케이', capacity: 15,
     start_date: '2026-06-07', end_date: '2026-08-30', weeks: 8,
     schedule: '토 10:00', payment_method: '매월', payment_due_day: 1,
     tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 15,
   },
   {
     id: 'cl-03', campus_id: 'campus-001', class_group_id: 'cg-03',
-    course: '맞춤수업', name: '2026여름학기토1100/맞춤수업/루스',
-    teacher: '루스', team_lead: '케이', capacity: 12,
+    course: '맞춤수업', subject_id: 'sub-custom', name: '2026여름학기토1100/맞춤수업/루스',
+    teacher: '루스', teacher_id: 'tch-ruth', team_lead: '케이', capacity: 12,
     start_date: '2026-06-07', end_date: '2026-08-30', weeks: 8,
     schedule: '토 11:00', payment_method: '일시', payment_due_day: 1,
     tuition_fee: 220000, material_fee: 30000, content_fee: 0, enrolled_count: 11,
   },
   {
     id: 'cl-04', campus_id: 'campus-001', class_group_id: 'cg-04',
-    course: '파이썬 기초', name: '2026여름학기화목1600/파이썬기초/리암',
-    teacher: '리암', team_lead: '케이', capacity: 18,
+    course: '파이썬 기초', subject_id: 'sub-python', name: '2026여름학기화목1600/파이썬기초/리암',
+    teacher: '리암', teacher_id: 'tch-liam', team_lead: '케이', capacity: 18,
     start_date: '2026-06-10', end_date: '2026-09-01', weeks: 8,
     schedule: '화·목 16:00', payment_method: '매월', payment_due_day: 1,
     tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 18,
   },
   {
     id: 'cl-05', campus_id: 'campus-001', class_group_id: 'cg-05',
-    course: '맞춤수업', name: '2026여름학기화목1700/맞춤수업/허빈',
-    teacher: '허빈', team_lead: '케이', capacity: 18,
+    course: '맞춤수업', subject_id: 'sub-custom', name: '2026여름학기화목1700/맞춤수업/허빈',
+    teacher: '허빈', teacher_id: 'tch-hobin', team_lead: '케이', capacity: 18,
     start_date: '2026-06-10', end_date: '2026-09-01', weeks: 8,
     schedule: '화·목 17:00', payment_method: '매월', payment_due_day: 1,
     tuition_fee: 220000, material_fee: 30000, content_fee: 0, enrolled_count: 16,
   },
   {
     id: 'cl-06', campus_id: 'campus-001', class_group_id: 'cg-06',
-    course: '아두이노', name: '2026여름학기화목1800/아두이노/씨드',
-    teacher: '씨드', team_lead: '케이', capacity: 12,
+    course: '아두이노', subject_id: 'sub-arduino', name: '2026여름학기화목1800/아두이노/씨드',
+    teacher: '씨드', teacher_id: 'tch-seed', team_lead: '케이', capacity: 12,
     start_date: '2026-06-10', end_date: '2026-09-01', weeks: 8,
     schedule: '화·목 18:00', payment_method: '일시', payment_due_day: 1,
     tuition_fee: 200000, material_fee: 50000, content_fee: 30000, enrolled_count: 4,
@@ -149,8 +183,8 @@ export const classes: Class[] = [
   // 토 10:00 동시간대 2개 반 (한 칸 누적 표시 예시) — cg-09
   {
     id: 'cl-09', campus_id: 'campus-001', class_group_id: 'cg-09',
-    course: '아두이노', name: '2026여름학기토1000/아두이노/허빈',
-    teacher: '허빈', team_lead: '케이', capacity: 12,
+    course: '아두이노', subject_id: 'sub-arduino', name: '2026여름학기토1000/아두이노/허빈',
+    teacher: '허빈', teacher_id: 'tch-hobin', team_lead: '케이', capacity: 12,
     start_date: '2026-06-07', end_date: '2026-08-30', weeks: 8,
     schedule: '토 10:00', payment_method: '일시', payment_due_day: 1,
     tuition_fee: 200000, material_fee: 50000, content_fee: 30000, enrolled_count: 7,
@@ -158,16 +192,16 @@ export const classes: Class[] = [
   // ── 2025 봄 (종강) — 과거 수강 이력용 ──
   {
     id: 'cl-07', campus_id: 'campus-001', class_group_id: 'cg-07', semester_id: 'sem-02',
-    course: '파이썬 기초', name: '2025봄학기토0900/파이썬기초/씨드',
-    teacher: '씨드', team_lead: '케이', capacity: 15,
+    course: '파이썬 기초', subject_id: 'sub-python', name: '2025봄학기토0900/파이썬기초/씨드',
+    teacher: '씨드', teacher_id: 'tch-seed', team_lead: '케이', capacity: 15,
     start_date: '2025-03-08', end_date: '2025-06-28', weeks: 16,
     schedule: '토 09:00', payment_method: '매월', payment_due_day: 1,
     tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 0,
   },
   {
     id: 'cl-08', campus_id: 'campus-001', class_group_id: 'cg-08', semester_id: 'sem-02',
-    course: '맞춤수업', name: '2025봄학기토1000/맞춤수업/루스',
-    teacher: '루스', team_lead: '케이', capacity: 15,
+    course: '맞춤수업', subject_id: 'sub-custom', name: '2025봄학기토1000/맞춤수업/루스',
+    teacher: '루스', teacher_id: 'tch-ruth', team_lead: '케이', capacity: 15,
     start_date: '2025-03-08', end_date: '2025-06-28', weeks: 16,
     schedule: '토 10:00', payment_method: '매월', payment_due_day: 1,
     tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 0,

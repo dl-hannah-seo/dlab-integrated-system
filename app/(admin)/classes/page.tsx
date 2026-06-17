@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { classes, classGroups, semesters as mockSemesters, students, enrollments, Class, Semester, Enrollment } from '@/lib/mock-data';
+import { classes, classGroups, semesters as mockSemesters, students, enrollments, subjects, teachers, Class, Semester, Enrollment } from '@/lib/mock-data';
+import { eligibleTeachers } from '@/lib/teacher-matching';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
@@ -42,8 +43,8 @@ export default function ClassesPage() {
   const [createNewSeason, setCreateNewSeason] = useState('');
   const [createDays, setCreateDays]           = useState<string[]>([]);
   const [createTime, setCreateTime]           = useState('09:00');
-  const [createCourse, setCreateCourse]       = useState('');
-  const [createTeacher, setCreateTeacher]     = useState('');
+  const [createSubjectId, setCreateSubjectId] = useState('');
+  const [createTeacherId, setCreateTeacherId] = useState('');
   const [createTeamLead, setCreateTeamLead]   = useState('');
   const [createCapacity, setCreateCapacity]   = useState(15);
   const [createStart, setCreateStart]         = useState('');
@@ -163,7 +164,10 @@ export default function ClassesPage() {
   const resolvedCreate = createSemId === '__new__'
     ? { year: createNewYear, season: createNewSeason }
     : (() => { const s = localSemesters.find(x => x.id === createSemId); return { year: s?.year ?? createNewYear, season: s?.season ?? '' }; })();
-  const autoName      = buildAutoName(resolvedCreate.year, resolvedCreate.season, createDays, createTime, createCourse, createTeacher);
+  const createSubjectName = subjects.find(s => s.id === createSubjectId)?.name ?? '';
+  const createTeacherName = teachers.find(t => t.id === createTeacherId)?.name ?? '';
+  const createEligibleTeachers = eligibleTeachers(createSubjectId, teachers);
+  const autoName      = buildAutoName(resolvedCreate.year, resolvedCreate.season, createDays, createTime, createSubjectName, createTeacherName);
   const computedWeeks = computeWeeks(createStart, createEnd);
 
   function toggleDay(day: string) {
@@ -183,7 +187,7 @@ export default function ClassesPage() {
   }
 
   function handleCreateClass() {
-    if (createDays.length === 0 || !createCourse || !createTeacher || !createTeamLead) return;
+    if (createDays.length === 0 || !createSubjectId || !createTeacherId || !createTeamLead) return;
 
     let sem = createSemId !== '__new__'
       ? localSemesters.find(s => s.id === createSemId)
@@ -198,9 +202,11 @@ export default function ClassesPage() {
       campus_id: 'campus-001',
       class_group_id: `cg-new-${Date.now()}`,
       semester_id: sem.id,
-      course: createCourse,
+      course: createSubjectName,
+      subject_id: createSubjectId,
       name: autoName,
-      teacher: createTeacher,
+      teacher: createTeacherName,
+      teacher_id: createTeacherId,
       team_lead: createTeamLead,
       capacity: createCapacity,
       start_date: createStart,
@@ -219,8 +225,8 @@ export default function ClassesPage() {
     setShowCreate(false);
     setCreateSemId(localSemesters[0]?.id ?? '__new__');
     setCreateNewYear(new Date().getFullYear()); setCreateNewSeason('');
-    setCreateDays([]); setCreateTime('09:00'); setCreateCourse('');
-    setCreateTeacher(''); setCreateTeamLead('');
+    setCreateDays([]); setCreateTime('09:00'); setCreateSubjectId('');
+    setCreateTeacherId(''); setCreateTeamLead('');
   }
 
   function openEdit(cls: Class) {
@@ -550,7 +556,7 @@ export default function ClassesPage() {
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowCreate(false)}>취소</Button>
-            <Button onClick={handleCreateClass} disabled={createDays.length === 0 || !createCourse || !createTeacher || !createTeamLead}>
+            <Button onClick={handleCreateClass} disabled={createDays.length === 0 || !createSubjectId || !createTeacherId || !createTeamLead}>
               반 생성
             </Button>
           </>
@@ -612,23 +618,26 @@ export default function ClassesPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <Input label="시작 시간" type="time" value={createTime} onChange={e => setCreateTime(e.target.value)} />
-            <Input
-              label="과정"
-              type="text"
-              placeholder="예: 파이썬 기초"
-              value={createCourse}
-              onChange={e => setCreateCourse(e.target.value)}
+            <Select
+              label="과정(과목)"
+              value={createSubjectId}
+              onChange={e => { setCreateSubjectId(e.target.value); setCreateTeacherId(''); }}
+              options={[{ value: '', label: '과목 선택' }, ...subjects.map(s => ({ value: s.id, label: s.name }))]}
             />
           </div>
 
           {/* 담임 + 책임 연구원 */}
           <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="담임"
-              type="text"
-              placeholder="예: 메튜"
-              value={createTeacher}
-              onChange={e => setCreateTeacher(e.target.value)}
+            <Select
+              label="담임 강사"
+              value={createTeacherId}
+              onChange={e => setCreateTeacherId(e.target.value)}
+              disabled={!createSubjectId}
+              options={
+                !createSubjectId
+                  ? [{ value: '', label: '과목을 먼저 선택하세요' }]
+                  : [{ value: '', label: '강사 선택' }, ...createEligibleTeachers.map(t => ({ value: t.id, label: t.name }))]
+              }
             />
             <Input
               label="팀장"
