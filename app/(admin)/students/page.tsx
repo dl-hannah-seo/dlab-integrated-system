@@ -549,7 +549,7 @@ export default function StudentsPage() {
       return (
         <div className="space-y-4">
           {/* 신규 상담 입력폼 */}
-          <div className="bg-[#F7F7F5] rounded-lg p-4 space-y-3">
+          <div className="bg-white border border-[#E9E9E7] rounded-lg p-4 space-y-3">
             <p className="text-xs font-semibold text-[#787774]">상담 기록 추가</p>
             <div className="grid grid-cols-3 gap-3">
               <Input label="상담일자" type="date" value={consultForm.date}
