@@ -80,26 +80,41 @@ export function isClassFull(cls: Pick<Class, 'id' | 'capacity'>, enrollments: En
   return activeCount(cls.id, enrollments) >= cls.capacity;
 }
 
+/** 고정 강의실 열 (1~8강의실) */
+export const ROOMS = [
+  '1강의실', '2강의실', '3강의실', '4강의실',
+  '5강의실', '6강의실', '7강의실', '8강의실',
+] as const;
+
+const DAY_ORDER = ['토', '화목', '월수금'];
+const DAY_LABEL: Record<string, string> = { '토': '토', '화목': '화·목', '월수금': '월·수·금' };
+
 export interface BoardCell {
   cls: Class;
   group: ClassGroup;
   roster: RosterEntry[];
 }
 
+export interface BoardRow {
+  dayGroup: string;
+  time: string;   // 'HH:MM'
+  label: string;  // '토 09:00'
+  key: string;    // `${dayGroup}|${time}`
+}
+
 export interface Board {
-  /** 열 순서 — 강의실들 + (있으면) '미배정' 맨 끝 */
+  /** 열 — 고정 1~8강의실 (+ 미배정 있으면 맨 끝) */
   rooms: string[];
-  /** 행 — 등장하는 시간대('HH:MM') 정렬 */
-  times: string[];
-  /** `${room}|${time}` → 그 칸의 반들 */
+  /** 행 — 요일·시간 (요일 순 → 시간 순) */
+  rows: BoardRow[];
+  /** `${room}|${dayGroup}|${time}` → 그 칸의 반들 */
   cells: Record<string, BoardCell[]>;
 }
 
-const cellKey = (room: string, time: string) => `${room}|${time}`;
+export const boardCellKey = (room: string, rowKey: string) => `${room}|${rowKey}`;
 
-/** 선택 요일을 강의실 × 시간대 그리드로 구성 */
+/** 전체 운영 요일을 강의실(열) × 요일·시간(행) 그리드로 구성 */
 export function buildBoard(
-  dayGroup: string,
   classes: Class[],
   groups: ClassGroup[],
   enrollments: Enrollment[],
@@ -108,36 +123,46 @@ export function buildBoard(
   billingMonth: string,
   today: string,
 ): Board {
-  const dayClasses = dayGroupClasses(dayGroup, classes, groups, today);
-
   const cells: Record<string, BoardCell[]> = {};
-  const roomSet = new Set<string>();
+  const rowMap = new Map<string, BoardRow>();
   let hasUnassigned = false;
-  const timeSet = new Set<string>();
 
-  for (const cls of dayClasses) {
+  for (const cls of classes) {
+    if (cls.end_date < today) continue; // 종강반 제외
     const group = groups.find(g => g.id === cls.class_group_id);
     if (!group) continue;
+
     const room = roomLabel(cls);
-    const time = fmtSlot(group.time_slot);
     if (room === UNASSIGNED) hasUnassigned = true;
-    else roomSet.add(room);
-    timeSet.add(time);
+    const time = fmtSlot(group.time_slot);
+    const rowKey = `${group.day_group}|${time}`;
+
+    if (!rowMap.has(rowKey)) {
+      rowMap.set(rowKey, {
+        dayGroup: group.day_group,
+        time,
+        label: `${DAY_LABEL[group.day_group] ?? group.day_group} ${time}`,
+        key: rowKey,
+      });
+    }
 
     const cell: BoardCell = {
       cls,
       group,
       roster: classRoster(cls.id, enrollments, students, billingMonth, invoices),
     };
-    (cells[cellKey(room, time)] ??= []).push(cell);
+    (cells[boardCellKey(room, rowKey)] ??= []).push(cell);
   }
 
-  const rooms = [...roomSet].sort((a, b) => a.localeCompare(b, 'ko'));
+  const rooms: string[] = [...ROOMS];
   if (hasUnassigned) rooms.push(UNASSIGNED);
 
-  const times = [...timeSet].sort();
+  const dayRank = (d: string) => { const i = DAY_ORDER.indexOf(d); return i < 0 ? 99 : i; };
+  const rows = [...rowMap.values()].sort((a, b) =>
+    dayRank(a.dayGroup) - dayRank(b.dayGroup) || a.time.localeCompare(b.time),
+  );
 
-  return { rooms, times, cells };
+  return { rooms, rows, cells };
 }
 
 /**

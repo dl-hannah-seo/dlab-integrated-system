@@ -79,26 +79,30 @@ describe('classRoster', () => {
 });
 
 describe('buildBoard', () => {
-  const groups = [group('g9', '토', '0900'), group('g10', '토', '1000')];
+  const groups = [group('g9', '토', '0900'), group('g10', '토', '1000'), group('gtt', '화목', '1600')];
   const classes = [
     klass('c1', 'g9', '1강의실'),
     klass('c2', 'g9', '2강의실'),
     klass('c3', 'g10', undefined), // 강의실 미배정
+    klass('c4', 'gtt', '1강의실'),  // 다른 요일, 같은 강의실 재사용
   ];
   const students = [stu('s1', '김하나'), stu('s2', '이두리')];
   const enrollments = [enr('e1', 's1', 'c1'), enr('e2', 's2', 'c3')];
-  const board = buildBoard('토', classes, groups, enrollments, students, [], MONTH, TODAY);
+  const board = buildBoard(classes, groups, enrollments, students, [], MONTH, TODAY);
 
-  it('강의실 열에 미배정을 맨 끝에 둔다', () => {
-    expect(board.rooms).toEqual(['1강의실', '2강의실', UNASSIGNED]);
+  it('고정 8강의실 + 미배정을 맨 끝에 둔다', () => {
+    expect(board.rooms).toEqual([
+      '1강의실', '2강의실', '3강의실', '4강의실', '5강의실', '6강의실', '7강의실', '8강의실', UNASSIGNED,
+    ]);
   });
-  it('등장하는 시간대만 행으로', () => {
-    expect(board.times).toEqual(['09:00', '10:00']);
+  it('요일·시간 행을 요일순→시간순으로', () => {
+    expect(board.rows.map(r => r.label)).toEqual(['토 09:00', '토 10:00', '화·목 16:00']);
   });
-  it('셀은 강의실·시간대로 반을 묶는다', () => {
-    expect(board.cells['1강의실|09:00'].map(c => c.cls.id)).toEqual(['c1']);
-    expect(board.cells[`${UNASSIGNED}|10:00`].map(c => c.cls.id)).toEqual(['c3']);
-    expect(board.cells['1강의실|09:00'][0].roster.map(r => r.student.id)).toEqual(['s1']);
+  it('셀은 강의실·요일·시간으로 반을 묶는다', () => {
+    expect(board.cells['1강의실|토|09:00'].map(c => c.cls.id)).toEqual(['c1']);
+    expect(board.cells[`${UNASSIGNED}|토|10:00`].map(c => c.cls.id)).toEqual(['c3']);
+    expect(board.cells['1강의실|화목|16:00'].map(c => c.cls.id)).toEqual(['c4']);
+    expect(board.cells['1강의실|토|09:00'][0].roster.map(r => r.student.id)).toEqual(['s1']);
   });
 });
 
