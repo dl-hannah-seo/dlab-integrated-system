@@ -51,13 +51,13 @@ const G: ClassGroup[] = [
 ];
 const C: Class[] = [
   {
-    id: 'c-sat', campus_id: 'c', class_group_id: 'g-sat', course: '파이썬', name: 'x',
+    id: 'c-sat', campus_id: 'c', class_group_id: 'g-sat', course: '파이썬', subject_id: 'sub-python', name: 'x',
     teacher: '론', team_lead: '케이', capacity: 15, start_date: '2026-07-05', end_date: '2026-08-30',
     schedule: '토 09:00', payment_method: '매월', payment_due_day: 1,
     tuition_fee: 0, material_fee: 0, content_fee: 0, enrolled_count: 10,
   },
   {
-    id: 'c-tt', campus_id: 'c', class_group_id: 'g-tt', course: '맞춤', name: 'y',
+    id: 'c-tt', campus_id: 'c', class_group_id: 'g-tt', course: '맞춤', subject_id: 'sub-custom', name: 'y',
     teacher: '리암', team_lead: '케이', capacity: 18, start_date: '2026-07-07', end_date: '2026-09-01',
     schedule: '화·목 16:00', payment_method: '매월', payment_due_day: 1,
     tuition_fee: 0, material_fee: 0, content_fee: 0, enrolled_count: 12,

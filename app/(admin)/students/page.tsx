@@ -503,6 +503,44 @@ export default function StudentsPage() {
             )}
           </div>
 
+          {/* 현금영수증 발행정보 */}
+          <div className="bg-[#F7F7F5] rounded-lg p-3">
+            <p className="text-xs text-[#787774] mb-2">현금영수증</p>
+            {editMode && f ? (
+              <div className="space-y-2">
+                <div className="w-40">
+                  <Select
+                    value={f.cash_receipt_enabled ? 'Y' : 'N'}
+                    onChange={e => updateField('cash_receipt_enabled', e.target.value === 'Y')}
+                    options={[{ value: 'N', label: '미발행' }, { value: 'Y', label: '발행' }]}
+                  />
+                </div>
+                {f.cash_receipt_enabled && (
+                  <div className="flex gap-2">
+                    <div className="w-32 shrink-0">
+                      <Select
+                        value={f.cash_receipt_purpose ?? '소득공제용'}
+                        onChange={e => updateField('cash_receipt_purpose', e.target.value as Student['cash_receipt_purpose'])}
+                        options={[{ value: '소득공제용', label: '소득공제용' }, { value: '지출증빙용', label: '지출증빙용' }]}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <Input
+                        value={f.cash_receipt_number ?? ''}
+                        placeholder={(f.cash_receipt_purpose ?? '소득공제용') === '지출증빙용' ? '사업자등록번호' : '휴대폰번호 / 주민번호'}
+                        onChange={e => updateField('cash_receipt_number', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : s.cash_receipt_enabled ? (
+              <p className="text-sm text-[#37352F]">{s.cash_receipt_purpose ?? '소득공제용'}{s.cash_receipt_number ? ` · ${s.cash_receipt_number}` : ''}</p>
+            ) : (
+              <p className="text-sm text-[#787774]">미발행</p>
+            )}
+          </div>
+
           {/* 특이사항 · 메모 */}
           <Field label="특이사항">
             {editMode && f ? <Input value={f.special_note ?? ''} placeholder="없음" onChange={e => updateField('special_note', e.target.value)} /> : <ViewText>{s.special_note || '없음'}</ViewText>}
