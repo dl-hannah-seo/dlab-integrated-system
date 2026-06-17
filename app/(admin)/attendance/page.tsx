@@ -3,9 +3,11 @@
 import { useState, useMemo } from 'react';
 import {
   classes,
-  students,
+  classGroups,
   initialAttendance,
   attendanceHistory,
+  getAbsenceFocusList,
+  getClassRoster,
   TODAY,
   type Attendance,
   type AttendanceStatus,
@@ -13,7 +15,8 @@ import {
 } from '@/lib/mock-data';
 import { Card } from '@/components/ui/Card';
 import { Select } from '@/components/ui/Input';
-import { AttendanceTrend } from '@/components/attendance/AttendanceTrend';
+import { DonutChart } from '@/components/ui/DonutChart';
+import { AbsenceFocusList } from '@/components/attendance/AbsenceFocusList';
 import { ClassRecordModal } from '@/components/attendance/ClassRecordModal';
 
 // 현재 학기(2026 여름) 진행 반만
@@ -21,7 +24,8 @@ const CURRENT_CLASSES = classes.filter(c => ['cl-01', 'cl-02', 'cl-03', 'cl-04',
 
 export default function AttendancePage() {
   const [records, setRecords] = useState<Attendance[]>(() => [...attendanceHistory, ...initialAttendance]);
-  const [classFilter, setClassFilter] = useState('전체');
+  const [groupFilter, setGroupFilter] = useState('');     // '' = 전체 그룹
+  const [classFilter, setClassFilter] = useState('전체');  // '전체' = 전체 반
   const [openClass, setOpenClass] = useState<Class | null>(null);
 
   function updateStatus(sessionId: string, studentId: string, status: AttendanceStatus, absenceReason: string | null) {
@@ -70,8 +74,56 @@ export default function AttendancePage() {
     return { total, attend, absent, pending, rate: denom ? Math.round((attend / denom) * 100) : 0 };
   }, [todayRecords]);
 
+  const focusEntries = useMemo(
+    () => getAbsenceFocusList(records, CURRENT_CLASSES.map(c => c.id), 8),
+    [records],
+  );
+
+  const donutSlices = [
+    { label: '출석', amount: kpi.attend, color: '#0F7B6C' },
+    { label: '미도착', amount: kpi.pending, color: '#C7C6C3' },
+    { label: '결석', amount: kpi.absent, color: '#EB5757' },
+  ].filter(s => s.amount > 0);
+
+  function openClassById(classId: string) {
+    const target = classes.find(c => c.id === classId);
+    if (target) setOpenClass(target);
+  }
+
   const todayLabel = `${Number(TODAY.slice(5, 7))}/${Number(TODAY.slice(8, 10))}`;
-  const targetClasses = classFilter === '전체' ? CURRENT_CLASSES : CURRENT_CLASSES.filter(c => c.id === classFilter);
+
+  // 그룹(연도+학기) 드롭다운 — 활성반·종강반 포함 전체 반 기준
+  const groupOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const opts = [{ value: '', label: '전체 그룹' }];
+    for (const c of classes) {
+      const cg = classGroups.find(g => g.id === c.class_group_id);
+      if (cg) {
+        const key = `${cg.year}년 ${cg.season}`;
+        if (!seen.has(key)) { seen.add(key); opts.push({ value: key, label: key }); }
+      }
+    }
+    return opts;
+  }, []);
+
+  // 선택된 그룹에 속한 반 (활성반·종강반 포함 전체)
+  const groupClasses = useMemo(
+    () => groupFilter === ''
+      ? classes
+      : classes.filter(c => {
+          const cg = classGroups.find(g => g.id === c.class_group_id);
+          return cg ? `${cg.year}년 ${cg.season}` === groupFilter : false;
+        }),
+    [groupFilter],
+  );
+
+  // 반 드롭다운 — 실제 반 이름(cls.name)으로 표시
+  const classOptions = [
+    { value: '전체', label: '전체 반' },
+    ...groupClasses.map(c => ({ value: c.id, label: c.name })),
+  ];
+
+  const targetClasses = classFilter === '전체' ? groupClasses : groupClasses.filter(c => c.id === classFilter);
 
   return (
     <div>
@@ -80,49 +132,53 @@ export default function AttendancePage() {
         <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 출석/결석/보강 이력</p>
       </div>
 
-      {/* 오늘 요약 KPI */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        {[
-          { label: '출석', value: kpi.attend, color: 'text-[#0F7B6C]', bg: 'bg-[#EDF7F5]', note: `오늘 (${todayLabel})` },
-          { label: '미도착', value: kpi.pending, color: 'text-[#787774]', bg: 'bg-[#F7F7F5]', note: `오늘 (${todayLabel})` },
-          { label: '결석', value: kpi.absent, color: 'text-[#EB5757]', bg: 'bg-[#FDECEA]', note: `오늘 (${todayLabel})` },
-          { label: '출석률', value: `${kpi.rate}%`, color: 'text-[#37352F]', bg: 'bg-white', note: '오늘 · 미도착 제외' },
-        ].map(item => (
-          <Card key={item.label} className={`!p-0 ${item.bg}`}>
-            <div className="px-5 py-4 text-center">
-              <p className="text-xs text-[#787774] mb-1">{item.label}</p>
-              <p className={`text-2xl font-bold tabular-nums ${item.color}`}>{item.value}</p>
-              <p className="text-xs text-[#787774] mt-0.5">{item.note}</p>
-            </div>
-          </Card>
-        ))}
+      {/* 1행: 당일 원그래프 + 미등원 집중 리스트 */}
+      <div className="grid grid-cols-2 gap-4 mb-6 items-stretch">
+        <Card title="당일 현황" className="h-full">
+          <p className="text-xs text-[#787774] -mt-1 mb-3">오늘 ({todayLabel}) · 미도착 제외 출석률</p>
+          {donutSlices.length === 0 ? (
+            <p className="text-sm text-[#787774] py-8 text-center">오늘 출결 기록이 없습니다.</p>
+          ) : (
+            <DonutChart
+              slices={donutSlices}
+              size={150}
+              centerValue={`${kpi.rate}%`}
+              centerCaption="출석률"
+            />
+          )}
+        </Card>
+        <AbsenceFocusList entries={focusEntries} onSelect={openClassById} />
       </div>
 
-      {/* 출석률 추이 */}
-      <AttendanceTrend records={records} />
-
-      {/* 반 필터 */}
+      {/* 반 필터 — 그룹(연도+학기) + 반(실제 반 이름) */}
       <div className="flex gap-3 mb-4">
+        <Select
+          value={groupFilter}
+          onChange={e => { setGroupFilter(e.target.value); setClassFilter('전체'); }}
+          options={groupOptions}
+          className="w-44"
+        />
         <Select
           value={classFilter}
           onChange={e => setClassFilter(e.target.value)}
-          options={[
-            { value: '전체', label: '전체 반' },
-            ...CURRENT_CLASSES.map(c => ({ value: c.id, label: c.schedule + ' ' + c.course })),
-          ]}
-          className="w-48"
+          options={classOptions}
+          className="w-72"
         />
       </div>
 
       {/* 반별 카드 (클릭 → 기록부 모달) */}
       <div className="space-y-3">
         {targetClasses.map(cls => {
-          const classStudentIds = new Set(students.filter(s => s.class_id === cls.id).map(s => s.id));
-          // 그 반의 오늘 회차 레코드로 요약 (없으면 미기록)
-          const todayCls = records.filter(r => classStudentIds.has(r.student_id) && r.session_id.startsWith('sess-'));
-          const attendCount = todayCls.filter(r => r.status === 'attend' || r.status === 'makeup').length;
-          const absentCount = todayCls.filter(r => r.status === 'absent').length;
-          const pendingCount = todayCls.filter(r => r.status === 'pending').length;
+          const rosterIds = new Set(getClassRoster(cls.id).map(s => s.id));
+          const todayCls = records.filter(r => rosterIds.has(r.student_id) && r.session_id.startsWith('sess-'));
+          const hasToday = todayCls.length > 0;
+          // 오늘 회차가 있으면 당일 요약, 없으면(종강반 등) 그 반 과거 회차 전체로 누적 요약
+          const summaryRecs = hasToday
+            ? todayCls
+            : records.filter(r => rosterIds.has(r.student_id) && r.session_id.startsWith(`sh-${cls.id}-`));
+          const attendCount = summaryRecs.filter(r => r.status === 'attend' || r.status === 'makeup').length;
+          const absentCount = summaryRecs.filter(r => r.status === 'absent').length;
+          const pendingCount = summaryRecs.filter(r => r.status === 'pending').length;
           const denom = attendCount + absentCount;
           const pct = denom ? Math.round((attendCount / denom) * 100) : 0;
 
@@ -140,9 +196,11 @@ export default function AttendancePage() {
                 </div>
                 <div className="flex items-center gap-4 text-xs">
                   <span className="text-[#0F7B6C]">출석 {attendCount}</span>
-                  <span className="text-[#787774]">미도착 {pendingCount}</span>
+                  {hasToday && <span className="text-[#787774]">미도착 {pendingCount}</span>}
                   <span className="text-[#EB5757]">결석 {absentCount}</span>
-                  <span className="font-semibold text-[#37352F]">{denom ? `${pct}%` : '미기록'}</span>
+                  <span className="font-semibold text-[#37352F]">
+                    {denom ? `${!hasToday ? '누적 ' : ''}${pct}%` : '미기록'}
+                  </span>
                   <span className="text-[#BEBDBA]">›</span>
                 </div>
               </div>

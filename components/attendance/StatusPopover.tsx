@@ -15,9 +15,11 @@ interface StatusPopoverProps {
   currentReason: string | null;
   onSelect: (status: AttendanceStatus, absenceReason: string | null) => void;
   onClose: () => void;
+  onRequestSms?: () => void;     // 결석 셀: 문자 보내기
+  onRequestMakeup?: () => void;  // 결석 셀: 보강 잡기
 }
 
-export function StatusPopover({ current, currentReason, onSelect, onClose }: StatusPopoverProps) {
+export function StatusPopover({ current, currentReason, onSelect, onClose, onRequestSms, onRequestMakeup }: StatusPopoverProps) {
   const [pending, setPending] = useState<AttendanceStatus | null>(null); // 결석 사유 입력 단계
   const [reason, setReason] = useState(currentReason ?? '');
   const ref = useRef<HTMLDivElement>(null);
@@ -77,17 +79,40 @@ export function StatusPopover({ current, currentReason, onSelect, onClose }: Sta
           </div>
         </div>
       ) : (
-        OPTIONS.map(o => (
-          <button
-            key={o.value}
-            onClick={() => choose(o.value)}
-            className={`flex items-center gap-2 w-full px-2.5 py-1.5 text-xs rounded-md text-left hover:bg-[#F7F7F5] ${o.value === current ? 'bg-[#F7F7F5]' : ''}`}
-          >
-            <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: o.color }} />
-            <span className="text-[#37352F]">{o.label}</span>
-            {o.value === current && <span className="ml-auto text-[#0F7B6C]">✓</span>}
-          </button>
-        ))
+        <>
+          {OPTIONS.map(o => (
+            <button
+              key={o.value}
+              onClick={() => choose(o.value)}
+              className={`flex items-center gap-2 w-full px-2.5 py-1.5 text-xs rounded-md text-left hover:bg-[#F7F7F5] ${o.value === current ? 'bg-[#F7F7F5]' : ''}`}
+            >
+              <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: o.color }} />
+              <span className="text-[#37352F]">{o.label}</span>
+              {o.value === current && <span className="ml-auto text-[#0F7B6C]">✓</span>}
+            </button>
+          ))}
+          {current === 'absent' && (onRequestSms || onRequestMakeup) && (
+            <div className="mt-1 pt-1 border-t border-[#F1F0EF]">
+              <p className="px-2.5 py-1 text-[10px] text-[#BEBDBA]">결석 후속</p>
+              {onRequestSms && (
+                <button
+                  onClick={onRequestSms}
+                  className="flex items-center gap-2 w-full px-2.5 py-1.5 text-xs rounded-md text-left hover:bg-[#FFF1EC]"
+                >
+                  <span>📩</span><span className="text-[#37352F]">문자 보내기</span>
+                </button>
+              )}
+              {onRequestMakeup && (
+                <button
+                  onClick={onRequestMakeup}
+                  className="flex items-center gap-2 w-full px-2.5 py-1.5 text-xs rounded-md text-left hover:bg-[#FFF1EC]"
+                >
+                  <span>📅</span><span className="text-[#37352F]">보강 잡기</span>
+                </button>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
