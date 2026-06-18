@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import { KioskShell } from '@/components/kiosk/KioskShell';
 
 export const metadata: Metadata = {
-  title: 'D.LAB OS — 키오스크',
+  title: 'D.LAB — 학생 포털',
 };
 
-export default function KioskLayout({ children }: { children: React.ReactNode }) {
+export default function MeLayout({ children }: { children: React.ReactNode }) {
   return <KioskShell>{children}</KioskShell>;
 }

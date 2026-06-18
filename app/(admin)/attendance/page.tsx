@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import {
   classes,
   classGroups,
+  students,
   initialAttendance,
   attendanceHistory,
   getAbsenceFocusList,
@@ -12,12 +13,17 @@ import {
   type Attendance,
   type AttendanceStatus,
   type Class,
+  type Student,
 } from '@/lib/mock-data';
 import { Card } from '@/components/ui/Card';
 import { Select } from '@/components/ui/Input';
 import { DonutChart } from '@/components/ui/DonutChart';
 import { AbsenceFocusList } from '@/components/attendance/AbsenceFocusList';
 import { ClassRecordModal } from '@/components/attendance/ClassRecordModal';
+import { MakeupPickerModal } from '@/components/attendance/MakeupPickerModal';
+import { useMakeup } from '@/components/panels/MakeupContext';
+import { useQuickActions } from '@/components/panels/QuickActionsContext';
+import { buildMakeupMessage } from '@/lib/makeup-helpers';
 
 // 현재 학기(2026 여름) 진행 반만
 const CURRENT_CLASSES = classes.filter(c => ['cl-01', 'cl-02', 'cl-03', 'cl-04', 'cl-05', 'cl-06'].includes(c.id));
@@ -27,6 +33,10 @@ export default function AttendancePage() {
   const [groupFilter, setGroupFilter] = useState('');     // '' = 전체 그룹
   const [classFilter, setClassFilter] = useState('전체');  // '전체' = 전체 반
   const [openClass, setOpenClass] = useState<Class | null>(null);
+  const { requests, scheduleMakeup, completeMakeup } = useMakeup();
+  const { openSms } = useQuickActions();
+  const [mkPick, setMkPick] = useState<{ student: Student; cls: Class } | null>(null);
+  const waitlist = requests.filter(r => r.status !== '완료');
 
   function updateStatus(sessionId: string, studentId: string, status: AttendanceStatus, absenceReason: string | null) {
     setRecords(prev => {
@@ -150,6 +160,65 @@ export default function AttendancePage() {
         <AbsenceFocusList entries={focusEntries} onSelect={openClassById} />
       </div>
 
+      {/* 보강 대기 목록 — 결석 후 통화 거쳐 나중에 확정/완료 추적 */}
+      <Card title="보강 대기 목록" className="mb-6">
+        <p className="text-xs text-[#787774] -mt-1 mb-3">결석 후 보강 미정·예정 건 · 통화 후 일정 확정</p>
+        {waitlist.length === 0 ? (
+          <p className="text-sm text-[#787774] py-6 text-center">보강 대기 건이 없습니다.</p>
+        ) : (
+          <div className="divide-y divide-[#F1F0EF]">
+            {waitlist.map(r => {
+              const stu = students.find(s => s.id === r.student_id);
+              const cls = classes.find(c => c.id === r.class_id);
+              if (!stu || !cls) return null;
+              const absentMmdd = `${Number(r.absent_date.slice(5, 7))}/${Number(r.absent_date.slice(8, 10))}`;
+              return (
+                <div key={r.id} className="flex items-center justify-between gap-3 py-2.5">
+                  <div className="min-w-0">
+                    <span className="text-sm text-[#37352F]">{stu.name}</span>
+                    <span className="text-xs text-[#787774] ml-2">{cls.schedule} {cls.course}</span>
+                    <span className="text-xs text-[#BEBDBA] ml-2">결석 {absentMmdd}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {r.status === '예정' ? (
+                      <>
+                        <span className="text-xs text-[#0F7B6C]">보강 {r.makeup_date} {r.makeup_time}</span>
+                        <button
+                          onClick={() => openSms({
+                            recipients: [{ studentId: stu.id, name: stu.name, phone: stu.parent_phone }],
+                            template: 'makeup',
+                            message: buildMakeupMessage(stu.name, cls.course, r.makeup_date!, r.makeup_time!),
+                          })}
+                          className="text-xs px-2.5 py-1 rounded-md border border-[#E9E9E7] text-[#787774] hover:text-[#37352F] transition-colors"
+                        >
+                          문자 재발송
+                        </button>
+                        <button
+                          onClick={() => completeMakeup(r.id)}
+                          className="text-xs px-2.5 py-1 rounded-md bg-[#EDF7F5] text-[#0F7B6C] border border-[#0F7B6C]/30 hover:bg-[#0F7B6C]/10 transition-colors"
+                        >
+                          완료
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-xs font-medium text-[#EB5757] bg-[#FDECEA] px-2 py-0.5 rounded">미정</span>
+                        <button
+                          onClick={() => setMkPick({ student: stu, cls })}
+                          className="text-xs px-2.5 py-1 rounded-md border border-[#FF6C37] text-[#FF6C37] hover:bg-[#FFF1EC] transition-colors"
+                        >
+                          보강 잡기
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
       {/* 반 필터 — 그룹(연도+학기) + 반(실제 반 이름) */}
       <div className="flex gap-3 mb-4">
         <Select
@@ -215,6 +284,26 @@ export default function AttendancePage() {
           records={records}
           onClose={() => setOpenClass(null)}
           onEdit={updateStatus}
+        />
+      )}
+
+      {mkPick && (
+        <MakeupPickerModal
+          student={mkPick.student}
+          cls={mkPick.cls}
+          onClose={() => setMkPick(null)}
+          onConfirm={(date, time, memo) => {
+            const req = requests.find(
+              r => r.student_id === mkPick.student.id && r.class_id === mkPick.cls.id && r.status !== '완료',
+            );
+            if (req) scheduleMakeup(req.id, date, time, memo);
+            openSms({
+              recipients: [{ studentId: mkPick.student.id, name: mkPick.student.name, phone: mkPick.student.parent_phone }],
+              template: 'makeup',
+              message: buildMakeupMessage(mkPick.student.name, mkPick.cls.course, date, time),
+            });
+            setMkPick(null);
+          }}
         />
       )}
     </div>

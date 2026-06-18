@@ -75,21 +75,53 @@ export const subjects: Subject[] = [
 ];
 
 // ── 강사 ──────────────────────────────────────────────────────
+export type TeacherRole = '강사' | '튜터';
+
 export interface Teacher {
   id: string;
   campus_id: string;
   name: string;
+  role: TeacherRole;             // 강사 / 튜터
   subject_ids: string[];         // 가르칠 수 있는 과목 = "강사 수준"
   phone?: string;
+  hire_date?: string;            // 입사일 YYYY-MM-DD
   status: '재직' | '휴직' | '퇴직';
 }
 
 export const teachers: Teacher[] = [
-  { id: 'tch-ron',   campus_id: 'campus-001', name: '론',   subject_ids: ['sub-python'],                status: '재직' },
-  { id: 'tch-seed',  campus_id: 'campus-001', name: '씨드', subject_ids: ['sub-python', 'sub-arduino'], status: '재직' },
-  { id: 'tch-ruth',  campus_id: 'campus-001', name: '루스', subject_ids: ['sub-custom'],                status: '재직' },
-  { id: 'tch-liam',  campus_id: 'campus-001', name: '리암', subject_ids: ['sub-python'],                status: '재직' },
-  { id: 'tch-hobin', campus_id: 'campus-001', name: '허빈', subject_ids: ['sub-custom', 'sub-arduino'], status: '재직' },
+  { id: 'tch-ron',   campus_id: 'campus-001', name: '론',   role: '강사', subject_ids: ['sub-python'],                phone: '010-1234-5678', hire_date: '2023-03-02', status: '재직' },
+  { id: 'tch-seed',  campus_id: 'campus-001', name: '씨드', role: '강사', subject_ids: ['sub-python', 'sub-arduino'], phone: '010-1234-5678', hire_date: '2022-09-01', status: '재직' },
+  { id: 'tch-ruth',  campus_id: 'campus-001', name: '루스', role: '강사', subject_ids: ['sub-custom'],                phone: '010-1234-5678', hire_date: '2024-01-08', status: '재직' },
+  { id: 'tch-liam',  campus_id: 'campus-001', name: '리암', role: '튜터', subject_ids: ['sub-python'],                phone: '010-1234-5678', hire_date: '2025-03-03', status: '재직' },
+  { id: 'tch-hobin', campus_id: 'campus-001', name: '허빈', role: '튜터', subject_ids: ['sub-custom', 'sub-arduino'], phone: '010-1234-5678', hire_date: '2024-07-15', status: '재직' },
+];
+
+// ── 강사 근태 ─────────────────────────────────────────────────
+export type AttendanceWorkStatus = '정상' | '지각' | '연차' | '병가' | '결근';
+
+export interface TeacherAttendance {
+  id: string;
+  teacher_id: string;
+  date: string;        // YYYY-MM-DD
+  status: AttendanceWorkStatus;
+  check_in?: string;   // HH:MM
+  check_out?: string;  // HH:MM
+  memo?: string;
+}
+
+// 최근 근태 시드(데모) — 강사별 며칠치
+export const teacherAttendance: TeacherAttendance[] = [
+  { id: 'ta-ron-1',   teacher_id: 'tch-ron',   date: '2026-06-08', status: '정상', check_in: '08:55', check_out: '18:05' },
+  { id: 'ta-ron-2',   teacher_id: 'tch-ron',   date: '2026-06-10', status: '정상', check_in: '08:50', check_out: '18:00' },
+  { id: 'ta-ron-3',   teacher_id: 'tch-ron',   date: '2026-06-12', status: '지각', check_in: '09:20', check_out: '18:10', memo: '교통 지연' },
+  { id: 'ta-seed-1',  teacher_id: 'tch-seed',  date: '2026-06-08', status: '정상', check_in: '08:40', check_out: '18:30' },
+  { id: 'ta-seed-2',  teacher_id: 'tch-seed',  date: '2026-06-11', status: '연차' },
+  { id: 'ta-ruth-1',  teacher_id: 'tch-ruth',  date: '2026-06-09', status: '정상', check_in: '09:00', check_out: '18:00' },
+  { id: 'ta-ruth-2',  teacher_id: 'tch-ruth',  date: '2026-06-12', status: '병가', memo: '몸살' },
+  { id: 'ta-liam-1',  teacher_id: 'tch-liam',  date: '2026-06-10', status: '정상', check_in: '12:55', check_out: '19:00' },
+  { id: 'ta-liam-2',  teacher_id: 'tch-liam',  date: '2026-06-12', status: '정상', check_in: '13:00', check_out: '19:05' },
+  { id: 'ta-hobin-1', teacher_id: 'tch-hobin', date: '2026-06-09', status: '지각', check_in: '13:25', check_out: '19:00', memo: '병원 경유' },
+  { id: 'ta-hobin-2', teacher_id: 'tch-hobin', date: '2026-06-11', status: '정상', check_in: '12:50', check_out: '19:00' },
 ];
 
 // ── 반 ──────────────────────────────────────────────────────
@@ -269,7 +301,18 @@ export interface Student {
   cash_receipt_enabled?: boolean;                       // 발행 / 미발행
   cash_receipt_purpose?: '소득공제용' | '지출증빙용';   // 용도 (발행 시)
   cash_receipt_number?: string;                         // 발행 대상 번호 (휴대폰·사업자번호 등)
+  // ── 퇴원 정보 (status === '퇴원'일 때) ──
+  withdraw_reason?: WithdrawReason;  // 퇴원 사유 (목록)
+  withdraw_memo?: string;            // 퇴원 사유 메모 (자유 입력)
+  withdrew_at?: string;              // 퇴원일 (YYYY-MM-DD)
 }
+
+/** 퇴원 사유 목록 — 드롭다운·집계 기준 */
+export type WithdrawReason =
+  | '이사' | '학업 부담' | '비용 부담' | '강사·수업 불만' | '친구 관계' | '타 학원 이동' | '기타';
+
+export const WITHDRAW_REASONS: WithdrawReason[] =
+  ['이사', '학업 부담', '비용 부담', '강사·수업 불만', '친구 관계', '타 학원 이동', '기타'];
 
 export interface Guardian {
   id: string;
@@ -425,9 +468,14 @@ SIBLING_GROUPS.forEach(group => {
   });
 });
 
-// 수강이력 조회용 퇴원 학생 (원생 상세 탭에서 복원 이력 시연용)
+// 수강이력 조회용 퇴원 학생 (원생관리 목록에 합쳐 표시 + AI 퇴원 분석 데이터)
 export const withdrawnStudents: Student[] = [
-  { id: 's-ex1', campus_id: 'campus-001', name: '이지호', grade: '중3', school: '대치중', parent_phone: '010-1111-9999', student_phone: '010-1111-9999', status: '퇴원', first_enrolled_at: '2023-01-10', source: '지인소개', points: 0, class_id: '', streak: 0, title: '', division: '중등부' },
+  { id: 's-ex1', campus_id: 'campus-001', name: '이지호', grade: '중3', school: '대치중', parent_phone: '010-1111-9999', student_phone: '010-1111-9999', status: '퇴원', first_enrolled_at: '2023-01-10', source: '지인소개', points: 0, class_id: '', streak: 0, title: '', division: '중등부', withdraw_reason: '타 학원 이동', withdrew_at: '2026-05-20', withdraw_memo: '대형 입시학원으로 이동' },
+  { id: 's-ex2', campus_id: 'campus-001', name: '박서윤', grade: '초5', school: '도곡초', parent_phone: '010-2222-8888', student_phone: '', status: '퇴원', first_enrolled_at: '2024-03-04', source: '인스타그램', points: 0, class_id: '', streak: 0, title: '', division: '초등부', withdraw_reason: '비용 부담', withdrew_at: '2026-05-28', withdraw_memo: '' },
+  { id: 's-ex3', campus_id: 'campus-001', name: '정우진', grade: '초6', school: '대치초', parent_phone: '010-3333-7777', student_phone: '', status: '퇴원', first_enrolled_at: '2024-07-15', source: '네이버카페', points: 0, class_id: '', streak: 0, title: '', division: '초등부', withdraw_reason: '학업 부담', withdrew_at: '2026-06-02', withdraw_memo: '학교 학원 병행 부담' },
+  { id: 's-ex4', campus_id: 'campus-001', name: '최하람', grade: '중1', school: '역삼중', parent_phone: '010-4444-6666', student_phone: '', status: '퇴원', first_enrolled_at: '2025-01-10', source: '학교안내', points: 0, class_id: '', streak: 0, title: '', division: '중등부', withdraw_reason: '이사', withdrew_at: '2026-06-05', withdraw_memo: '타 지역 전학' },
+  { id: 's-ex5', campus_id: 'campus-001', name: '한지안', grade: '초4', school: '개포초', parent_phone: '010-5555-5555', student_phone: '', status: '퇴원', first_enrolled_at: '2025-03-02', source: '현수막', points: 0, class_id: '', streak: 0, title: '', division: '초등부', withdraw_reason: '비용 부담', withdrew_at: '2026-06-09', withdraw_memo: '' },
+  { id: 's-ex6', campus_id: 'campus-001', name: '오시현', grade: '중2', school: '대치중', parent_phone: '010-6666-4444', student_phone: '', status: '퇴원', first_enrolled_at: '2024-07-15', source: '지인소개', points: 0, class_id: '', streak: 0, title: '', division: '중등부', withdraw_reason: '타 학원 이동', withdrew_at: '2026-06-11', withdraw_memo: '코딩 대회 준비 전문반 이동' },
 ];
 
 // ── 보호자 ────────────────────────────────────────────────────
@@ -545,6 +593,11 @@ export const consultations: Consultation[] = [
   { id: 'cons-s-01-1', student_id: 's-01', date: '2026-03-12', method: '대면', counselor: '김지원', content: '신학기 학습 목표 상담. 알고리즘 심화에 관심 많음.' },
   { id: 'cons-s-01-2', student_id: 's-01', date: '2026-05-20', method: '전화', counselor: '김지원', content: '어머니와 진도 관련 통화. 다음 달 심화반 이동 희망.' },
   { id: 'cons-s-02-1', student_id: 's-02', date: '2026-04-03', method: '문자·카톡', counselor: '박서준', content: '결석 후속 안내. 보강 일정 카톡으로 공유함.' },
+  // 강사가 진행한 상담 (인사기록카드 상담이력 탭 연동용)
+  { id: 'cons-s-03-1', student_id: 's-03', date: '2026-06-05', method: '대면', counselor: '씨드', content: '파이썬 심화 진도 상담. 알고리즘 추가 과제 제공.' },
+  { id: 'cons-s-04-1', student_id: 's-04', date: '2026-06-08', method: '전화', counselor: '씨드', content: '결석 사유 확인 및 보강 안내.' },
+  { id: 'cons-s-05-1', student_id: 's-05', date: '2026-06-10', method: '대면', counselor: '론', content: '학습 태도 우수 — 칭찬 및 다음 단계 안내.' },
+  { id: 'cons-s-06-1', student_id: 's-06', date: '2026-06-11', method: '대면', counselor: '허빈', content: '아두이노 프로젝트 주제 상담.' },
 ];
 
 // 문자·상담 발송 기록(데모) — 보낸 문자를 상담이력에 남기고 그 기록을 반환.
@@ -833,6 +886,39 @@ export const kioskShopItems: KioskShopItem[] = [
   { id: 'ks-03', icon: '📓', name: '디랩 노트', cost: 150 },
   { id: 'ks-04', icon: '🏆', name: '특별 수업 참가권', cost: 500 },
   { id: 'ks-05', icon: '🎁', name: '디랩 굿즈 키트', cost: 800 },
+];
+
+// ── 키오스크 공지 포스터 (목업 플레이스홀더) ──────────────────
+export interface KioskPoster {
+  id: string;
+  title: string;
+  desc: string;
+  emoji: string;
+  bg: string;   // 그라데이션 배경
+}
+
+export const kioskPosters: KioskPoster[] = [
+  { id: 'poster-1', title: '여름방학 코딩 캠프 모집', desc: '7/21 ~ 8/1 · 파이썬·아두이노 집중반', emoji: '🏕️', bg: 'linear-gradient(135deg,#FF6C37,#FF8C5A)' },
+  { id: 'poster-2', title: '디랩 코딩 대회 D-7', desc: '8월 둘째 주 · 전 캠퍼스 통합 대회', emoji: '🏆', bg: 'linear-gradient(135deg,#1A73E8,#5FA8FF)' },
+  { id: 'poster-3', title: '신규 친구 추천 이벤트', desc: '친구와 함께 등록 시 포인트 2배!', emoji: '🎁', bg: 'linear-gradient(135deg,#0F7B6C,#34C7A8)' },
+];
+
+// ── 포인트 상점 구매 이력 ─────────────────────────────────────
+export interface Purchase {
+  id: string;
+  student_id: string;
+  item_id: string;
+  item_name: string;
+  cost: number;
+  date: string;   // YYYY-MM-DD
+}
+
+export const purchases: Purchase[] = [
+  { id: 'pur-1', student_id: 's-01', item_id: 'ks-01', item_name: '간식 교환권', cost: 200, date: '2026-05-21' },
+  { id: 'pur-2', student_id: 's-01', item_id: 'ks-03', item_name: '디랩 노트', cost: 150, date: '2026-06-04' },
+  { id: 'pur-3', student_id: 's-05', item_id: 'ks-02', item_name: '게임 시간 30분', cost: 300, date: '2026-05-30' },
+  { id: 'pur-4', student_id: 's-13', item_id: 'ks-04', item_name: '특별 수업 참가권', cost: 500, date: '2026-06-02' },
+  { id: 'pur-5', student_id: 's-15', item_id: 'ks-01', item_name: '간식 교환권', cost: 200, date: '2026-06-10' },
 ];
 
 // ── 칭호 ──────────────────────────────────────────────────────
@@ -1174,4 +1260,138 @@ export const lessonProducts: LessonProduct[] = [
   { id: 'lp-06', title: '데이터 분석 with 파이썬', category: 'AI·데이터', type: '강의', instructor: '김도윤', level: '중급', lessons: 18, durationMin: 650, rating: 4.7, students: 640, skills: ['Python', '데이터'], priceWon: 99000, thumbnailEmoji: '📊' },
   { id: 'lp-07', title: '웹의 시작: HTML/CSS 교안', category: '웹·앱', type: '교안', instructor: '이서연', level: '입문', lessons: 12, durationMin: 380, rating: 4.5, students: 980, skills: ['HTML', 'CSS'], priceWon: 45000, thumbnailEmoji: '🌐' },
   { id: 'lp-08', title: '나만의 앱 만들기: 앱인벤터', category: '웹·앱', type: '강의', instructor: '박지훈', level: '초급', lessons: 15, durationMin: 500, rating: 4.7, students: 420, skills: ['앱개발', '블록코딩'], priceWon: 65000, thumbnailEmoji: '📱', badge: '신규' },
+];
+
+// ─────────────────────────────────────────────────────────────
+// 랩장 성과 정량화 — 지점(랩)별 주간 지표
+// 4개 지표: 주간 홍보 건수 / 상담 문의 / 신규 입반 / 퇴원율(%)
+// ─────────────────────────────────────────────────────────────
+export interface Lab {
+  id: string;
+  name: string;
+  leader: string;   // 랩장
+}
+
+export const labs: Lab[] = [
+  { id: 'lab-pg', name: '판교랩', leader: '이지은' },
+  { id: 'lab-bd', name: '분당랩', leader: '박서준' },
+  { id: 'lab-gn', name: '강남랩', leader: '최민수' },
+  { id: 'lab-pc', name: '평촌랩', leader: '정유진' },
+  { id: 'lab-is', name: '일산랩', leader: '한지훈' },
+  { id: 'lab-sd', name: '송도랩', leader: '오세영' },
+];
+
+export interface LabWeeklyMetric {
+  lab_id: string;
+  week: string;             // 주 시작(월요일) ISO
+  promo_count: number;      // 홍보 건수(= SNS + 블로그)
+  promo_sns: number;        // SNS 홍보 건수
+  promo_blog: number;       // 블로그 홍보 건수
+  inquiry_count: number;    // 상담 문의 건수(오프라인·전화·네이버 등)
+  new_enroll_count: number; // 신규 등록
+  re_enroll_count: number;  // 재등록
+  attendance_rate: number;  // 출석률(%)
+  makeup_count: number;     // 보강 건수
+  makeup_done_rate: number; // 보강 완료율(%)
+  withdraw_rate: number;    // 퇴원율(%) — 낮을수록 좋음
+  parent_response_rate: number; // 학부모 반응(응답·만족, %)
+}
+
+type LabMetricBase = Omit<LabWeeklyMetric, 'lab_id' | 'week'>;
+
+/** 분석 기준 주차(이번 주, 월요일) */
+export const LAB_CURRENT_WEEK = '2026-06-08';
+
+// 최근 8주(월요일) — 과거 → 현재
+const LAB_WEEKS = [
+  '2026-04-20', '2026-04-27', '2026-05-04', '2026-05-11',
+  '2026-05-18', '2026-05-25', '2026-06-01', '2026-06-08',
+];
+
+const labBase = (
+  sns: number, blog: number, inquiry: number, newE: number, reE: number,
+  attend: number, mkCount: number, mkDone: number, withdraw: number, parent: number,
+): LabMetricBase => ({
+  promo_count: sns + blog, promo_sns: sns, promo_blog: blog,
+  inquiry_count: inquiry, new_enroll_count: newE, re_enroll_count: reE,
+  attendance_rate: attend, makeup_count: mkCount, makeup_done_rate: mkDone,
+  withdraw_rate: withdraw, parent_response_rate: parent,
+});
+
+// 이번 주 명시값 — 시연용. 판교랩: 홍보 많지만 문의 전환 낮고 출결↓·퇴원율↑ 이상치.
+const LAB_CURRENT: Record<string, LabMetricBase> = {
+  //                  sns blog inq new re  att mk  mkD wd  par
+  'lab-pg': labBase(   8,  4,  4,  2,  2,  88, 3,  60,  7,  70),
+  'lab-bd': labBase(   3,  3, 14,  5,  3,  94, 2,  90,  3,  92),
+  'lab-gn': labBase(   3,  2, 11,  4,  3,  92, 2,  85,  4,  88),
+  'lab-pc': labBase(   4,  3, 12,  5,  4,  93, 1,  95,  3,  90),
+  'lab-is': labBase(   2,  2,  9,  3,  2,  90, 3,  80,  5,  85),
+  'lab-sd': labBase(   3,  2, 10,  4,  3,  89, 2,  78,  6,  82),
+};
+
+// 과거 주차는 결정적 생성(랜덤 금지) — lab/week 인덱스 기반
+function genLabMetric(labIdx: number, weekIdx: number): LabMetricBase {
+  const h = (n: number) => Math.abs((labIdx * 31 + weekIdx * 17 + n * 7) % 11); // 0..10
+  return labBase(
+    2 + (h(1) % 7),    // sns 2..8
+    1 + (h(2) % 5),    // blog 1..5
+    8 + h(3),          // inquiry 8..18
+    1 + (h(4) % 6),    // new 1..6
+    1 + (h(5) % 4),    // re 1..4
+    86 + h(6),         // attendance 86..96
+    1 + (h(7) % 4),    // makeup count 1..4
+    70 + h(8) * 3,     // makeup done 70..100
+    2 + (h(9) % 7),    // withdraw 2..8
+    78 + h(10) * 2,    // parent response 78..98
+  );
+}
+
+export const labWeeklyMetrics: LabWeeklyMetric[] = labs.flatMap((lab, labIdx) =>
+  LAB_WEEKS.map((week, weekIdx) => {
+    const base = week === LAB_CURRENT_WEEK ? LAB_CURRENT[lab.id] : genLabMetric(labIdx, weekIdx);
+    return { lab_id: lab.id, week, ...base };
+  }),
+);
+
+// ─────────────────────────────────────────────────────────────
+// 상담 관리 — 예비 원생(리드) 파이프라인
+// 문의 → 상담예약 → 상담완료 → 등록 / 미등록
+// ─────────────────────────────────────────────────────────────
+export type LeadStage = '신규문의' | '상담예약' | '상담완료' | '등록' | '미등록';
+export const LEAD_STAGES: LeadStage[] = ['신규문의', '상담예약', '상담완료', '등록', '미등록'];
+
+export const LEAD_SOURCES =
+  ['지인소개', '인스타그램', '블로그', '학교안내', '현수막', '네이버카페', '전화문의'];
+export const LEAD_SUBJECTS = ['파이썬 기초', '아두이노', '맞춤수업', '웹/앱'];
+
+/** 예비 원생(상담만 하고 미등록 포함) */
+export interface Lead {
+  id: string;
+  name: string;
+  parent_phone: string;
+  grade?: string;
+  source: string;            // 유입경로
+  interest_subject: string;  // 관심 과목
+  stage: LeadStage;
+  inquiry_date: string;      // 문의일 YYYY-MM-DD
+  next_contact_date?: string;// 다음 연락 예정일
+  memo?: string;
+}
+
+// 상담 관리 기준 주차 시작(이번 주 월요일)
+export const LEAD_WEEK_START = '2026-06-08';
+
+export const leads: Lead[] = [
+  { id: 'lead-01', name: '김도현', parent_phone: DEMO_PHONE, grade: '초4', source: '인스타그램', interest_subject: '파이썬 기초', stage: '신규문의', inquiry_date: '2026-06-12', memo: '주말반 문의' },
+  { id: 'lead-02', name: '이서아', parent_phone: DEMO_PHONE, grade: '초5', source: '네이버카페', interest_subject: '아두이노', stage: '신규문의', inquiry_date: '2026-06-13' },
+  { id: 'lead-03', name: '박민준', parent_phone: DEMO_PHONE, grade: '중1', source: '현수막', interest_subject: '맞춤수업', stage: '신규문의', inquiry_date: '2026-06-11' },
+  { id: 'lead-04', name: '정하윤', parent_phone: DEMO_PHONE, grade: '초6', source: '지인소개', interest_subject: '파이썬 기초', stage: '상담예약', inquiry_date: '2026-06-10', next_contact_date: '2026-06-16', memo: '월요일 오후 방문 상담 예약' },
+  { id: 'lead-05', name: '최유나', parent_phone: DEMO_PHONE, grade: '중2', source: '블로그', interest_subject: '웹/앱', stage: '상담예약', inquiry_date: '2026-06-09', next_contact_date: '2026-06-15' },
+  { id: 'lead-06', name: '강시우', parent_phone: DEMO_PHONE, grade: '초4', source: '학교안내', interest_subject: '아두이노', stage: '상담완료', inquiry_date: '2026-06-08', next_contact_date: '2026-06-17', memo: '비용 비교 중 — 재연락 필요' },
+  { id: 'lead-07', name: '윤지호', parent_phone: DEMO_PHONE, grade: '초5', source: '인스타그램', interest_subject: '파이썬 기초', stage: '상담완료', inquiry_date: '2026-06-05', memo: '형제 동시 등록 고려' },
+  { id: 'lead-08', name: '임채원', parent_phone: DEMO_PHONE, grade: '중1', source: '지인소개', interest_subject: '맞춤수업', stage: '등록', inquiry_date: '2026-06-02' },
+  { id: 'lead-09', name: '한예린', parent_phone: DEMO_PHONE, grade: '초6', source: '네이버카페', interest_subject: '파이썬 기초', stage: '등록', inquiry_date: '2026-05-28' },
+  { id: 'lead-10', name: '오태경', parent_phone: DEMO_PHONE, grade: '중2', source: '현수막', interest_subject: '아두이노', stage: '등록', inquiry_date: '2026-06-04' },
+  { id: 'lead-11', name: '서지안', parent_phone: DEMO_PHONE, grade: '초4', source: '블로그', interest_subject: '웹/앱', stage: '미등록', inquiry_date: '2026-05-30', memo: '타 학원 등록' },
+  { id: 'lead-12', name: '노은서', parent_phone: DEMO_PHONE, grade: '초5', source: '전화문의', interest_subject: '맞춤수업', stage: '미등록', inquiry_date: '2026-06-03', memo: '비용 부담' },
 ];

@@ -5,7 +5,9 @@ import { SlidePanel } from '@/components/panels/SlidePanel';
 import { useQuickActions } from '@/components/panels/QuickActionsContext';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
-import { classes } from '@/lib/mock-data';
+import { classes, students, logConsultation, TODAY } from '@/lib/mock-data';
+
+type RecordMode = 'class' | 'consult';
 
 // DEMO ONLY ↓↓↓
 // 실제 녹음(MediaRecorder)·STT API·서버 저장 없음. 데모 검증용 클릭 플로우 목업.
@@ -29,6 +31,18 @@ const MOCK_TRANSCRIPT =
   '이걸 누적 변수라고 불러요. 자 그러면 중첩 반복문도 한번 볼까요? 반복문 안에 반복문이 들어가는 거예요. ' +
   '여기서부터 조금 헷갈릴 수 있는데, 바깥쪽이 한 번 돌 때 안쪽이 전부 도는 거예요. ' +
   '오늘은 여기까지 하고, 다음 시간에는 리스트랑 같이 써볼게요.';
+
+// 상담 녹음 전사/요약(목업) — 학부모 상담 가정
+const MOCK_CONSULT_SUMMARY = [
+  '최근 수업 집중도와 과제 수행에 대해 학부모와 상담했습니다.',
+  '가정에서도 코딩에 흥미를 보이며 추가 심화 학습을 희망합니다.',
+  '다음 학기 심화반 이동을 긍정 검토하기로 했습니다.',
+  '결제·일정 관련 문의는 없었습니다.',
+];
+const MOCK_CONSULT_TRANSCRIPT =
+  '안녕하세요 어머님, 요즘 아이가 수업에 참여도가 아주 좋아요. 과제도 꾸준히 해오고 있고요. ' +
+  '집에서도 코딩 얘기를 많이 한다고 하셔서, 다음 단계로 심화반을 한번 고려해보면 좋을 것 같아요. ' +
+  '일정이나 비용 부분은 다음에 다시 안내드릴게요. 오늘 상담 감사합니다.';
 // DEMO ONLY ↑↑↑
 
 export function RecordingPanel() {
@@ -36,8 +50,11 @@ export function RecordingPanel() {
   const open = activePanel === 'recording';
 
   const recordableClasses = useMemo(() => classes.filter(c => c.enrolled_count > 0), []);
+  const enrolledStudents = useMemo(() => students.filter(s => s.status === '재원'), []);
 
+  const [mode, setMode] = useState<RecordMode>('class');
   const [selectedClassId, setSelectedClassId] = useState(recordableClasses[0]?.id ?? '');
+  const [selectedStudentId, setSelectedStudentId] = useState(enrolledStudents[0]?.id ?? '');
   const [stage, setStage] = useState<Stage>('idle');
   const [elapsed, setElapsed] = useState(0);
   const [showTranscript, setShowTranscript] = useState(false);
@@ -85,6 +102,18 @@ export function RecordingPanel() {
 
   const mmss = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`;
   const selectedClass = recordableClasses.find(c => c.id === selectedClassId);
+  const selectedStudent = enrolledStudents.find(s => s.id === selectedStudentId);
+  const studentClass = selectedStudent ? classes.find(c => c.id === selectedStudent.class_id) : undefined;
+
+  const summaryLines = mode === 'consult' ? MOCK_CONSULT_SUMMARY : MOCK_SUMMARY;
+  const transcriptText = mode === 'consult' ? MOCK_CONSULT_TRANSCRIPT : MOCK_TRANSCRIPT;
+
+  function handleSave() {
+    if (mode === 'consult' && selectedStudentId) {
+      logConsultation(selectedStudentId, MOCK_CONSULT_SUMMARY.join(' '), TODAY, '대면', '원장님');
+    }
+    setSaved(true);
+  }
 
   return (
     <SlidePanel open={open} onClose={handleClose} title="AI 녹음">
@@ -95,14 +124,43 @@ export function RecordingPanel() {
           <span className="text-xs text-[#787774]">실제 녹음 없이 흐름을 시연하는 목업입니다.</span>
         </div>
 
-        {/* 반 선택 — idle에서만 변경 가능 */}
-        <Select
-          label="녹음할 수업"
-          value={selectedClassId}
-          onChange={e => setSelectedClassId(e.target.value)}
-          disabled={stage !== 'idle'}
-          options={recordableClasses.map(c => ({ value: c.id, label: `${c.schedule} ${c.course}` }))}
-        />
+        {/* 모드 토글 — idle에서만 전환 가능 */}
+        <div className="inline-flex w-full rounded-lg border border-[#E9E9E7] bg-white p-0.5">
+          {([['class', '수업 녹음'], ['consult', '상담 녹음']] as [RecordMode, string][]).map(([m, label]) => (
+            <button
+              key={m}
+              onClick={() => mode !== m && setMode(m)}
+              disabled={stage !== 'idle'}
+              className={`flex-1 px-3 py-1.5 text-sm rounded-md transition-colors disabled:cursor-not-allowed ${
+                mode === m ? 'bg-[#FFF1EC] text-[#FF6C37] font-medium' : 'text-[#787774] hover:text-[#37352F] disabled:hover:text-[#787774]'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* 대상 선택 — idle에서만 변경 가능 */}
+        {mode === 'class' ? (
+          <Select
+            label="녹음할 수업"
+            value={selectedClassId}
+            onChange={e => setSelectedClassId(e.target.value)}
+            disabled={stage !== 'idle'}
+            options={recordableClasses.map(c => ({ value: c.id, label: `${c.schedule} ${c.course}` }))}
+          />
+        ) : (
+          <Select
+            label="상담할 학생"
+            value={selectedStudentId}
+            onChange={e => setSelectedStudentId(e.target.value)}
+            disabled={stage !== 'idle'}
+            options={enrolledStudents.map(s => {
+              const c = classes.find(x => x.id === s.class_id);
+              return { value: s.id, label: `${s.name} · ${c ? c.course : '미배정'}` };
+            })}
+          />
+        )}
 
         {/* [1] idle */}
         {stage === 'idle' && (
@@ -113,7 +171,9 @@ export function RecordingPanel() {
               </svg>
             </span>
             <p className="text-sm text-[#787774]">
-              녹음을 시작하면 수업 내용이 자동으로<br />텍스트로 전사되고 요약됩니다.
+              {mode === 'consult'
+                ? <>녹음을 시작하면 상담 내용이 자동으로<br />텍스트로 전사·요약됩니다.</>
+                : <>녹음을 시작하면 수업 내용이 자동으로<br />텍스트로 전사되고 요약됩니다.</>}
             </p>
             <Button className="w-full" onClick={startRecording}>녹음 시작</Button>
           </div>
@@ -157,21 +217,21 @@ export function RecordingPanel() {
         {/* [4] result */}
         {stage === 'result' && (
           <div className="space-y-4">
-            {selectedClass && (
-              <p className="text-xs text-[#787774]">
-                {selectedClass.schedule} {selectedClass.course} · 녹음 {mmss}
-              </p>
-            )}
+            <p className="text-xs text-[#787774]">
+              {mode === 'consult'
+                ? `${selectedStudent?.name ?? ''}${studentClass ? ` · ${studentClass.course}` : ''} · 녹음 ${mmss}`
+                : selectedClass ? `${selectedClass.schedule} ${selectedClass.course} · 녹음 ${mmss}` : `녹음 ${mmss}`}
+            </p>
 
             <div>
               <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-[#FF6C37]">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                 </svg>
-                수업 요약 (AI 자동 생성)
+                {mode === 'consult' ? '상담 요약 (AI 자동 생성)' : '수업 요약 (AI 자동 생성)'}
               </p>
               <ul className="space-y-2 rounded-lg bg-[#F7F7F5] p-4">
-                {MOCK_SUMMARY.map((line, i) => (
+                {summaryLines.map((line, i) => (
                   <li key={i} className="flex gap-2 text-sm text-[#37352F]">
                     <span className="text-[#FF6C37]">•</span>
                     <span>{line}</span>
@@ -196,7 +256,7 @@ export function RecordingPanel() {
               </button>
               {showTranscript && (
                 <p className="mt-2 rounded-lg border border-[#E9E9E7] p-3 text-xs leading-relaxed text-[#787774]">
-                  {MOCK_TRANSCRIPT}
+                  {transcriptText}
                 </p>
               )}
             </div>
@@ -206,15 +266,19 @@ export function RecordingPanel() {
               <Button
                 className="flex-1"
                 variant={saved ? 'secondary' : 'primary'}
-                onClick={() => setSaved(true)}
+                onClick={handleSave}
                 disabled={saved}
               >
-                {saved ? '저장됨 ✓' : '요약 저장'}
+                {saved ? '저장됨 ✓' : mode === 'consult' ? '상담 저장' : '요약 저장'}
               </Button>
               <Button className="flex-1" variant="secondary" onClick={reset}>다시 녹음</Button>
             </div>
             {saved && (
-              <p className="text-center text-xs text-[#0F7B6C]">수업 기록에 저장되었습니다.</p>
+              <p className="text-center text-xs text-[#0F7B6C]">
+                {mode === 'consult'
+                  ? `${selectedStudent?.name ?? ''} 학생 상담이력에 저장되었습니다.`
+                  : '수업 기록에 저장되었습니다.'}
+              </p>
             )}
           </div>
         )}

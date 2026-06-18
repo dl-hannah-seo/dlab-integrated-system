@@ -2,17 +2,22 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import {
-  students as initialStudents,
+  students as activeStudents,
+  withdrawnStudents,
   classes,
   enrollments as initialEnrollments,
   consultations as initialConsultations,
   getInvoiceByStudent,
   payments,
+  WITHDRAW_REASONS,
   Student,
   Enrollment,
   Consultation,
   ConsultMethod,
 } from '@/lib/mock-data';
+
+// 원생관리 목록 = 재원/휴원(활성) + 퇴원자 합본
+const initialStudents: Student[] = [...activeStudents, ...withdrawnStudents];
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input, Select, Textarea } from '@/components/ui/Input';
@@ -405,6 +410,29 @@ export default function StudentsPage() {
                 ? <Select value={f.status} onChange={e => updateField('status', e.target.value as Student['status'])} options={STATUSES.slice(1).map(v => ({ value: v, label: v }))} />
                 : <ViewText>{s.status}</ViewText>}
             </Field>
+            {((editMode && f ? f.status : s.status) === '퇴원') && (
+              <>
+                <Field label="퇴원사유">
+                  {editMode && f
+                    ? <Select
+                        value={f.withdraw_reason ?? ''}
+                        onChange={e => updateField('withdraw_reason', (e.target.value || undefined) as Student['withdraw_reason'])}
+                        options={[{ value: '', label: '선택' }, ...WITHDRAW_REASONS.map(v => ({ value: v, label: v }))]}
+                      />
+                    : <ViewText>{s.withdraw_reason ?? '미입력'}</ViewText>}
+                </Field>
+                <Field label="퇴원일">
+                  {editMode && f
+                    ? <Input type="date" value={f.withdrew_at ?? ''} onChange={e => updateField('withdrew_at', e.target.value)} />
+                    : <ViewText>{s.withdrew_at ?? '-'}</ViewText>}
+                </Field>
+                <Field label="퇴원 메모">
+                  {editMode && f
+                    ? <Textarea rows={2} value={f.withdraw_memo ?? ''} onChange={e => updateField('withdraw_memo', e.target.value)} placeholder="상세 사유 (선택)" />
+                    : <ViewText>{s.withdraw_memo || '-'}</ViewText>}
+                </Field>
+              </>
+            )}
             <Field label="유입경로">
               {editMode && f ? (
                 <div className="w-full flex flex-col gap-1.5">
