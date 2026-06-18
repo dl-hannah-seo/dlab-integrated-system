@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   students as initialStudents,
   classes,
@@ -255,6 +255,15 @@ export default function StudentsPage() {
     setConfirmDelete(false);
     resetConsultState();
   }
+  // 배치표/외부에서 ?detail=<원생ID> 로 진입 시 해당 원생 상세 자동 오픈
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('detail');
+    if (!id) return;
+    const target = localStudents.find(s => s.id === id);
+    if (target) openDetail(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function closeDetail() {
     setDetailStudent(null);
     setEditMode(false);
