@@ -888,6 +888,26 @@ export const kioskShopItems: KioskShopItem[] = [
   { id: 'ks-05', icon: '🎁', name: '디랩 굿즈 키트', cost: 800 },
 ];
 
+// ── 포인트 지급 사유 프리셋 (교사 → 학생) ────────────────────
+export type PointCategory = '출석' | '과제' | '참여' | '기타';
+export interface PointPreset {
+  id: string;
+  category: PointCategory;
+  label: string;
+  points: number;
+}
+export const POINT_CATEGORIES: PointCategory[] = ['출석', '과제', '참여', '기타'];
+export const pointPresets: PointPreset[] = [
+  { id: 'pp-att-1', category: '출석', label: '정시 출석', points: 10 },
+  { id: 'pp-att-2', category: '출석', label: '개근 보너스', points: 30 },
+  { id: 'pp-hw-1', category: '과제', label: '과제 완수', points: 20 },
+  { id: 'pp-hw-2', category: '과제', label: '과제 우수', points: 30 },
+  { id: 'pp-part-1', category: '참여', label: '수업 참여', points: 15 },
+  { id: 'pp-part-2', category: '참여', label: '예리한 질문', points: 25 },
+  { id: 'pp-part-3', category: '참여', label: '발표·도우미', points: 10 },
+  { id: 'pp-etc-1', category: '기타', label: '정리 정돈', points: 5 },
+];
+
 // ── 키오스크 공지 포스터 (목업 플레이스홀더) ──────────────────
 export interface KioskPoster {
   id: string;

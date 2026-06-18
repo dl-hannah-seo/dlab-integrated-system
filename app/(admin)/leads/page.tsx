@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import {
-  leads as seedLeads, LEAD_STAGES, LEAD_SOURCES, LEAD_SUBJECTS, LEAD_WEEK_START, TODAY,
-  type Lead, type LeadStage,
+  LEAD_STAGES, LEAD_SOURCES, LEAD_SUBJECTS, LEAD_WEEK_START,
+  type LeadStage,
 } from '@/lib/mock-data';
 import { leadStageCounts, conversionRate, activeLeads, newThisWeek } from '@/lib/leads';
+import { useLeads } from '@/components/panels/LeadsContext';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
@@ -18,10 +19,8 @@ const STAGE_STYLE: Record<LeadStage, string> = {
   '미등록': 'bg-[#FDECEA] text-[#EB5757]',
 };
 
-let addCounter = 0;
-
 export default function LeadsPage() {
-  const [leads, setLeads] = useState<Lead[]>(seedLeads);
+  const { leads, addLead, updateStage } = useLeads();
   const [toast, setToast] = useState<string | null>(null);
 
   const [form, setForm] = useState({ name: '', subject: LEAD_SUBJECTS[0], source: LEAD_SOURCES[0], grade: '', memo: '' });
@@ -37,20 +36,16 @@ export default function LeadsPage() {
   ];
 
   function setStage(id: string, stage: LeadStage) {
-    setLeads(prev => prev.map(l => (l.id === id ? { ...l, stage } : l)));
+    updateStage(id, stage);
   }
   function convert(id: string) {
-    setStage(id, '등록');
+    updateStage(id, '등록');
     const l = leads.find(x => x.id === id);
     showToast(`${l?.name ?? ''} 등록 처리되었습니다.`);
   }
-  function addLead() {
+  function submitLead() {
     if (!form.name.trim()) return;
-    addCounter += 1;
-    setLeads(prev => [
-      { id: `lead-new-${addCounter}`, name: form.name.trim(), parent_phone: '010-1234-5678', grade: form.grade || undefined, source: form.source, interest_subject: form.subject, stage: '신규문의', inquiry_date: TODAY, memo: form.memo || undefined },
-      ...prev,
-    ]);
+    addLead({ name: form.name, parent_phone: '010-1234-5678', grade: form.grade, source: form.source, interest_subject: form.subject, stage: '신규문의', memo: form.memo });
     setForm({ name: '', subject: LEAD_SUBJECTS[0], source: LEAD_SOURCES[0], grade: '', memo: '' });
     showToast('신규 문의가 추가되었습니다.');
   }
@@ -96,7 +91,7 @@ export default function LeadsPage() {
           <Select label="관심 과목" value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} options={LEAD_SUBJECTS.map(v => ({ value: v, label: v }))} />
           <Select label="유입경로" value={form.source} onChange={e => setForm({ ...form, source: e.target.value })} options={LEAD_SOURCES.map(v => ({ value: v, label: v }))} />
           <Input label="메모" value={form.memo} onChange={e => setForm({ ...form, memo: e.target.value })} placeholder="선택" />
-          <Button onClick={addLead} disabled={!form.name.trim()}>추가</Button>
+          <Button onClick={submitLead} disabled={!form.name.trim()}>추가</Button>
         </div>
       </Card>
 

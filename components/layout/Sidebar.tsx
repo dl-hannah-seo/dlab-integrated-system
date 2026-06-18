@@ -1,8 +1,11 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useQuickActions } from '@/components/panels/QuickActionsContext';
+import { useRole } from '@/components/layout/RoleContext';
+import { ROLES, ROLE_META, menusForRole, canSeeExtra, type Role } from '@/lib/roles';
 
 interface NavItem {
   href: string;
@@ -62,6 +65,11 @@ const adminNav: NavItem[] = [
     icon: <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>,
   },
   {
+    href: '/points',
+    label: '포인트 관리',
+    icon: <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  },
+  {
     href: '/settings',
     label: '설정',
     icon: <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
@@ -70,7 +78,24 @@ const adminNav: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { openAttendance, openSms, openRecording } = useQuickActions();
+  const { role, setRole, ready } = useRole();
+
+  // 학생 역할이면 admin이 아니라 포털로
+  useEffect(() => {
+    if (ready && role === '학생') router.push('/me');
+  }, [ready, role, router]);
+
+  const allowed = menusForRole(role);
+  const visibleNav = adminNav.filter(item => allowed.includes(item.href));
+
+  function onSwitch(value: string) {
+    if (value === '__kiosk__') { router.push('/kiosk'); return; }   // 데모: 키오스크 출석 화면
+    const r = value as Role;
+    setRole(r);
+    if (r === '학생') router.push('/me');
+  }
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-60 bg-[#F7F7F5] border-r border-[#E9E9E7] flex flex-col z-10">
@@ -80,10 +105,23 @@ export function Sidebar() {
         <span className="ml-1.5 text-xs text-[#787774] mt-0.5">OS</span>
       </div>
 
+      {/* 역할 전환 (데모) */}
+      <div className="px-3 pt-3">
+        <label className="px-1 text-[10px] font-semibold text-[#9B9A97] uppercase tracking-wider">⇄ 역할 전환 (데모)</label>
+        <select
+          value={role}
+          onChange={e => onSwitch(e.target.value)}
+          className="w-full mt-1 px-2.5 py-2 text-sm rounded-md border border-[#E9E9E7] bg-white text-[#37352F] focus:outline-none focus:ring-1 focus:ring-[#FF6C37]"
+        >
+          {ROLES.map(r => <option key={r} value={r}>{ROLE_META[r].label}</option>)}
+          <option value="__kiosk__">키오스크(출석 화면)</option>
+        </select>
+      </div>
+
       {/* 네비게이션 */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto flex flex-col">
         <ul className="space-y-0.5">
-          {adminNav.map((item) => {
+          {visibleNav.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
               <li key={item.href}>
@@ -105,31 +143,24 @@ export function Sidebar() {
           })}
         </ul>
 
-        {/* 외부 화면 링크 (새 탭) */}
-        <div className="mt-4 pt-4 border-t border-[#E9E9E7] space-y-0.5">
-          <Link
-            href="/kiosk"
-            target="_blank"
-            className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-[#787774] hover:bg-[#EFEFEE] transition-colors"
-          >
-            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            출석·포인트 키오스크
-          </Link>
-          <Link
-            href="/marketplace"
-            target="_blank"
-            className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-[#787774] hover:bg-[#EFEFEE] transition-colors"
-          >
-            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            교안 마켓플레이스
-          </Link>
-        </div>
+        {/* 외부 화면 링크 (새 탭) — 교안 마켓플레이스 (원장·교사) */}
+        {canSeeExtra(role, 'marketplace') && (
+          <div className="mt-4 pt-4 border-t border-[#E9E9E7] space-y-0.5">
+            <Link
+              href="/marketplace"
+              target="_blank"
+              className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-[#787774] hover:bg-[#EFEFEE] transition-colors"
+            >
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              교안 마켓플레이스
+            </Link>
+          </div>
+        )}
 
-        {/* 빠른 실행 */}
+        {/* 빠른 실행 — 교사·SO (원장 제외) */}
+        {canSeeExtra(role, 'quickActions') && (
         <div className="mt-auto pt-4 border-t border-[#E9E9E7]">
           <p className="px-3 mb-1.5 text-[10px] font-semibold text-[#787774] uppercase tracking-wider">
             빠른 실행
@@ -168,8 +199,10 @@ export function Sidebar() {
             AI 녹음
           </button>
         </div>
+        )}
 
-        {/* 운영 매뉴얼 */}
+        {/* 운영 매뉴얼 — 원장만 */}
+        {canSeeExtra(role, 'manual') && (
         <div className="mt-4 pt-4 border-t border-[#E9E9E7]">
           <p className="px-3 mb-1.5 text-[10px] font-semibold text-[#787774] uppercase tracking-wider">
             운영 매뉴얼
@@ -190,13 +223,14 @@ export function Sidebar() {
             가맹 운영 매뉴얼
           </Link>
         </div>
+        )}
       </nav>
 
-      {/* 유저 정보 */}
+      {/* 유저 정보 (역할 반영) */}
       <div className="px-4 py-4 border-t border-[#E9E9E7]">
         <div className="mb-2">
-          <p className="text-sm font-medium text-[#37352F]">데스크 담당자</p>
-          <p className="text-xs text-[#787774]">판교 캠퍼스 · staff</p>
+          <p className="text-sm font-medium text-[#37352F]">{ROLE_META[role].label}</p>
+          <p className="text-xs text-[#787774]">판교 캠퍼스 · {ROLE_META[role].sub}</p>
         </div>
         <button className="w-full px-3 py-2 text-sm text-[#787774] bg-[#F1F1EF] hover:bg-[#EFEFEE] hover:text-[#37352F] rounded-md transition-colors">
           로그아웃

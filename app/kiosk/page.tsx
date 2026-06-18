@@ -58,6 +58,10 @@ export default function KioskPage() {
   if (!registered) {
     return (
       <div className="px-6 py-8 min-h-screen flex items-center justify-center">
+        <Link href="/dashboard" className="fixed top-4 left-4 z-50 text-xs font-semibold px-3 py-1.5 rounded-lg"
+          style={{ color: 'var(--kiosk-muted)', background: 'var(--kiosk-surface)', border: '1px solid var(--kiosk-border)' }}>
+          ← 데모 화면으로
+        </Link>
         <div className="rounded-3xl p-10 border text-center" style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)', maxWidth: 460 }}>
           <div className="text-5xl">🔒</div>
           <div className="text-xl font-extrabold text-white mt-4">이 기기는 키오스크가 아니에요</div>
@@ -93,6 +97,10 @@ export default function KioskPage() {
   // ── 등록된 키오스크: 출석 화면 (가로 iPad 2열 최적화) ──
   return (
     <div className="px-6 py-6 min-h-screen flex items-center">
+      <Link href="/dashboard" className="fixed top-4 left-4 z-50 text-xs font-semibold px-3 py-1.5 rounded-lg"
+        style={{ color: 'var(--kiosk-muted)', background: 'var(--kiosk-surface)', border: '1px solid var(--kiosk-border)' }}>
+        ← 데모 화면으로
+      </Link>
       <div className="mx-auto w-full grid grid-cols-1 gap-6 lg:grid-cols-[1.3fr_minmax(380px,460px)] lg:items-start" style={{ maxWidth: 1180 }}>
         {/* 왼쪽 — 공지 포스터 (오른쪽 높이와 독립, 고정 높이) */}
         <div className="rounded-3xl border overflow-hidden flex flex-col" style={{ borderColor: 'var(--kiosk-border)', height: 'min(80vh, 760px)' }}>

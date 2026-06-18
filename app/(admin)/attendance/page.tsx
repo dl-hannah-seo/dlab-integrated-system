@@ -23,6 +23,9 @@ import { ClassRecordModal } from '@/components/attendance/ClassRecordModal';
 import { MakeupPickerModal } from '@/components/attendance/MakeupPickerModal';
 import { useMakeup } from '@/components/panels/MakeupContext';
 import { useQuickActions } from '@/components/panels/QuickActionsContext';
+import { useRole } from '@/components/layout/RoleContext';
+import { DEMO_TEACHER_ID, DEMO_TEACHER_NAME } from '@/lib/roles';
+import { classesOfTeacher } from '@/lib/teacher-hr';
 import { buildMakeupMessage } from '@/lib/makeup-helpers';
 
 // 현재 학기(2026 여름) 진행 반만
@@ -36,7 +39,13 @@ export default function AttendancePage() {
   const { requests, scheduleMakeup, completeMakeup } = useMakeup();
   const { openSms } = useQuickActions();
   const [mkPick, setMkPick] = useState<{ student: Student; cls: Class } | null>(null);
-  const waitlist = requests.filter(r => r.status !== '완료');
+  const { role } = useRole();
+  const isTeacher = role === '교사';
+  const myClassIds = useMemo(
+    () => (isTeacher ? new Set(classesOfTeacher(DEMO_TEACHER_ID, classes).map(c => c.id)) : null),
+    [isTeacher],
+  );
+  const waitlist = requests.filter(r => r.status !== '완료' && (!myClassIds || myClassIds.has(r.class_id)));
 
   function updateStatus(sessionId: string, studentId: string, status: AttendanceStatus, absenceReason: string | null) {
     setRecords(prev => {
@@ -85,8 +94,11 @@ export default function AttendancePage() {
   }, [todayRecords]);
 
   const focusEntries = useMemo(
-    () => getAbsenceFocusList(records, CURRENT_CLASSES.map(c => c.id), 8),
-    [records],
+    () => {
+      const ids = (isTeacher ? classesOfTeacher(DEMO_TEACHER_ID, classes) : CURRENT_CLASSES).map(c => c.id);
+      return getAbsenceFocusList(records, ids, 8);
+    },
+    [records, isTeacher],
   );
 
   const donutSlices = [
@@ -116,15 +128,18 @@ export default function AttendancePage() {
     return opts;
   }, []);
 
-  // 선택된 그룹에 속한 반 (활성반·종강반 포함 전체)
+  // 선택된 그룹에 속한 반 (활성반·종강반 포함 전체). 교사는 본인 담당 반만.
   const groupClasses = useMemo(
-    () => groupFilter === ''
-      ? classes
-      : classes.filter(c => {
-          const cg = classGroups.find(g => g.id === c.class_group_id);
-          return cg ? `${cg.year}년 ${cg.season}` === groupFilter : false;
-        }),
-    [groupFilter],
+    () => {
+      const base = groupFilter === ''
+        ? classes
+        : classes.filter(c => {
+            const cg = classGroups.find(g => g.id === c.class_group_id);
+            return cg ? `${cg.year}년 ${cg.season}` === groupFilter : false;
+          });
+      return myClassIds ? base.filter(c => myClassIds.has(c.id)) : base;
+    },
+    [groupFilter, myClassIds],
   );
 
   // 반 드롭다운 — 실제 반 이름(cls.name)으로 표시
@@ -139,7 +154,7 @@ export default function AttendancePage() {
     <div>
       <div className="mb-6">
         <h1 className="text-xl font-bold text-[#37352F]">출결 현황</h1>
-        <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 출석/결석/보강 이력</p>
+        <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 출석/결석/보강 이력{isTeacher && ` · ${DEMO_TEACHER_NAME} 선생님 담당 반`}</p>
       </div>
 
       {/* 1행: 당일 원그래프 + 미등원 집중 리스트 */}

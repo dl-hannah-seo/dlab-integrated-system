@@ -5,10 +5,14 @@ import {
   campus,
   dashboardData,
   classes,
+  consultations,
   getUnpaidStudents,
   getClassById,
 } from '@/lib/mock-data';
 import { useQuickActions } from '@/components/panels/QuickActionsContext';
+import { useRole } from '@/components/layout/RoleContext';
+import { DEMO_TEACHER_ID, DEMO_TEACHER_NAME, canSeeExtra } from '@/lib/roles';
+import { classesOfTeacher, consultationsByCounselor } from '@/lib/teacher-hr';
 import { Card } from '@/components/ui/Card';
 
 // ── 데모 기준 ──────────────────────────────────────────────────
@@ -39,11 +43,18 @@ function fmtMoney(n: number) {
 
 export default function DashboardPage() {
   const { openAttendance, openSms, openRecording } = useQuickActions();
+  const { role } = useRole();
+  const isTeacher = role === '교사';
+  const who = role === '교사' ? `${DEMO_TEACHER_NAME} 선생님` : role === 'SO' ? '데스크 담당자님' : '원장님';
+  const showQuick = canSeeExtra(role, 'quickActions');
 
-  // 오늘 수업 (현재 학기 + 오늘 요일)
-  const todayClasses = classes.filter(
-    (c) => c.enrolled_count > 0 && c.schedule.includes(TODAY_DOW),
-  );
+  // 오늘 수업 — 교사는 본인 담당 반만
+  const todayClasses = isTeacher
+    ? classesOfTeacher(DEMO_TEACHER_ID, classes).filter((c) => c.enrolled_count > 0)
+    : classes.filter((c) => c.enrolled_count > 0 && c.schedule.includes(TODAY_DOW));
+
+  // 교사 본인 상담
+  const myConsults = consultationsByCounselor(DEMO_TEACHER_NAME, consultations);
 
   const enrolledTotal = dashboardData.total_students;
 
@@ -73,10 +84,12 @@ export default function DashboardPage() {
             {campus.name} · {TODAY_LABEL}
           </p>
           <h1 className="mt-1.5 text-2xl font-bold text-white">
-            좋은 아침이에요, 원장님 👋
+            좋은 아침이에요, {who} 👋
           </h1>
           <p className="mt-2 text-sm text-[#9B9B97]">
-            오늘 수업 {todayClasses.length}개 · 재원생 {enrolledTotal}명
+            {isTeacher
+              ? `내 수업 ${todayClasses.length}개`
+              : `오늘 수업 ${todayClasses.length}개 · 재원생 ${enrolledTotal}명`}
           </p>
         </div>
         <div className="text-right">
@@ -92,9 +105,9 @@ export default function DashboardPage() {
       <div className="grid gap-4" style={{ gridTemplateColumns: '1fr 1.6fr' }}>
         {/* 왼쪽 컬럼 */}
         <div className="space-y-4">
-          {/* 오늘 수업 */}
+          {/* 오늘/내 수업 */}
           <Card
-            title="오늘 수업"
+            title={isTeacher ? '내 수업' : '오늘 수업'}
             action={
               <Link href="/attendance" className="text-xs text-[#787774] hover:text-[#37352F]">
                 출결 현황 →
@@ -102,13 +115,13 @@ export default function DashboardPage() {
             }
           >
             {todayClasses.length === 0 ? (
-              <p className="py-6 text-center text-sm text-[#787774]">오늘 수업이 없습니다</p>
+              <p className="py-6 text-center text-sm text-[#787774]">{isTeacher ? '담당 수업이 없습니다' : '오늘 수업이 없습니다'}</p>
             ) : (
               <ul className="space-y-2.5">
                 {todayClasses.map((c) => (
                   <li key={c.id} className="flex items-center gap-3">
-                    <span className="w-14 text-sm font-medium text-[#FF6C37]">
-                      {c.schedule.replace(`${TODAY_DOW} `, '')}
+                    <span className="w-20 text-sm font-medium text-[#FF6C37]">
+                      {isTeacher ? c.schedule : c.schedule.replace(`${TODAY_DOW} `, '')}
                     </span>
                     <span className="flex-1 text-sm text-[#37352F]">{c.course}</span>
                     <span className="text-xs text-[#787774]">
@@ -120,7 +133,8 @@ export default function DashboardPage() {
             )}
           </Card>
 
-          {/* 빠른 실행 */}
+          {/* 빠른 실행 — 교사·SO (원장 제외) */}
+          {showQuick && (
           <div className="rounded-lg bg-[#FFF1EC] p-5">
             <p className="mb-3 text-sm font-semibold text-[#37352F]">빠른 실행</p>
             <div className="flex gap-2.5">
@@ -153,12 +167,13 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
+          )}
         </div>
 
         {/* 오른쪽 컬럼 */}
         <div className="space-y-4">
           {/* 주간 출결 추이 */}
-          <Card title="주간 출결 추이">
+          <Card title={isTeacher ? '내 수업 출결 추이' : '주간 출결 추이'}>
             <div className="flex justify-between gap-2">
               {weeklyAttendance.map((d) => (
                 <div key={d.day} className="flex flex-1 flex-col items-center">
@@ -192,7 +207,8 @@ export default function DashboardPage() {
             </div>
           </Card>
 
-          {/* 납부 현황 + 미납 원생 */}
+          {/* 납부 현황 + 미납 원생 (교사는 본인 상담으로 대체) */}
+          {!isTeacher ? (
           <div className="grid gap-4" style={{ gridTemplateColumns: '1fr 1.4fr' }}>
             {/* 도넛 */}
             <Card title="납부 현황">
@@ -246,6 +262,25 @@ export default function DashboardPage() {
               </ul>
             </Card>
           </div>
+          ) : (
+          <Card title={`내 상담 ${myConsults.length}건`} action={<Link href="/students" className="text-xs text-[#787774] hover:text-[#37352F]">원생 →</Link>}>
+            {myConsults.length === 0 ? (
+              <p className="py-6 text-center text-sm text-[#787774]">진행한 상담이 없습니다</p>
+            ) : (
+              <ul className="-my-1 max-h-56 space-y-1 overflow-y-auto">
+                {myConsults.map((c) => (
+                  <li key={c.id} className="py-2 border-b border-[#F1F0EF] last:border-0">
+                    <div className="flex items-center gap-2 text-xs text-[#787774]">
+                      <span className="tabular-nums">{c.date}</span>
+                      <span className="px-1.5 py-0.5 rounded bg-[#F1F1EF]">{c.method}</span>
+                    </div>
+                    <p className="text-sm text-[#37352F] mt-0.5">{c.content}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+          )}
         </div>
       </div>
     </div>
