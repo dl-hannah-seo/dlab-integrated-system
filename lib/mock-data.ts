@@ -512,12 +512,19 @@ students.forEach(s => {
 });
 
 // 현재 학기 추가 수강반(2026 여름 토1000 아두이노 cl-09) — 현재 학생 일부가 복수 수강
+// 메인 루프와 동일한 BOARD_ACTIVE_CAP을 적용해 활성 인원이 정원을 넘지 않게 한다.
+// (초과분은 종료 이력으로 남겨 보드/수강명단에서는 제외)
 students.forEach(s => {
   if (hashString(s.id) % 7 === 0) {
+    const used = activeByClass['cl-09'] ?? 0;
+    const overCap = used >= BOARD_ACTIVE_CAP;
     enrollments.push({
       id: `enr-${s.id}-c09`, student_id: s.id, class_id: 'cl-09',
-      started_at: '2026-06-07', ended_at: null, end_reason: null,
+      started_at: '2026-06-07',
+      ended_at: overCap ? '2026-06-14' : null,
+      end_reason: overCap ? '반 정원 조정' : null,
     });
+    if (!overCap) activeByClass['cl-09'] = used + 1;
   }
 });
 
