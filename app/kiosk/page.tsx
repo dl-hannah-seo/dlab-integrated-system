@@ -1,342 +1,152 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { students, classes, kioskShopItems, kioskCodes, Student } from '@/lib/mock-data';
+import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { kioskPosters, type Student } from '@/lib/mock-data';
+import { AuthEntry } from '@/components/kiosk/AuthEntry';
+import { AttendanceComplete } from '@/components/kiosk/AttendanceComplete';
+import { isKioskRegistered, registerKiosk, unregisterKiosk, isValidSetupCode } from '@/lib/kiosk-mode';
 
-type Mode = 'home' | 'attend' | 'shop';
+export default function KioskPage() {
+  const [ready, setReady] = useState(false);       // 등록 상태 확인 완료(하이드레이션 후)
+  const [registered, setRegistered] = useState(false);
+  const [done, setDone] = useState<Student | null>(null);
+  const [posterIdx, setPosterIdx] = useState(0);
+  const [authKey, setAuthKey] = useState(0);
+  const [setupCode, setSetupCode] = useState('');
+  const [setupError, setSetupError] = useState(false);
+  const [releasing, setReleasing] = useState(false);
+  const [releaseCode, setReleaseCode] = useState('');
+  const [releaseError, setReleaseError] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-const levelOf = (points: number) => Math.floor(points / 300) + 1;
-// 사용 가능 포인트: 시드에 balance가 있으면 사용, 없으면 누적 포인트에서 파생
-const baseBalance = (s: Student) => s.balance ?? Math.round((s.points * 0.4) / 10) * 10;
+  useEffect(() => { setRegistered(isKioskRegistered()); setReady(true); }, []);
 
-// 재원생 전체를 누적 포인트 내림차순으로 정렬한 랭킹
-const rankedStudents = [...students]
-  .filter(s => s.status === '재원')
-  .sort((a, b) => b.points - a.points);
+  useEffect(() => {
+    const t = setInterval(() => setPosterIdx(i => (i + 1) % kioskPosters.length), 5000);
+    return () => clearInterval(t);
+  }, []);
 
-// 힌트 칩: 키오스크 코드(원본 전화 뒤 4자리)에서 고유값 3개
-const hintCodes = [...new Set(students.map(s => kioskCodes[s.id]))].slice(0, 3);
-
-// ── 공유: 4자리 입력 + 확인 + 학생 리스트 (출석/상점 공통 진입) ──────────
-function AuthEntry({ mode, onPick }: { mode: 'attend' | 'shop'; onPick: (s: Student) => void }) {
-  const [digits, setDigits] = useState('');
-  const [confirmed, setConfirmed] = useState('');
-
-  const matches = confirmed.length === 4
-    ? students.filter(s => kioskCodes[s.id] === confirmed).sort((a, b) => a.name.localeCompare(b.name, 'ko'))
-    : [];
-
-  function press(key: string) {
-    setConfirmed('');
-    if (key === 'clear') setDigits('');
-    else if (key === 'back') setDigits(d => d.slice(0, -1));
-    else if (digits.length < 4) setDigits(d => d + key);
+  function handleAttend(s: Student) {
+    setDone(s);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => finish(), 6000);
   }
-  function confirm() { if (digits.length === 4) setConfirmed(digits); }
+  function finish() {
+    if (timer.current) clearTimeout(timer.current);
+    setDone(null);
+    setAuthKey(k => k + 1);
+  }
+  function trySetup() {
+    if (registerKiosk(setupCode)) { setRegistered(true); setSetupError(false); setSetupCode(''); }
+    else setSetupError(true);
+  }
+  function tryRelease() {
+    if (isValidSetupCode(releaseCode)) {
+      unregisterKiosk(); setRegistered(false);
+      setReleasing(false); setReleaseCode(''); setReleaseError(false);
+    } else setReleaseError(true);
+  }
+  function cancelRelease() { setReleasing(false); setReleaseCode(''); setReleaseError(false); }
 
-  const display = digits.padEnd(4, ' ').split('').map(c => (c === ' ' ? '_' : c)).join(' ');
-  const title = mode === 'attend' ? 'D.LAB 출석 체크' : 'D.LAB 포인트 상점';
-  const listSub = mode === 'attend' ? '이름을 누르면 출석돼요' : '이름을 누르면 상점으로 들어가요';
-  const cta = mode === 'attend' ? '출석 →' : '선택 →';
+  const poster = kioskPosters[posterIdx];
 
-  return (
-    <div className="mx-auto grid grid-cols-1 gap-6 lg:grid-cols-[minmax(280px,420px)_1fr]" style={{ maxWidth: 980 }}>
-      {/* 키패드 카드 */}
-      <div className="rounded-3xl p-8 border" style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
-        <div className="text-center mb-5">
-          <div className="text-3xl">{mode === 'attend' ? '📲' : '🛍️'}</div>
-          <div className="text-lg font-extrabold text-white mt-2">{title}</div>
-          <div className="text-sm mt-1" style={{ color: 'var(--kiosk-muted)' }}>전화번호 뒤 4자리를 눌러주세요</div>
+  // 하이드레이션 깜빡임 방지
+  if (!ready) return <div className="min-h-screen" />;
+
+  // ── 미등록 기기: 출석 차단 게이트 ──
+  if (!registered) {
+    return (
+      <div className="px-6 py-8 min-h-screen flex items-center justify-center">
+        <Link href="/dashboard" className="fixed top-4 left-4 z-50 text-xs font-semibold px-3 py-1.5 rounded-lg"
+          style={{ color: 'var(--kiosk-muted)', background: 'var(--kiosk-surface)', border: '1px solid var(--kiosk-border)' }}>
+          ← 데모 화면으로
+        </Link>
+        <div className="rounded-3xl p-10 border text-center" style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)', maxWidth: 460 }}>
+          <div className="text-5xl">🔒</div>
+          <div className="text-xl font-extrabold text-white mt-4">이 기기는 키오스크가 아니에요</div>
+          <p className="text-sm mt-2" style={{ color: 'var(--kiosk-muted)' }}>
+            출석은 학원에 설치된 키오스크에서만 가능합니다.<br />포인트 상점·마이페이지는 아래에서 이용하세요.
+          </p>
+          <Link href="/me"
+            className="block w-full mt-6 py-3.5 rounded-xl text-base font-extrabold text-white transition-all active:scale-95"
+            style={{ background: 'var(--kiosk-orange)' }}>
+            🎮 학생 포털로 이동
+          </Link>
+
+          {/* 관리자 키오스크 등록 */}
+          <div className="mt-8 pt-6 border-t" style={{ borderColor: 'var(--kiosk-border)' }}>
+            <p className="text-xs mb-2" style={{ color: 'var(--kiosk-muted)' }}>관리자 · 이 기기를 키오스크로 등록</p>
+            <div className="flex gap-2">
+              <input
+                value={setupCode}
+                onChange={e => { setSetupCode(e.target.value); setSetupError(false); }}
+                placeholder="셋업 코드"
+                className="flex-1 px-3 py-2.5 rounded-xl text-center font-bold focus:outline-none"
+                style={{ background: 'var(--kiosk-card)', color: 'var(--kiosk-text)', border: `1px solid ${setupError ? '#EB5757' : 'var(--kiosk-border)'}` }}
+              />
+              <button onClick={trySetup} className="px-4 rounded-xl font-bold text-white" style={{ background: 'var(--kiosk-orange)' }}>등록</button>
+            </div>
+            {setupError && <p className="text-xs mt-1.5" style={{ color: '#EB5757' }}>셋업 코드가 올바르지 않습니다.</p>}
+          </div>
         </div>
-
-        <div className="rounded-2xl py-7 mb-5 text-center text-3xl font-extrabold tracking-[0.3em]"
-          style={{ background: 'var(--kiosk-card)', color: digits ? 'var(--kiosk-text)' : 'var(--kiosk-muted)' }}>
-          {display}
-        </div>
-
-        <div className="grid grid-cols-3 gap-2.5">
-          {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(n => (
-            <button key={n} onClick={() => press(n)}
-              className="h-16 rounded-xl text-2xl font-bold transition-all active:scale-95"
-              style={{ background: 'var(--kiosk-card)', color: 'var(--kiosk-text)' }}>
-              {n}
-            </button>
-          ))}
-          <button onClick={() => press('clear')}
-            className="h-16 rounded-xl text-xl font-bold text-white transition-all active:scale-95"
-            style={{ background: 'var(--kiosk-orange)' }}>C</button>
-          <button onClick={() => press('0')}
-            className="h-16 rounded-xl text-2xl font-bold transition-all active:scale-95"
-            style={{ background: 'var(--kiosk-card)', color: 'var(--kiosk-text)' }}>0</button>
-          <button onClick={() => press('back')}
-            className="h-16 rounded-xl text-xl font-bold text-white transition-all active:scale-95"
-            style={{ background: 'var(--kiosk-orange)' }}>←</button>
-        </div>
-
-        {/* 확인 버튼 — 4자리를 모두 입력해야 활성화 */}
-        <button onClick={confirm} disabled={digits.length !== 4}
-          className="w-full h-14 mt-4 rounded-xl text-base font-extrabold transition-all active:scale-95"
-          style={{
-            background: digits.length === 4 ? 'var(--kiosk-orange)' : 'var(--kiosk-border)',
-            color: digits.length === 4 ? 'white' : 'var(--kiosk-muted)',
-            cursor: digits.length === 4 ? 'pointer' : 'not-allowed',
-          }}>
-          확인
-        </button>
       </div>
+    );
+  }
 
-      {/* 사이드 패널 (상하 중앙 정렬) */}
-      <div className="h-full flex flex-col justify-center">
-        {!confirmed ? (
-          <div className="rounded-3xl p-10 border flex flex-col items-center justify-center text-center min-h-[260px]"
-            style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
-            <div className="text-5xl kiosk-wave">👋</div>
-            <div className="text-lg font-bold text-white mt-4 leading-snug">번호를 누르면<br />학생 정보가 여기에 나와요</div>
-            <div className="flex gap-2 mt-4">
-              {hintCodes.map(code => (
-                <span key={code} className="text-sm font-bold px-3 py-1 rounded-md"
-                  style={{ background: 'rgba(255,108,55,0.15)', color: 'var(--kiosk-orange)' }}>{code}</span>
+  // ── 등록된 키오스크: 출석 화면 (가로 iPad 2열 최적화) ──
+  return (
+    <div className="px-6 py-6 min-h-screen flex items-center">
+      <Link href="/dashboard" className="fixed top-4 left-4 z-50 text-xs font-semibold px-3 py-1.5 rounded-lg"
+        style={{ color: 'var(--kiosk-muted)', background: 'var(--kiosk-surface)', border: '1px solid var(--kiosk-border)' }}>
+        ← 데모 화면으로
+      </Link>
+      <div className="mx-auto w-full grid grid-cols-1 gap-6 lg:grid-cols-[1.3fr_minmax(380px,460px)] lg:items-start" style={{ maxWidth: 1180 }}>
+        {/* 왼쪽 — 공지 포스터 (오른쪽 높이와 독립, 고정 높이) */}
+        <div className="rounded-3xl border overflow-hidden flex flex-col" style={{ borderColor: 'var(--kiosk-border)', height: 'min(80vh, 760px)' }}>
+          <div className="flex-1 flex flex-col items-center justify-center p-12 text-center transition-all" style={{ background: poster.bg }}>
+            <div className="text-7xl mb-6">{poster.emoji}</div>
+            <div className="text-3xl font-extrabold text-white leading-tight">{poster.title}</div>
+            <div className="text-lg text-white/90 mt-3">{poster.desc}</div>
+          </div>
+          <div className="flex items-center justify-between px-5 py-3" style={{ background: 'var(--kiosk-surface)' }}>
+            <span className="text-sm font-bold text-white">📢 학원 공지</span>
+            <div className="flex gap-1.5">
+              {kioskPosters.map((p, i) => (
+                <button key={p.id} onClick={() => setPosterIdx(i)} className="w-2.5 h-2.5 rounded-full transition-all"
+                  style={{ background: i === posterIdx ? 'var(--kiosk-orange)' : 'var(--kiosk-border)' }} />
               ))}
             </div>
           </div>
-        ) : matches.length > 0 ? (
-          <div className="rounded-3xl p-6 border" style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
-            <h2 className="text-lg font-extrabold text-white">학생 선택</h2>
-            <p className="text-sm mb-4" style={{ color: 'var(--kiosk-muted)' }}>{listSub} ({matches.length}명)</p>
-            <div className="flex flex-col gap-2.5 max-h-[420px] overflow-y-auto pr-1">
-              {matches.map(s => {
-                const cls = classes.find(c => c.id === s.class_id);
-                return (
-                  <button key={s.id} onClick={() => onPick(s)}
-                    className="flex items-center gap-3 p-4 rounded-2xl border text-left transition-all hover:border-[var(--kiosk-orange)] active:scale-[0.99]"
-                    style={{ background: 'var(--kiosk-card)', borderColor: 'var(--kiosk-border)' }}>
-                    <div className="w-11 h-11 flex items-center justify-center rounded-full font-bold flex-shrink-0"
-                      style={{ background: 'rgba(255,108,55,0.18)', color: 'var(--kiosk-orange)' }}>
-                      {s.name.charAt(1) || s.name[0]}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-bold text-white">{s.name}</div>
-                      <div className="text-sm truncate" style={{ color: 'var(--kiosk-muted)' }}>
-                        {cls?.course} · Lv.{levelOf(s.points)} · {s.points}P
-                      </div>
-                    </div>
-                    <span className="px-3 h-9 inline-flex items-center rounded-xl font-bold text-white flex-shrink-0"
-                      style={{ background: 'var(--kiosk-orange)' }}>{cta}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-3xl p-10 border flex flex-col items-center justify-center text-center min-h-[260px]"
-            style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
-            <div className="text-5xl">😅</div>
-            <div className="text-lg font-bold text-white mt-4">일치하는 학생이 없어요</div>
-            <div className="text-sm mt-1" style={{ color: 'var(--kiosk-muted)' }}>번호를 다시 확인해 주세요</div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── 포인트 상점 대시보드 (학생 선택 후) ─────────────────────────────────
-function ShopDashboard({ student, onAnother, onHome }: { student: Student; onAnother: () => void; onHome: () => void }) {
-  const [balance, setBalance] = useState(baseBalance(student));
-  const points = student.points;
-  const cls = classes.find(c => c.id === student.class_id);
-  const level = levelOf(points);
-  const toNext = 300 - (points % 300);
-  const lvlPct = Math.round(((points % 300) / 300) * 100);
-  const myRank = (rankedStudents.findIndex(s => s.id === student.id) + 1) || rankedStudents.length;
-
-  function buy(cost: number) { if (balance >= cost) setBalance(b => b - cost); }
-
-  const topRows = rankedStudents.slice(0, 3).map((s, i) => {
-    const me = s.id === student.id;
-    return (
-      <div key={s.id} className="flex items-center gap-3 px-4 py-3 rounded-xl"
-        style={me ? { background: 'rgba(255,108,55,0.12)', border: '1px solid var(--kiosk-orange)' } : {}}>
-        <div className="w-7 h-7 flex items-center justify-center rounded-full text-sm font-extrabold"
-          style={{
-            background: i === 0 ? 'rgba(245,200,66,0.18)' : i === 1 ? 'rgba(192,192,192,0.18)' : 'rgba(205,127,50,0.18)',
-            color: i === 0 ? 'var(--kiosk-gold)' : i === 1 ? '#C0C0C0' : '#CD7F32',
-          }}>
-          {i + 1}
-        </div>
-        <span className="flex-1 text-sm font-semibold">{s.name}{me ? ' (나)' : ''}</span>
-        <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--kiosk-gold)' }}>{s.points.toLocaleString()}P</span>
-      </div>
-    );
-  });
-
-  return (
-    <div className="mx-auto grid grid-cols-1 gap-4 lg:grid-cols-[1.04fr_0.96fr]" style={{ maxWidth: 1060 }}>
-      {/* 좌측 컬럼 */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-4 rounded-2xl p-6"
-          style={{ background: 'linear-gradient(135deg, var(--kiosk-orange), var(--kiosk-orange2))' }}>
-          <div className="text-4xl kiosk-float">🎉</div>
-          <div>
-            <div className="text-xl font-extrabold text-white">{student.name}, 환영해요!</div>
-            <div className="text-sm text-white/90 mt-0.5">포인트로 원하는 보상을 교환해 보세요 🎁</div>
-          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-2xl p-5 border" style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
-            <div className="text-sm" style={{ color: 'var(--kiosk-muted)' }}>사용 가능 포인트</div>
-            <div className="text-3xl font-extrabold text-white mt-1">{balance}P</div>
-          </div>
-          <div className="rounded-2xl p-5 border" style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
-            <div className="text-sm" style={{ color: 'var(--kiosk-muted)' }}>레벨 포인트</div>
-            <div className="text-3xl font-extrabold text-white mt-1">{points}P</div>
-            <span className="inline-block mt-3 text-xs font-bold px-2.5 py-1 rounded-md"
-              style={{ background: 'rgba(255,108,55,0.15)', color: 'var(--kiosk-orange)' }}>🏆 Lv.{level} · {myRank}위</span>
-          </div>
-        </div>
-
-        <div className="rounded-2xl p-5 border" style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
-          <div className="text-sm" style={{ color: 'var(--kiosk-muted)' }}>오늘의 수업</div>
-          <div className="text-xl font-extrabold text-white mt-1">{cls?.course ?? '-'}</div>
-          <div className="text-sm mt-1" style={{ color: 'var(--kiosk-muted)' }}>{cls?.teacher} 선생님 · {cls?.schedule}</div>
-          <div className="h-2 rounded-full overflow-hidden mt-4" style={{ background: 'var(--kiosk-border)' }}>
-            <div className="h-full rounded-full" style={{ width: `${lvlPct}%`, background: 'linear-gradient(90deg, var(--kiosk-orange), var(--kiosk-gold))' }} />
-          </div>
-          <div className="text-xs mt-1.5" style={{ color: 'var(--kiosk-muted)' }}>다음 레벨까지 {toNext}P</div>
-        </div>
-
-        <div className="flex gap-3">
-          <button onClick={onAnother}
-            className="flex-1 h-12 rounded-xl font-bold text-white transition-all active:scale-95"
-            style={{ background: 'var(--kiosk-orange)' }}>
-            다른 학생
-          </button>
-          <button onClick={onHome}
-            className="flex-1 h-12 rounded-xl font-bold transition-all active:scale-95"
-            style={{ background: 'var(--kiosk-card)', color: 'var(--kiosk-text)', border: '1px solid var(--kiosk-border)' }}>
-            홈으로
-          </button>
-        </div>
-      </div>
-
-      {/* 우측 컬럼 */}
-      <div className="flex flex-col gap-4">
-        <div className="rounded-2xl p-5 border" style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
-          <h2 className="text-base font-extrabold mb-3">🏆 포인트 랭킹</h2>
-          <div className="flex flex-col gap-1.5">
-            {topRows}
-            {myRank > 3 && (
-              <div className="flex items-center gap-3 px-4 py-3 rounded-xl"
-                style={{ background: 'rgba(255,108,55,0.12)', border: '1px solid var(--kiosk-orange)' }}>
-                <div className="w-7 h-7 flex items-center justify-center rounded-full text-sm font-extrabold"
-                  style={{ background: 'var(--kiosk-card)', color: 'var(--kiosk-muted)' }}>{myRank}</div>
-                <span className="flex-1 text-sm font-semibold">{student.name} (나)</span>
-                <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--kiosk-gold)' }}>{points.toLocaleString()}P</span>
+        {/* 오른쪽 — 출석 */}
+        <div className="flex flex-col justify-center">
+          {done
+            ? <AttendanceComplete student={done} onDone={finish} />
+            : <AuthEntry key={authKey} icon="📲" title="D.LAB 출석 체크" listSub="이름을 누르면 출석돼요" cta="출석 →" onPick={handleAttend} />}
+          <div className="mt-4 text-center">
+            {!releasing ? (
+              <button onClick={() => setReleasing(true)} className="text-xs" style={{ color: 'var(--kiosk-border)' }}>키오스크 해제</button>
+            ) : (
+              <div className="inline-flex flex-col items-center gap-1.5">
+                <div className="flex gap-2">
+                  <input
+                    value={releaseCode}
+                    onChange={e => { setReleaseCode(e.target.value); setReleaseError(false); }}
+                    placeholder="관리자 코드"
+                    className="w-32 px-3 py-2 rounded-lg text-center text-sm font-bold focus:outline-none"
+                    style={{ background: 'var(--kiosk-card)', color: 'var(--kiosk-text)', border: `1px solid ${releaseError ? '#EB5757' : 'var(--kiosk-border)'}` }}
+                  />
+                  <button onClick={tryRelease} className="px-3 rounded-lg text-sm font-bold text-white" style={{ background: 'var(--kiosk-orange)' }}>해제</button>
+                  <button onClick={cancelRelease} className="px-3 rounded-lg text-sm" style={{ color: 'var(--kiosk-muted)' }}>취소</button>
+                </div>
+                {releaseError && <p className="text-xs" style={{ color: '#EB5757' }}>관리자 코드가 올바르지 않습니다.</p>}
               </div>
             )}
           </div>
         </div>
-
-        <div className="rounded-2xl p-5 border" style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-extrabold">🛍️ 포인트 상점</h2>
-            <span className="text-xs font-bold px-2.5 py-1 rounded-md"
-              style={{ background: 'rgba(245,200,66,0.15)', color: 'var(--kiosk-gold)' }}>사용가능 {balance}P</span>
-          </div>
-          <div className="flex flex-col gap-2">
-            {kioskShopItems.map(item => {
-              const can = balance >= item.cost;
-              return (
-                <div key={item.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: 'var(--kiosk-card)' }}>
-                  <div className="text-2xl">{item.icon}</div>
-                  <div className="flex-1">
-                    <div className="text-sm font-semibold">{item.name}</div>
-                    <div className="text-xs" style={{ color: 'var(--kiosk-gold)' }}>{item.cost}P</div>
-                  </div>
-                  <button onClick={() => buy(item.cost)} disabled={!can}
-                    className="px-4 h-9 rounded-lg text-sm font-bold transition-all active:scale-95"
-                    style={{
-                      background: can ? 'var(--kiosk-orange)' : 'var(--kiosk-border)',
-                      color: can ? 'white' : 'var(--kiosk-muted)',
-                      cursor: can ? 'pointer' : 'not-allowed',
-                    }}>
-                    {can ? '교환' : '부족'}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
       </div>
-    </div>
-  );
-}
-
-export default function KioskPage() {
-  const [mode, setMode] = useState<Mode>('home');
-  const [shopStudent, setShopStudent] = useState<Student | null>(null);
-  const [toast, setToast] = useState('');
-  const [attendKey, setAttendKey] = useState(0);   // 출석 후 AuthEntry 리마운트(초기화)용
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  function goHome() {
-    if (timer.current) clearTimeout(timer.current);
-    setMode('home'); setShopStudent(null); setToast('');
-  }
-
-  // 출석: +30P(시연) → 토스트 → 약 2초 후 키패드 첫 화면 복귀
-  function handleAttend(s: Student) {
-    setToast(`${s.name} 학생 출석 완료! ⭐ +30P`);
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => { setToast(''); setAttendKey(k => k + 1); }, 2000);
-  }
-
-  return (
-    <div className="px-6 py-8">
-      {/* 상단: 홈이 아닐 때만 뒤로가기 */}
-      {mode !== 'home' && (
-        <div className="mx-auto mb-4" style={{ maxWidth: 1060 }}>
-          <button onClick={goHome}
-            className="text-sm font-semibold px-3 py-1.5 rounded-lg transition-all hover:text-white"
-            style={{ color: 'var(--kiosk-muted)', background: 'var(--kiosk-surface)', border: '1px solid var(--kiosk-border)' }}>
-            ← 홈
-          </button>
-        </div>
-      )}
-
-      {mode === 'home' && (
-        <div className="mx-auto grid grid-cols-1 sm:grid-cols-2 gap-5" style={{ maxWidth: 760, marginTop: '6vh' }}>
-          {[
-            { m: 'attend' as Mode, icon: '📲', title: '출석 체크', desc: '전화번호 뒤 4자리로 출석' },
-            { m: 'shop' as Mode, icon: '🛍️', title: '포인트 상점', desc: '포인트로 보상 교환' },
-          ].map(b => (
-            <button key={b.m} onClick={() => setMode(b.m)}
-              className="rounded-3xl p-10 border text-center transition-all hover:border-[var(--kiosk-orange)] active:scale-[0.99]"
-              style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
-              <div className="text-5xl">{b.icon}</div>
-              <div className="text-xl font-extrabold text-white mt-4">{b.title}</div>
-              <div className="text-sm mt-1.5" style={{ color: 'var(--kiosk-muted)' }}>{b.desc}</div>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {mode === 'attend' && <AuthEntry key={attendKey} mode="attend" onPick={handleAttend} />}
-
-      {mode === 'shop' && (
-        shopStudent
-          ? <ShopDashboard student={shopStudent} onAnother={() => setShopStudent(null)} onHome={goHome} />
-          : <AuthEntry mode="shop" onPick={setShopStudent} />
-      )}
-
-      {/* 출석 완료 토스트 */}
-      {toast && (
-        <div className="fixed left-1/2 bottom-10 -translate-x-1/2 px-6 py-3.5 rounded-xl font-extrabold text-white shadow-lg z-50"
-          style={{ background: 'var(--kiosk-orange)' }}>
-          {toast}
-        </div>
-      )}
     </div>
   );
 }

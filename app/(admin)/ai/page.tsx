@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { LabBenchmarkCard } from '@/components/ai/LabBenchmarkCard';
+import { WithdrawAnalysisCard } from '@/components/ai/WithdrawAnalysisCard';
 
 const AI_SUMMARIES = [
   {
@@ -74,7 +76,7 @@ export default function AiPage() {
     <div>
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-[#37352F]">AI 요약</h1>
+          <h1 className="text-xl font-bold text-[#37352F]">AI 인사이트</h1>
           <p className="text-sm text-[#787774] mt-1">Claude 기반 학원 운영 인사이트 · 판교 캠퍼스</p>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FFF1EC] border border-[#FF6C37]/20 rounded-lg">
@@ -90,6 +92,8 @@ export default function AiPage() {
       </div>
 
       <div className="space-y-4">
+        <LabBenchmarkCard />
+        <WithdrawAnalysisCard />
         {AI_SUMMARIES.map(item => (
           <Card key={item.id}>
             <div className="flex items-start justify-between mb-3">

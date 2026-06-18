@@ -3,13 +3,14 @@
 import { Fragment, useRef, useState } from 'react';
 import {
   classes as mockClasses, classGroups, students, enrollments as mockEnrollments,
-  invoices, dashboardData, TODAY, Class, Enrollment, InvoiceStatus,
+  invoices, dashboardData, TODAY, Class, Enrollment, InvoiceStatus, Student,
 } from '@/lib/mock-data';
 import {
   buildBoard, boardCellKey, isClassFull, moveStudent, activeCount, UNASSIGNED, RosterEntry,
 } from '@/lib/placement-board';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { StudentQuickPanel } from '@/components/schedule/StudentQuickPanel';
 
 const DAY_NAME: Record<string, string> = { '토': '토요일', '화목': '화·목요일', '월수금': '월·수·금요일' };
 
@@ -48,6 +49,7 @@ export function PlacementBoard() {
   const [dragOverClassId, setDragOverClassId] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingMove | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [quickStudent, setQuickStudent] = useState<Student | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -197,6 +199,7 @@ export function PlacementBoard() {
                               onDragEnterCard={() => { if (dragging && dragging.fromClassId !== cell.cls.id) setDragOverClassId(cell.cls.id); }}
                               onDragLeaveCard={() => setDragOverClassId(prev => (prev === cell.cls.id ? null : prev))}
                               onDropCard={() => handleDrop(cell.cls)}
+                              onChipClick={setQuickStudent}
                             />
                           ))}
                         </div>
@@ -208,6 +211,15 @@ export function PlacementBoard() {
             })}
           </div>
         </div>
+      )}
+
+      {/* 원생 빠른 패널 */}
+      {quickStudent && (
+        <StudentQuickPanel
+          student={quickStudent}
+          onClose={() => setQuickStudent(null)}
+          onToast={showToast}
+        />
       )}
 
       {/* 토스트 */}
@@ -246,7 +258,7 @@ export function PlacementBoard() {
 // ── 반 카드 ─────────────────────────────────────────────────────
 function ClassCard({
   cls, roster, count, isDragOver,
-  onChipDragStart, onChipDragEnd, onDragEnterCard, onDragLeaveCard, onDropCard,
+  onChipDragStart, onChipDragEnd, onDragEnterCard, onDragLeaveCard, onDropCard, onChipClick,
 }: {
   cls: Class;
   roster: RosterEntry[];
@@ -257,6 +269,7 @@ function ClassCard({
   onDragEnterCard: () => void;
   onDragLeaveCard: () => void;
   onDropCard: () => void;
+  onChipClick: (student: Student) => void;
 }) {
   const full = count >= cls.capacity;
   const twoCol = roster.length > TWO_COL_THRESHOLD;
@@ -298,7 +311,13 @@ function ClassCard({
                 className="flex items-center gap-1 px-1.5 py-1 rounded-md cursor-grab active:cursor-grabbing"
                 style={{ background: c.bg, border: `1px solid ${c.border}` }}
               >
-                <span className="text-xs font-medium truncate" style={{ color: c.text }}>{student.name}</span>
+                <span
+                  className="text-xs font-medium truncate cursor-pointer hover:underline"
+                  style={{ color: c.text }}
+                  onClick={e => { e.stopPropagation(); onChipClick(student); }}
+                >
+                  {student.name}
+                </span>
                 <span className="text-[10px] flex-shrink-0 ml-auto" style={{ color: c.text, opacity: 0.7 }}>
                   {student.grade}
                 </span>

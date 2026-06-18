@@ -8,12 +8,14 @@ import { Button } from '@/components/ui/Button';
 const TEMPLATES: Record<SmsTemplate, string> = {
   absence: '[D.LAB 판교] 안녕하세요. 오늘 수업에 미도착/결석 처리되었습니다. 문의: 031-000-0000',
   unpaid: '[D.LAB 판교] 안녕하세요. 이번 달 수강료 미납 안내드립니다. 확인 부탁드립니다.',
+  makeup: '[D.LAB 판교] 보강 일정 안내드립니다. 확인 부탁드립니다.',
   custom: '',
 };
 
 const TEMPLATE_LABELS: Record<SmsTemplate, string> = {
   absence: '결석 알림',
   unpaid: '미납 안내',
+  makeup: '보강 안내',
   custom: '직접 입력',
 };
 
@@ -31,7 +33,7 @@ export function SmsPanel() {
     if (open && smsConfig) {
       setRecipients(smsConfig.recipients);
       setTemplate(smsConfig.template);
-      setMessage(TEMPLATES[smsConfig.template]);
+      setMessage(smsConfig.message ?? TEMPLATES[smsConfig.template]);
       setSent(false);
     }
     if (!open) setSent(false);
@@ -87,7 +89,7 @@ export function SmsPanel() {
         <div>
           <p className="text-xs font-semibold text-[#787774] mb-2">템플릿</p>
           <div className="flex gap-2">
-            {(['absence', 'unpaid', 'custom'] as SmsTemplate[]).map(t => (
+            {(['absence', 'unpaid', 'makeup', 'custom'] as SmsTemplate[]).map(t => (
               <button
                 key={t}
                 onClick={() => handleTemplateChange(t)}

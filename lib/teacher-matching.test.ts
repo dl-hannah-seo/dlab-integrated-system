@@ -3,7 +3,7 @@ import { canTeach, eligibleTeachers, eligibleClasses } from './teacher-matching'
 import type { Class, Teacher } from './mock-data';
 
 const teacher = (over: Partial<Teacher>): Teacher => ({
-  id: 't1', campus_id: 'c', name: '홍', subject_ids: ['sub-python'], status: '재직', ...over,
+  id: 't1', campus_id: 'c', name: '홍', role: '강사', subject_ids: ['sub-python'], status: '재직', ...over,
 });
 const klass = (over: Partial<Class>): Class => ({
   id: 'k1', campus_id: 'c', class_group_id: 'g', course: '파이썬 기초', subject_id: 'sub-python',

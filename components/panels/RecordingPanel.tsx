@@ -3,45 +3,49 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { SlidePanel } from '@/components/panels/SlidePanel';
 import { useQuickActions } from '@/components/panels/QuickActionsContext';
+import { useLeads } from '@/components/panels/LeadsContext';
 import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Input';
-import { classes } from '@/lib/mock-data';
+import { Select, Input } from '@/components/ui/Input';
+import { classes, LEAD_SUBJECTS, LEAD_SOURCES } from '@/lib/mock-data';
 
-// DEMO ONLY ↓↓↓
-// 실제 녹음(MediaRecorder)·STT API·서버 저장 없음. 데모 검증용 클릭 플로우 목업.
-// 실기능 교체 시: stage 전환부의 setTimeout/setInterval → 실제 녹음·전사 파이프라인으로 대체.
-
+// DEMO ONLY — 실제 녹음/STT 없이 흐름을 시연하는 목업.
+type RecordMode = 'class' | 'consult';
 type Stage = 'idle' | 'recording' | 'transcribing' | 'result';
-
 const TRANSCRIBE_DELAY_MS = 1500;
 
-// 전사 결과(목업) — 토 14:00 코딩 수업 가정
-const MOCK_SUMMARY = [
+const MOCK_CLASS_SUMMARY = [
   '반복문(for) 개념과 동작 원리를 다뤘습니다.',
   '1부터 10까지 합 구하기 예제로 누적 변수 패턴을 연습했습니다.',
   '중첩 반복문에서 일부 학생이 흐름을 헷갈려 해 다음 시간 보충 설명이 필요합니다.',
-  '다음 수업 예고: 리스트와 반복문을 함께 사용하는 실습.',
 ];
+const MOCK_CLASS_TRANSCRIPT =
+  '자, 오늘은 반복문을 배워볼 거예요. 같은 작업을 여러 번 할 때 쓰는 거죠. 1부터 10까지 더하려면 누적 변수를 만들어서 계속 더해주면 돼요. 중첩 반복문도 한번 볼까요? 오늘은 여기까지 하고 다음 시간에 리스트랑 같이 써볼게요.';
 
-const MOCK_TRANSCRIPT =
-  '자, 오늘은 반복문을 배워볼 거예요. 반복문은 같은 작업을 여러 번 할 때 쓰는 거죠. ' +
-  '예를 들어 1부터 10까지 더하려면 어떻게 할까요? 네, 변수를 하나 만들어서 계속 더해주면 돼요. ' +
-  '이걸 누적 변수라고 불러요. 자 그러면 중첩 반복문도 한번 볼까요? 반복문 안에 반복문이 들어가는 거예요. ' +
-  '여기서부터 조금 헷갈릴 수 있는데, 바깥쪽이 한 번 돌 때 안쪽이 전부 도는 거예요. ' +
-  '오늘은 여기까지 하고, 다음 시간에는 리스트랑 같이 써볼게요.';
-// DEMO ONLY ↑↑↑
+const MOCK_CONSULT_SUMMARY = [
+  '초등 5학년, 코딩 입문 문의. 학교 방과후에서 스크래치를 접한 경험 있음.',
+  '주 1회 토요일 오전반 희망. 파이썬 기초에 관심.',
+  '형이 디랩 재원생이라 추천으로 연락(지인소개).',
+  '다음 주 레벨 테스트 후 등록 상담 이어가기로 안내.',
+];
+const MOCK_CONSULT_TRANSCRIPT =
+  '안녕하세요, 아이가 코딩에 관심이 많아서 문의드려요. 학교에서 스크래치를 해봤는데 더 배우고 싶어 해요. 토요일 오전반이 있을까요? 형이 거기 다니고 있어서 추천을 받았어요.';
 
 export function RecordingPanel() {
   const { activePanel, close } = useQuickActions();
+  const { addLead } = useLeads();
   const open = activePanel === 'recording';
 
   const recordableClasses = useMemo(() => classes.filter(c => c.enrolled_count > 0), []);
 
+  const [mode, setMode] = useState<RecordMode>('class');
   const [selectedClassId, setSelectedClassId] = useState(recordableClasses[0]?.id ?? '');
   const [stage, setStage] = useState<Stage>('idle');
   const [elapsed, setElapsed] = useState(0);
   const [showTranscript, setShowTranscript] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // 신규 상담 → 신규 학생 정보
+  const [lead, setLead] = useState({ name: '', phone: '', grade: '', subject: LEAD_SUBJECTS[0], source: LEAD_SOURCES[0] });
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const transcribeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -50,33 +54,19 @@ export function RecordingPanel() {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     if (transcribeRef.current) { clearTimeout(transcribeRef.current); transcribeRef.current = null; }
   }
-
   function reset() {
     clearTimers();
-    setStage('idle');
-    setElapsed(0);
-    setShowTranscript(false);
-    setSaved(false);
+    setStage('idle'); setElapsed(0); setShowTranscript(false); setSaved(false);
+    setLead({ name: '', phone: '', grade: '', subject: LEAD_SUBJECTS[0], source: LEAD_SOURCES[0] });
   }
+  function handleClose() { reset(); close(); }
 
-  // 패널 닫힘(X·오버레이·Esc) → 상태 초기화 후 닫기
-  function handleClose() {
-    reset();
-    close();
-  }
-
-  // 패널이 가려지거나 언마운트되면 타이머만 정리 (setState 없음)
-  useEffect(() => {
-    if (!open) clearTimers();
-    return clearTimers;
-  }, [open]);
+  useEffect(() => { if (!open) clearTimers(); return clearTimers; }, [open]);
 
   function startRecording() {
-    setStage('recording');
-    setElapsed(0);
+    setStage('recording'); setElapsed(0);
     timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
   }
-
   function stopRecording() {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     setStage('transcribing');
@@ -85,24 +75,49 @@ export function RecordingPanel() {
 
   const mmss = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`;
   const selectedClass = recordableClasses.find(c => c.id === selectedClassId);
+  const summaryLines = mode === 'consult' ? MOCK_CONSULT_SUMMARY : MOCK_CLASS_SUMMARY;
+  const transcriptText = mode === 'consult' ? MOCK_CONSULT_TRANSCRIPT : MOCK_CLASS_TRANSCRIPT;
+
+  function saveClass() { setSaved(true); }
+  function saveConsult() {
+    if (!lead.name.trim()) return;
+    addLead({
+      name: lead.name, parent_phone: lead.phone || '010-1234-5678', grade: lead.grade,
+      source: lead.source, interest_subject: lead.subject, stage: '상담완료',
+      memo: MOCK_CONSULT_SUMMARY.join(' '),
+    });
+    setSaved(true);
+  }
 
   return (
     <SlidePanel open={open} onClose={handleClose} title="AI 녹음">
       <div className="px-5 py-4 space-y-5">
-        {/* DEMO 표식 */}
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-[#FF6C37]/40 bg-[#FFF8F5]">
           <span className="text-[10px] font-semibold text-[#FF6C37] uppercase tracking-wider">DEMO</span>
           <span className="text-xs text-[#787774]">실제 녹음 없이 흐름을 시연하는 목업입니다.</span>
         </div>
 
-        {/* 반 선택 — idle에서만 변경 가능 */}
-        <Select
-          label="녹음할 수업"
-          value={selectedClassId}
-          onChange={e => setSelectedClassId(e.target.value)}
-          disabled={stage !== 'idle'}
-          options={recordableClasses.map(c => ({ value: c.id, label: `${c.schedule} ${c.course}` }))}
-        />
+        {/* 모드 토글 — idle에서만 */}
+        <div className="inline-flex w-full rounded-lg border border-[#E9E9E7] bg-white p-0.5">
+          {([['class', '수업 녹음'], ['consult', '신규 상담 녹음']] as [RecordMode, string][]).map(([m, label]) => (
+            <button key={m} onClick={() => stage === 'idle' && setMode(m)} disabled={stage !== 'idle'}
+              className={`flex-1 px-3 py-1.5 text-sm rounded-md transition-colors disabled:cursor-not-allowed ${
+                mode === m ? 'bg-[#FFF1EC] text-[#FF6C37] font-medium' : 'text-[#787774] hover:text-[#37352F]'
+              }`}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* 수업 모드: 반 선택 */}
+        {mode === 'class' && (
+          <Select label="녹음할 수업" value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)}
+            disabled={stage !== 'idle'}
+            options={recordableClasses.map(c => ({ value: c.id, label: `${c.schedule} ${c.course}` }))} />
+        )}
+        {mode === 'consult' && stage === 'idle' && (
+          <p className="text-xs text-[#787774]">신규 상담은 녹음·요약 후 마지막에 학생 정보를 입력해 예비원생으로 등록합니다. (재원생 상담은 보통 전화로 진행)</p>
+        )}
 
         {/* [1] idle */}
         {stage === 'idle' && (
@@ -113,7 +128,9 @@ export function RecordingPanel() {
               </svg>
             </span>
             <p className="text-sm text-[#787774]">
-              녹음을 시작하면 수업 내용이 자동으로<br />텍스트로 전사되고 요약됩니다.
+              {mode === 'consult'
+                ? <>녹음을 시작하면 상담 내용이 자동으로<br />전사·요약됩니다.</>
+                : <>녹음을 시작하면 수업 내용이 자동으로<br />전사되고 요약됩니다.</>}
             </p>
             <Button className="w-full" onClick={startRecording}>녹음 시작</Button>
           </div>
@@ -127,18 +144,11 @@ export function RecordingPanel() {
               <span className="text-xs font-semibold text-[#EB5757] uppercase tracking-wider">REC</span>
               <span className="text-2xl font-bold text-[#37352F] tabular-nums">{mmss}</span>
             </div>
-
-            {/* 가짜 파형 (CSS 애니메이션) */}
             <div className="flex h-12 items-center gap-1">
               {Array.from({ length: 13 }).map((_, i) => (
-                <span
-                  key={i}
-                  className="w-1 rounded-full bg-[#FF6C37] animate-wave-bar"
-                  style={{ height: '100%', animationDelay: `${(i % 7) * 0.12}s` }}
-                />
+                <span key={i} className="w-1 rounded-full bg-[#FF6C37] animate-wave-bar" style={{ height: '100%', animationDelay: `${(i % 7) * 0.12}s` }} />
               ))}
             </div>
-
             <Button className="w-full" variant="danger" onClick={stopRecording}>녹음 종료</Button>
           </div>
         )}
@@ -157,64 +167,64 @@ export function RecordingPanel() {
         {/* [4] result */}
         {stage === 'result' && (
           <div className="space-y-4">
-            {selectedClass && (
-              <p className="text-xs text-[#787774]">
-                {selectedClass.schedule} {selectedClass.course} · 녹음 {mmss}
-              </p>
-            )}
+            <p className="text-xs text-[#787774]">
+              {mode === 'consult' ? `신규 상담 · 녹음 ${mmss}` : selectedClass ? `${selectedClass.schedule} ${selectedClass.course} · 녹음 ${mmss}` : `녹음 ${mmss}`}
+            </p>
 
             <div>
               <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-[#FF6C37]">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                 </svg>
-                수업 요약 (AI 자동 생성)
+                {mode === 'consult' ? '상담 요약 (AI 자동 생성)' : '수업 요약 (AI 자동 생성)'}
               </p>
               <ul className="space-y-2 rounded-lg bg-[#F7F7F5] p-4">
-                {MOCK_SUMMARY.map((line, i) => (
-                  <li key={i} className="flex gap-2 text-sm text-[#37352F]">
-                    <span className="text-[#FF6C37]">•</span>
-                    <span>{line}</span>
-                  </li>
+                {summaryLines.map((line, i) => (
+                  <li key={i} className="flex gap-2 text-sm text-[#37352F]"><span className="text-[#FF6C37]">•</span><span>{line}</span></li>
                 ))}
               </ul>
             </div>
 
-            {/* 전사 원문 (접기/펼치기) */}
             <div>
-              <button
-                onClick={() => setShowTranscript(v => !v)}
-                className="flex items-center gap-1 text-xs font-medium text-[#787774] hover:text-[#37352F] transition-colors"
-              >
-                <svg
-                  width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-                  className={`transition-transform ${showTranscript ? 'rotate-90' : ''}`}
-                >
+              <button onClick={() => setShowTranscript(v => !v)} className="flex items-center gap-1 text-xs font-medium text-[#787774] hover:text-[#37352F] transition-colors">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className={`transition-transform ${showTranscript ? 'rotate-90' : ''}`}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
                 전사 원문 보기
               </button>
-              {showTranscript && (
-                <p className="mt-2 rounded-lg border border-[#E9E9E7] p-3 text-xs leading-relaxed text-[#787774]">
-                  {MOCK_TRANSCRIPT}
-                </p>
-              )}
+              {showTranscript && <p className="mt-2 rounded-lg border border-[#E9E9E7] p-3 text-xs leading-relaxed text-[#787774]">{transcriptText}</p>}
             </div>
 
-            {/* 액션 */}
+            {/* 신규 상담: 학생 정보 입력 → 예비원생 등록 */}
+            {mode === 'consult' && !saved && (
+              <div className="rounded-lg border border-[#E9E9E7] p-3 space-y-2">
+                <p className="text-xs font-semibold text-[#37352F]">신규 학생 정보</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input placeholder="이름 *" value={lead.name} onChange={e => setLead({ ...lead, name: e.target.value })} />
+                  <Input placeholder="연락처" value={lead.phone} onChange={e => setLead({ ...lead, phone: e.target.value })} />
+                  <Input placeholder="학년 (예: 초5)" value={lead.grade} onChange={e => setLead({ ...lead, grade: e.target.value })} />
+                  <Select value={lead.subject} onChange={e => setLead({ ...lead, subject: e.target.value })} options={LEAD_SUBJECTS.map(v => ({ value: v, label: v }))} />
+                  <Select value={lead.source} onChange={e => setLead({ ...lead, source: e.target.value })} options={LEAD_SOURCES.map(v => ({ value: v, label: v }))} />
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2 pt-2 border-t border-[#E9E9E7]">
-              <Button
-                className="flex-1"
-                variant={saved ? 'secondary' : 'primary'}
-                onClick={() => setSaved(true)}
-                disabled={saved}
-              >
-                {saved ? '저장됨 ✓' : '요약 저장'}
-              </Button>
+              {mode === 'consult' ? (
+                <Button className="flex-1" variant={saved ? 'secondary' : 'primary'} onClick={saveConsult} disabled={saved || !lead.name.trim()}>
+                  {saved ? '등록됨 ✓' : '예비원생 등록'}
+                </Button>
+              ) : (
+                <Button className="flex-1" variant={saved ? 'secondary' : 'primary'} onClick={saveClass} disabled={saved}>
+                  {saved ? '저장됨 ✓' : '요약 저장'}
+                </Button>
+              )}
               <Button className="flex-1" variant="secondary" onClick={reset}>다시 녹음</Button>
             </div>
             {saved && (
-              <p className="text-center text-xs text-[#0F7B6C]">수업 기록에 저장되었습니다.</p>
+              <p className="text-center text-xs text-[#0F7B6C]">
+                {mode === 'consult' ? `${lead.name} 학생이 상담 관리(예비원생)에 등록되었습니다.` : '수업 기록에 저장되었습니다.'}
+              </p>
             )}
           </div>
         )}

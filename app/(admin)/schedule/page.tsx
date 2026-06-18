@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { classes, classGroups, sessions, Class, ClassGroup, Session } from '@/lib/mock-data';
 import { koWeekday, addDays, weekDates, mondayOf, resolveWeekSessions, defaultWeekStart } from '@/lib/sessions';
 import { PlacementBoard } from '@/components/schedule/PlacementBoard';
+import { useRole } from '@/components/layout/RoleContext';
+import { DEMO_TEACHER_ID, DEMO_TEACHER_NAME } from '@/lib/roles';
 
 // ── 헬퍼 ────────────────────────────────────────────────────────
 // 고정 시간 축: 수업 유무와 무관하게 09:00~18:00 항상 표시
@@ -80,9 +82,13 @@ export default function SchedulePage() {
   const [slideDir, setSlideDir] = useState<'left' | 'right'>('right');
   const [popover, setPopover] = useState<Popover | null>(null);
 
-  // 전체 학기 통합
+  const { role } = useRole();
+  const isTeacher = role === '교사';
+  const effectiveView = isTeacher ? 'week' : view;   // 교사는 주간 보기만
+
+  // 전체 학기 통합 (교사는 본인 담당 반만)
   const semGroups = classGroups;
-  const semClasses = classes;
+  const semClasses = isTeacher ? classes.filter(c => c.teacher_id === DEMO_TEACHER_ID) : classes;
 
   // 담임(선생님) 선택지
   const teacherOptions = [...new Set(semClasses.map(c => c.teacher))].sort();
@@ -123,7 +129,10 @@ export default function SchedulePage() {
 
   return (
     <div onClick={() => setPopover(null)}>
-      {/* 뷰 토글 — 주간 보기 / 강의실별 배치(반 배치도) */}
+      {/* 뷰 토글 — 교사는 주간 보기만 */}
+      {isTeacher ? (
+        <p className="mb-4 text-sm text-[#787774]">{DEMO_TEACHER_NAME} 선생님 담당 수업 · 주간 보기</p>
+      ) : (
       <div className="mb-4 inline-flex rounded-lg border border-[#E9E9E7] bg-white p-0.5">
         <button
           onClick={() => setView('week')}
@@ -142,8 +151,9 @@ export default function SchedulePage() {
           강의실별 배치
         </button>
       </div>
+      )}
 
-      {view === 'board' ? (
+      {effectiveView === 'board' ? (
         <PlacementBoard />
       ) : (
       <>

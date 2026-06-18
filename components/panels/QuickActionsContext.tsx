@@ -8,11 +8,13 @@ export interface SmsRecipient {
   phone: string;
 }
 
-export type SmsTemplate = 'absence' | 'unpaid' | 'custom';
+export type SmsTemplate = 'absence' | 'unpaid' | 'makeup' | 'custom';
 
 export interface SmsConfig {
   recipients: SmsRecipient[];
   template: SmsTemplate;
+  /** 있으면 템플릿 기본 문구 대신 이 문구로 채운다 (보강 안내처럼 동적 문구용) */
+  message?: string;
 }
 
 export type AttendanceOverride = 'attend' | 'late' | 'absent';
