@@ -14,8 +14,6 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { Table } from '@/components/ui/Table';
 import { useQuickActions } from '@/components/panels/QuickActionsContext';
-import { useRole } from '@/components/layout/RoleContext';
-import { canSeeFinance } from '@/lib/roles';
 
 const TODAY = '2026-06-16';
 
@@ -40,7 +38,6 @@ export default function PaymentsPage() {
   const [showPayModal, setShowPayModal] = useState(false);
   const [paySuccess, setPaySuccess] = useState(false);
   const { openSms } = useQuickActions();
-  const { role } = useRole();
 
   const allRows = useMemo(
     () => buildRows(monthFilter, TODAY, { invoices, students, classes, payments }),
@@ -129,16 +126,6 @@ export default function PaymentsPage() {
     ?.map(id => students.find(s => s.id === id)?.name)
     .filter(Boolean)
     .join(', ');
-
-  // 재무·금액 화면 — 원장만. SO 등은 메뉴에서 제외되며 직접 진입도 차단.
-  if (!canSeeFinance(role)) {
-    return (
-      <div className="py-20 text-center">
-        <h1 className="text-xl font-bold text-[#1A1D29]">수납 관리</h1>
-        <p className="text-sm text-[#6B7280] mt-2">금액·재무 정보는 원장만 열람할 수 있습니다.</p>
-      </div>
-    );
-  }
 
   return (
     <div>

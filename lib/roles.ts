@@ -8,7 +8,7 @@ export const ROLE_STORAGE_KEY = 'dlab_role';
 export const DEMO_TEACHER_ID = 'tch-seed';
 export const DEMO_TEACHER_NAME = '씨드';
 
-export const ROLES: Role[] = ['원장', '교사', 'SO', '학생'];
+export const ROLES: Role[] = ['원장', 'SO', '교사', '학생'];
 
 /** 데모 계정 표시 이름(상담자 기본값 등) — 실제 인증 아님 */
 export const ACCOUNT_NAME: Record<Role, string> = {
@@ -31,8 +31,8 @@ const MENU_ALLOWLIST: Record<Role, string[]> = {
   '원장': ['/dashboard', '/promotion', '/leads', '/schedule', '/attendance', '/classes', '/students', '/teachers', '/payments', '/revenue', '/points', '/settings'],
   // 교사: 4개 메뉴만 — 대시보드·시간표·수업관리·포인트. 출결·피드백·보강은 수업관리(/teaching)로 통합
   '교사': ['/dashboard', '/schedule', '/teaching', '/points'],
-  // SO: 홍보·상담은 유지, 재무·금액 화면(수납) 제외 — canSeeFinance 참조
-  'SO': ['/dashboard', '/promotion', '/leads', '/schedule', '/attendance', '/classes', '/students', '/points'],
+  // SO: 데스크 운영 — 수납 관리 포함(손익·강사만 제외)
+  'SO': ['/dashboard', '/promotion', '/leads', '/schedule', '/attendance', '/classes', '/students', '/payments', '/points'],
   '학생': [],
 };
 
@@ -89,7 +89,7 @@ export type ExtraKey = 'marketplace' | 'manual' | 'quickActions';
 const EXTRA_ALLOWLIST: Record<ExtraKey, Role[]> = {
   marketplace: [],                // 교안 마켓플레이스: 전 역할 숨김(요청). 되살릴 때 ['원장','교사']로 복구
   manual: ['원장'],
-  quickActions: ['교사', 'SO'],   // 원장 제외
+  quickActions: ['교사'],         // 원장·SO 제외
 };
 
 export function canSeeExtra(role: Role, key: ExtraKey): boolean {

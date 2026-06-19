@@ -16,13 +16,14 @@ describe('menusForRole', () => {
     expect(m).not.toContain('/teachers');
     expect(m).not.toContain('/settings');
   });
-  it('SO는 데스크 운영 메뉴(재무·금액 제외 — 수납·손익·강사 없음, 홍보·상담·포인트 포함)', () => {
+  it('SO는 데스크 운영 메뉴(수납 포함, 손익·강사만 제외)', () => {
     const m = menusForRole('SO');
     expect(m).toContain('/leads');
     expect(m).toContain('/promotion');
     expect(m).toContain('/points');
-    expect(m).not.toContain('/payments');  // 금액 화면 제외
+    expect(m).toContain('/payments');   // 수납 관리 노출
     expect(m).not.toContain('/revenue');
+    expect(m).not.toContain('/teachers');
     expect(m).not.toContain('/ai');
   });
   it('AI 인사이트(/ai) 메뉴는 제거됨 — 대시보드로 통합, 어떤 역할도 노출 안 함', () => {
