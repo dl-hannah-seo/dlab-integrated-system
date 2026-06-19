@@ -76,7 +76,7 @@ type Popover = { cls: Class; group: ClassGroup; session?: Session; top: number; 
 
 // ── 메인 ────────────────────────────────────────────────────────
 export default function SchedulePage() {
-  const [view, setView] = useState<'week' | 'board'>('week');
+  const [view, setView] = useState<'week' | 'board'>('board');
   const [selectedTeachers, setSelectedTeachers] = useState<Set<string>>(new Set());
   const [weekStart, setWeekStart] = useState<string | null>(null);
   const [slideDir, setSlideDir] = useState<'left' | 'right'>('right');
