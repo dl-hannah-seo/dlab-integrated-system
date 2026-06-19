@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { kioskPosters, type Student } from '@/lib/mock-data';
 import { AuthEntry } from '@/components/kiosk/AuthEntry';
 import { AttendanceComplete } from '@/components/kiosk/AttendanceComplete';
-import { isKioskRegistered, registerKiosk, unregisterKiosk, isValidSetupCode } from '@/lib/kiosk-mode';
+import { isKioskRegistered, registerKiosk, unregisterKiosk, isValidSetupCode, KIOSK_SETUP_CODE } from '@/lib/kiosk-mode';
 
 export default function KioskPage() {
   const [ready, setReady] = useState(false);       // 등록 상태 확인 완료(하이드레이션 후)
@@ -13,7 +13,7 @@ export default function KioskPage() {
   const [done, setDone] = useState<Student | null>(null);
   const [posterIdx, setPosterIdx] = useState(0);
   const [authKey, setAuthKey] = useState(0);
-  const [setupCode, setSetupCode] = useState('');
+  const [setupCode, setSetupCode] = useState(KIOSK_SETUP_CODE);   // 데모: 셋업 코드 미리 입력
   const [setupError, setSetupError] = useState(false);
   const [releasing, setReleasing] = useState(false);
   const [releaseCode, setReleaseCode] = useState('');
@@ -87,7 +87,8 @@ export default function KioskPage() {
               />
               <button onClick={trySetup} className="px-4 rounded-xl font-bold text-white" style={{ background: 'var(--kiosk-orange)' }}>등록</button>
             </div>
-            {setupError && <p className="text-xs mt-1.5" style={{ color: '#EB5757' }}>셋업 코드가 올바르지 않습니다.</p>}
+            <p className="text-[11px] mt-1.5" style={{ color: 'var(--kiosk-muted)' }}>데모 셋업 코드: {KIOSK_SETUP_CODE} (이미 입력됨 · 등록만 누르세요)</p>
+            {setupError && <p className="text-xs mt-1" style={{ color: '#EB5757' }}>셋업 코드가 올바르지 않습니다.</p>}
           </div>
         </div>
       </div>
