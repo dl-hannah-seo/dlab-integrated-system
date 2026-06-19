@@ -27,9 +27,6 @@ import { ConsultFunnelCard } from '@/components/dashboard/ConsultFunnelCard';
 import { AtRiskList } from '@/components/dashboard/AtRiskList';
 import { MissedConsultList } from '@/components/dashboard/MissedConsultList';
 
-// ── 데모 기준 ──────────────────────────────────────────────────
-const TODAY_LABEL = '2026년 6월 14일 토요일';
-
 export default function DashboardPage() {
   const { openAttendance, openSms, openRecording } = useQuickActions();
   const { role } = useRole();
@@ -127,10 +124,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-bold text-[#1A1D29]">{DEMO_TEACHER_NAME} 선생님</h1>
-        <p className="text-sm text-[#6B7280] mt-0.5">{TODAY_LABEL} · 담당 {myClasses.length}개 반</p>
-      </div>
+      <h1 className="text-xl font-bold text-[#1A1D29]">{DEMO_TEACHER_NAME} 선생님</h1>
 
       <div className="grid gap-4" style={{ gridTemplateColumns: '1fr 1.6fr' }}>
         {/* 왼쪽 컬럼 */}
