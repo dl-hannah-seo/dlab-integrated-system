@@ -16,7 +16,7 @@ import { DEMO_TEACHER_ID, DEMO_TEACHER_NAME, canSeeExtra } from '@/lib/roles';
 import { classesOfTeacher, consultationsByCounselor } from '@/lib/teacher-hr';
 import { atRiskStudents } from '@/lib/at-risk';
 import { Card } from '@/components/ui/Card';
-import { PnlSummaryStrip } from '@/components/dashboard/PnlSummaryStrip';
+import { QuarterlyPnlTable } from '@/components/dashboard/QuarterlyPnlTable';
 import { QuarterlyTrends } from '@/components/dashboard/QuarterlyTrends';
 import { QuarterlyInsights } from '@/components/dashboard/QuarterlyInsights';
 import { ConsultFunnelCard } from '@/components/dashboard/ConsultFunnelCard';
@@ -86,25 +86,11 @@ export default function DashboardPage() {
 
     return (
       <div className="space-y-6">
-        {/* ① 인사 배너 */}
-        <div className="flex items-center justify-between rounded-xl bg-[#37352F] px-8 py-7">
-          <div>
-            <p className="text-xs text-[#9B9B97]">{campus.name} · {TODAY_LABEL}</p>
-            <h1 className="mt-1.5 text-2xl font-bold text-white">좋은 아침이에요, {who} 👋</h1>
-            <p className="mt-2 text-sm text-[#9B9B97]">재원생 {enrolledTotal}명</p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-[#9B9B97]">오늘 출석률</p>
-            <p className="mt-0.5 text-4xl font-bold text-[#5FD0BE]">{todayAttendRate}%</p>
-            <p className="mt-1 text-xs text-[#9B9B97]">출석 {todayAttended} / {todayTotalAttending}명</p>
-          </div>
-        </div>
-
-        {/* ② 성장 추이 — 학생 수 · 매출 (5개 분기) */}
+        {/* ① 성장 추이 — 학생 수 · 매출 (5개 분기) */}
         <QuarterlyTrends />
 
-        {/* ③ 분기 손익 요약 → /revenue */}
-        <PnlSummaryStrip />
+        {/* ② 분기 손익 표 — 행: 학생수·총매출·지출·영업이익 / 열: 분기 */}
+        <QuarterlyPnlTable />
 
         {/* ④ 운영 인사이트 — 선행지표 4종 */}
         <QuarterlyInsights />
