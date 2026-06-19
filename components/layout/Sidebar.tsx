@@ -97,9 +97,9 @@ export function Sidebar() {
   const { openAttendance, openSms, openRecording } = useQuickActions();
   const { role, setRole, ready } = useRole();
 
-  // 학생 역할이면 admin이 아니라 포털로
+  // 학생 역할이면 admin이 아니라 키오스크로
   useEffect(() => {
-    if (ready && role === '학생') router.push('/me');
+    if (ready && role === '학생') router.push('/kiosk');
   }, [ready, role, router]);
 
   const allowed = menusForRole(role);
@@ -110,7 +110,7 @@ export function Sidebar() {
     if (value === '__kiosk__') { router.push('/kiosk'); return; }   // 데모: 키오스크 출석 화면
     const r = value as Role;
     setRole(r);
-    if (r === '학생') router.push('/me');
+    if (r === '학생') router.push('/kiosk');
   }
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
@@ -266,7 +266,7 @@ export function Sidebar() {
             className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
               pathname === '/manual' || pathname.startsWith('/manual/')
                 ? 'bg-[#2F6BFF] text-white font-medium shadow-[0_4px_12px_rgba(47,107,255,0.35)]'
-                : 'text-[#9CA3AF] hover:bg-white/5 hover:text-white'
+                : 'text-white hover:bg-white/5 hover:text-white'
             }`}
           >
             <span className={pathname.startsWith('/manual') ? 'text-white' : 'text-[#6B7280]'}>

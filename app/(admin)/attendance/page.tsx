@@ -167,8 +167,8 @@ export default function AttendancePage() {
     return sessionHistory.find(s => s.class_id === classId && s.session_date === date) ?? null;
   }
 
-  // ── 원장 전용 단순 뷰: 오늘 출결 KPI 4칸 + 반별 표(읽기 전용) ──
-  if (role === '원장') {
+  // ── 원장·SO 단순 뷰: 오늘 출결 KPI 4칸 + 반별 표(읽기 전용) ──
+  if (role === '원장' || role === 'SO') {
     const kpiCards = [
       { label: '오늘 출석률', value: kpi.attend + kpi.absent ? `${kpi.rate}%` : '–', sub: '전체 반 평균', color: '#1A1D29' },
       { label: '출석', value: `${kpi.attend}명`, sub: '정상 출석', color: '#28C76F' },

@@ -81,9 +81,14 @@ export default function ClassesPage() {
   const [editSemYear, setEditSemYear]     = useState(2026);
   const [editSemSeason, setEditSemSeason] = useState('봄');
 
-  // 복제 폼
-  const [cloneFrom, setCloneFrom]   = useState(localSemesters[0]?.id ?? '');
-  const [cloneTo, setCloneTo]       = useState(localSemesters[1]?.id ?? '');
+  // 복제 폼 — 기본값: 2026 여름학기 → (새 학기) 2026 가을학기
+  const CLONE_NEW = '__new__';
+  const [cloneFrom, setCloneFrom]   = useState(
+    localSemesters.find(s => s.year === 2026 && s.season === '여름학기')?.id ?? localSemesters[0]?.id ?? '',
+  );
+  const [cloneTo, setCloneTo]       = useState<string>(CLONE_NEW);
+  const [cloneNewYear, setCloneNewYear]     = useState(2026);
+  const [cloneNewSeason, setCloneNewSeason] = useState('가을학기');
   const [cloneStart, setCloneStart] = useState('');
   const [cloneStudents, setCloneStudents] = useState(true);
 
@@ -301,10 +306,26 @@ export default function ClassesPage() {
     : 0;
 
   function handleCloneSemester() {
-    const target = localSemesters.find(s => s.id === cloneTo);
-    if (!target || cloneFrom === cloneTo || cloneSourceClasses.length === 0) return;
+    if (cloneSourceClasses.length === 0) return;
 
     const stamp = Date.now();
+
+    // 복제 대상 — 기존 학기 선택 또는 '새 학기 만들기'(즉석 생성)
+    let target: Semester | undefined;
+    if (cloneTo === CLONE_NEW) {
+      const season = cloneNewSeason.trim();
+      if (!season) return;
+      // 같은 연도·구분명 학기가 이미 있으면 재사용, 없으면 새로 생성
+      target = localSemesters.find(s => s.year === cloneNewYear && s.season === season);
+      if (!target) {
+        target = { id: `sem-${stamp}`, campus_id: 'campus-001', year: cloneNewYear, season, courses: [] };
+        setLocalSemesters(p => [...p, target!]);
+      }
+    } else {
+      target = localSemesters.find(s => s.id === cloneTo);
+    }
+    if (!target || target.id === cloneFrom) return;
+
     const startDate = cloneStart || today;
     const newClasses: Class[] = [];
     const newEnrollments: Enrollment[] = [];
@@ -381,6 +402,15 @@ export default function ClassesPage() {
     const s = localSemesters.find(x => x.id === id);
     return s ? `${s.year}년 ${s.season}` : '-';
   };
+
+  // 복제 대상 — '새 학기' 모드 포함 라벨·유효성
+  const cloneTargetLabel = cloneTo === CLONE_NEW
+    ? `${cloneNewYear}년 ${cloneNewSeason.trim() || '새 학기'}`
+    : semLabel(cloneTo);
+  const cloneSameSemester = cloneTo === CLONE_NEW
+    ? localSemesters.some(s => s.id === cloneFrom && s.year === cloneNewYear && s.season === cloneNewSeason.trim())
+    : cloneFrom === cloneTo;
+  const cloneTargetInvalid = cloneTo === CLONE_NEW && !cloneNewSeason.trim();
 
   return (
     <div>
@@ -793,7 +823,7 @@ export default function ClassesPage() {
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowClone(false)}>취소</Button>
-            <Button onClick={handleCloneSemester} loading={cloneSuccess} disabled={cloneFrom === cloneTo || cloneSourceClasses.length === 0}>
+            <Button onClick={handleCloneSemester} loading={cloneSuccess} disabled={cloneSameSemester || cloneTargetInvalid || cloneSourceClasses.length === 0}>
               {cloneSuccess ? '복제 완료!' : '전체 복제 실행'}
             </Button>
           </>
@@ -813,12 +843,35 @@ export default function ClassesPage() {
               onChange={e => setCloneFrom(e.target.value)}
               options={localSemesters.map(s => ({ value: s.id, label: `${s.year}년 ${s.season}` }))}
             />
-            <Select
-              label="복제 대상"
-              value={cloneTo}
-              onChange={e => setCloneTo(e.target.value)}
-              options={localSemesters.map(s => ({ value: s.id, label: `${s.year}년 ${s.season}` }))}
-            />
+            <div>
+              <Select
+                label="복제 대상"
+                value={cloneTo}
+                onChange={e => setCloneTo(e.target.value)}
+                options={[
+                  ...localSemesters.map(s => ({ value: s.id, label: `${s.year}년 ${s.season}` })),
+                  { value: CLONE_NEW, label: '＋ 새 학기 만들기' },
+                ]}
+              />
+              {cloneTo === CLONE_NEW && (
+                <div className="grid grid-cols-2 gap-3 mt-2">
+                  <Input
+                    label="연도"
+                    type="number"
+                    min={2020}
+                    value={String(cloneNewYear)}
+                    onChange={e => setCloneNewYear(Number(e.target.value))}
+                  />
+                  <Input
+                    label="구분명"
+                    type="text"
+                    placeholder="예: 가을학기"
+                    value={cloneNewSeason}
+                    onChange={e => setCloneNewSeason(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
           </div>
           <Input label="복제 후 수강 시작일" type="date" value={cloneStart} onChange={e => setCloneStart(e.target.value)} />
           <label className="flex items-center gap-2.5 cursor-pointer select-none">
@@ -833,11 +886,15 @@ export default function ClassesPage() {
           <div className="bg-[#F4F6FA] rounded-lg px-4 py-3 text-sm text-[#6B7280]">
             <span className="font-semibold text-[#1A1D29]">{semLabel(cloneFrom)}</span>의 반{' '}
             <span className="font-semibold text-[#1A1D29]">{cloneSourceClasses.length}개</span>를{' '}
-            <span className="font-semibold text-[#1A1D29]">{semLabel(cloneTo)}</span>(으)로 복제합니다.
+            <span className="font-semibold text-[#1A1D29]">{cloneTargetLabel}</span>(으)로 복제합니다.
+            {cloneTo === CLONE_NEW && !cloneTargetInvalid && (
+              <span className="block text-[#2F6BFF] mt-1">새 학기 「{cloneTargetLabel}」가 함께 생성됩니다.</span>
+            )}
             {cloneStudents && (
               <> 재원 학생 <span className="font-semibold text-[#1A1D29]">{cloneStudentCount}명</span>도 함께 이동합니다.</>
             )}
-            {cloneFrom === cloneTo && <span className="block text-[#F2474B] mt-1">원본과 대상 학기가 같습니다.</span>}
+            {cloneSameSemester && <span className="block text-[#F2474B] mt-1">원본과 대상 학기가 같습니다.</span>}
+            {cloneTargetInvalid && <span className="block text-[#F2474B] mt-1">새 학기 구분명을 입력하세요.</span>}
           </div>
         </div>
       </Modal>
