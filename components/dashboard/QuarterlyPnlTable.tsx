@@ -21,7 +21,6 @@ const ROWS: Row[] = [
   {
     label: '영업이익',
     cell: p => fmtMan(p.profit),
-    tone: p => (p.profit >= 0 ? 'text-[#28C76F]' : 'text-[#F2474B]'),
   },
 ];
 
@@ -106,7 +105,7 @@ export function QuarterlyPnlTable() {
   return (
     <section className="rounded-2xl border border-[#EEF1F5] bg-white p-6 shadow-[0_2px_8px_rgba(20,30,55,0.05)]">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-[#1A1D29]">분기 손익</h2>
+        <h2 className="text-base font-semibold text-[#1A1D29]">분기 손익</h2>
         <Link href="/revenue" className="text-xs font-medium text-[#2F6BFF] hover:underline">매출 현황 →</Link>
       </div>
 

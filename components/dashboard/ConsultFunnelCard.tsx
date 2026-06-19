@@ -35,7 +35,7 @@ export function ConsultFunnelCard() {
   return (
     <section className="rounded-2xl border border-[#EEF1F5] bg-white p-6 shadow-[0_2px_8px_rgba(20,30,55,0.05)]">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-[#1A1D29]">
+        <h2 className="text-base font-semibold text-[#1A1D29]">
           홍보 → 상담 → 등록 → 퇴원 <span className="ml-1 text-xs font-normal text-[#9CA3AF]">{quarterLabel(cur)}</span>
         </h2>
         <Link href="/promotion" className="text-xs font-medium text-[#2F6BFF] hover:underline">자세히 보기 →</Link>
