@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { autoLines, buildPnlLines, summarize, groupTotal, ROYALTY_RATE, type PnlLine } from './pnl';
+import { autoLines, buildPnlLines, summarize, groupTotal, revenueByTax, ROYALTY_RATE, type PnlLine } from './pnl';
 import { invoices } from './mock-data';
 
 describe('autoLines', () => {
@@ -42,5 +42,37 @@ describe('buildPnlLines / groupTotal', () => {
     const lines = buildPnlLines(invoices);
     expect(lines.some(l => l.auto)).toBe(true);
     expect(groupTotal(lines, '인건비')).toBe(4_500_000 + 1_800_000 + 400_000 + 600_000);
+  });
+});
+
+describe('면세/과세 구분', () => {
+  it('autoLines: 수강료=면세, 교구비=과세', () => {
+    const lines = autoLines(invoices);
+    expect(lines.find(l => l.id === 'pnl-rev-tuition')!.tax).toBe('면세');
+    expect(lines.find(l => l.id === 'pnl-rev-material')!.tax).toBe('과세');
+  });
+
+  it('모든 매출 라인은 면세/과세가 지정되어 있다', () => {
+    const revenue = buildPnlLines(invoices).filter(l => l.kind === 'revenue');
+    expect(revenue.length).toBeGreaterThan(0);
+    expect(revenue.every(l => l.tax === '면세' || l.tax === '과세')).toBe(true);
+  });
+
+  it('revenueByTax: 매출만 합산, 지출은 무시', () => {
+    const lines: PnlLine[] = [
+      { id: 'r1', kind: 'revenue', group: '교육매출', label: '수강료', amount: 1000, tax: '면세' },
+      { id: 'r2', kind: 'revenue', group: '기타매출', label: '물품', amount: 300, tax: '과세' },
+      { id: 'r3', kind: 'revenue', group: '교육매출', label: '특강', amount: 500, tax: '면세' },
+      { id: 'e1', kind: 'expense', group: '기타', label: '세금', amount: 999, tax: '과세' as never },
+    ];
+    expect(revenueByTax(lines, '면세')).toBe(1500);
+    expect(revenueByTax(lines, '과세')).toBe(300);
+  });
+
+  it('summarize: 면세+과세 소계 합이 총매출과 같다', () => {
+    const s = summarize(buildPnlLines(invoices));
+    expect(s.taxExemptRevenue + s.taxableRevenue).toBe(s.totalRevenue);
+    expect(s.taxExemptRevenue).toBeGreaterThan(0);
+    expect(s.taxableRevenue).toBeGreaterThan(0);
   });
 });

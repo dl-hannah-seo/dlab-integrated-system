@@ -6,7 +6,7 @@ import { DeleteButton } from '@/components/ui/DeleteButton';
 import {
   buildPnlLines, summarize, groupTotal, fmt,
   REVENUE_GROUPS, EXPENSE_GROUPS, MONTHLY_PNL, CURRENT_MONTH, monthShort, monthMargin,
-  type PnlLine, type PnlKind, type PnlGroup,
+  type PnlLine, type PnlKind, type PnlGroup, type TaxClass,
 } from '@/lib/pnl';
 
 let addCounter = 0;
@@ -20,11 +20,33 @@ export function PnlDashboard() {
     setLines(prev => prev.map(l => (l.id === id ? { ...l, amount: Number.isFinite(v) ? Math.max(0, v) : 0 } : l)));
   const setLabel = (id: string, v: string) =>
     setLines(prev => prev.map(l => (l.id === id ? { ...l, label: v } : l)));
+  const setTax = (id: string, tax: TaxClass) =>
+    setLines(prev => prev.map(l => (l.id === id ? { ...l, tax } : l)));
   const remove = (id: string) => setLines(prev => prev.filter(l => l.id !== id));
   const addLine = (kind: PnlKind, group: PnlGroup) => {
     addCounter += 1;
-    setLines(prev => [...prev, { id: `pnl-new-${addCounter}`, kind, group, label: '', amount: 0 }]);
+    setLines(prev => [...prev, { id: `pnl-new-${addCounter}`, kind, group, label: '', amount: 0, ...(kind === 'revenue' ? { tax: '면세' as TaxClass } : {}) }]);
   };
+
+  // 매출 라인 면세/과세 표시 — 자동 라인은 배지, 편집 라인은 클릭 토글
+  function TaxToggle({ line }: { line: PnlLine }) {
+    if (line.kind !== 'revenue') return null;
+    const t: TaxClass = line.tax ?? '면세';
+    const cls = t === '면세' ? 'bg-[#EDF7F5] text-[#0F7B6C]' : 'bg-[#FFF1EC] text-[#FF6C37]';
+    if (line.auto) {
+      return <span className={`w-10 shrink-0 text-center text-[11px] px-1 py-0.5 rounded ${cls}`}>{t}</span>;
+    }
+    return (
+      <button
+        type="button"
+        onClick={() => setTax(line.id, t === '면세' ? '과세' : '면세')}
+        className={`w-10 shrink-0 text-center text-[11px] px-1 py-0.5 rounded ${cls} hover:opacity-80 transition-opacity`}
+        title="클릭하여 면세/과세 전환"
+      >
+        {t}
+      </button>
+    );
+  }
 
   const kpis: { label: string; value: string; tone?: 'profit' | 'danger' }[] = [
     { label: '총매출', value: fmt(s.totalRevenue) },
@@ -61,6 +83,7 @@ export function PnlDashboard() {
                   className="flex-1 text-sm text-[#37352F] bg-white border border-[#E9E9E7] rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#FF6C37]"
                 />
               )}
+              <TaxToggle line={l} />
               {l.auto ? (
                 <span className="w-32 text-right text-sm text-[#37352F] tabular-nums">{fmt(l.amount)}</span>
               ) : (
@@ -193,6 +216,14 @@ export function PnlDashboard() {
           action={<span className="text-sm font-semibold text-[#37352F] tabular-nums">{fmt(s.totalRevenue)}</span>}
         >
           {REVENUE_GROUPS.map(g => <GroupBlock key={g} kind="revenue" group={g} />)}
+          <div className="mt-2 pt-3 border-t border-[#E9E9E7] flex items-center justify-between text-sm">
+            <span className="text-[#787774]">면세 / 과세 매출</span>
+            <span className="tabular-nums">
+              <span className="font-medium text-[#0F7B6C]">{fmt(s.taxExemptRevenue)}</span>
+              <span className="mx-1.5 text-[#9B9A97]">/</span>
+              <span className="font-medium text-[#FF6C37]">{fmt(s.taxableRevenue)}</span>
+            </span>
+          </div>
         </Card>
 
         {/* 지출 */}
