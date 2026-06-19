@@ -83,12 +83,12 @@ export default function KioskPage() {
                 onChange={e => { setSetupCode(e.target.value); setSetupError(false); }}
                 placeholder="셋업 코드"
                 className="flex-1 px-3 py-2.5 rounded-xl text-center font-bold focus:outline-none"
-                style={{ background: 'var(--kiosk-card)', color: 'var(--kiosk-text)', border: `1px solid ${setupError ? '#EB5757' : 'var(--kiosk-border)'}` }}
+                style={{ background: 'var(--kiosk-card)', color: 'var(--kiosk-text)', border: `1px solid ${setupError ? '#F2474B' : 'var(--kiosk-border)'}` }}
               />
               <button onClick={trySetup} className="px-4 rounded-xl font-bold text-white" style={{ background: 'var(--kiosk-orange)' }}>등록</button>
             </div>
             <p className="text-[11px] mt-1.5" style={{ color: 'var(--kiosk-muted)' }}>데모 셋업 코드: {KIOSK_SETUP_CODE} (이미 입력됨 · 등록만 누르세요)</p>
-            {setupError && <p className="text-xs mt-1" style={{ color: '#EB5757' }}>셋업 코드가 올바르지 않습니다.</p>}
+            {setupError && <p className="text-xs mt-1" style={{ color: '#F2474B' }}>셋업 코드가 올바르지 않습니다.</p>}
           </div>
         </div>
       </div>
@@ -137,12 +137,12 @@ export default function KioskPage() {
                     onChange={e => { setReleaseCode(e.target.value); setReleaseError(false); }}
                     placeholder="관리자 코드"
                     className="w-32 px-3 py-2 rounded-lg text-center text-sm font-bold focus:outline-none"
-                    style={{ background: 'var(--kiosk-card)', color: 'var(--kiosk-text)', border: `1px solid ${releaseError ? '#EB5757' : 'var(--kiosk-border)'}` }}
+                    style={{ background: 'var(--kiosk-card)', color: 'var(--kiosk-text)', border: `1px solid ${releaseError ? '#F2474B' : 'var(--kiosk-border)'}` }}
                   />
                   <button onClick={tryRelease} className="px-3 rounded-lg text-sm font-bold text-white" style={{ background: 'var(--kiosk-orange)' }}>해제</button>
                   <button onClick={cancelRelease} className="px-3 rounded-lg text-sm" style={{ color: 'var(--kiosk-muted)' }}>취소</button>
                 </div>
-                {releaseError && <p className="text-xs" style={{ color: '#EB5757' }}>관리자 코드가 올바르지 않습니다.</p>}
+                {releaseError && <p className="text-xs" style={{ color: '#F2474B' }}>관리자 코드가 올바르지 않습니다.</p>}
               </div>
             )}
           </div>

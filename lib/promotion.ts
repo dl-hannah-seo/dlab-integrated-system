@@ -102,6 +102,18 @@ const PAST_SEED: Record<string, { promo: PromoQuarter; consult: number; enroll: 
 /** 현재 분기 미입력 시 기본값(데모) */
 export const CURRENT_QUARTER_SEED: PromoQuarter = { blog: 48, sns: 45, sms: 30, kakao: 35, etc: 10 };
 
+// 퇴원율(%) 데모 — 퇴원 집계 연동 전 임시값
+const DEMO_WITHDRAW_RATE: Record<string, number> = {
+  '2026-Q2': 4.2,
+  '2026-Q1': 5.1,
+  '2025-Q4': 6.3,
+  '2025-Q3': 5.8,
+  '2025-Q2': 7.0,
+};
+function withdrawRateOf(key: string): number {
+  return DEMO_WITHDRAW_RATE[key] ?? 0;
+}
+
 // ── localStorage 저장소 ──────────────────────────────────────
 export type PromoStore = Record<string, PromoQuarter>;
 const STORE_KEY = 'dlab.promo.v1';
@@ -174,6 +186,7 @@ export interface QuarterRow {
   promoTotal: number;
   consult: number;
   enroll: number;
+  withdrawRate: number; // 퇴원율(%) — 데모
 }
 
 /** 최신순 n개 분기 행 — 현재 분기는 실데이터, 과거는 시드(저장값 우선) */
@@ -183,6 +196,6 @@ export function quarterRows(leads: Lead[], store: PromoStore, today: string, n =
     const promo = getQuarter(store, key, today);
     const seeded = PAST_SEED[key];
     const f = key === cur || !seeded ? quarterFunnel(leads, key) : { consult: seeded.consult, enroll: seeded.enroll };
-    return { key, promo, promoTotal: promoSum(promo), consult: f.consult, enroll: f.enroll };
+    return { key, promo, promoTotal: promoSum(promo), consult: f.consult, enroll: f.enroll, withdrawRate: withdrawRateOf(key) };
   });
 }

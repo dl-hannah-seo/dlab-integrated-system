@@ -7,7 +7,7 @@ import {
   Teacher, Subject, Class, TeacherAttendance, type TeacherRole,
 } from '@/lib/mock-data';
 import { eligibleClasses } from '@/lib/teacher-matching';
-import { monthlySalary, weeklySessions, SESSION_HOURS, WEEKS_PER_MONTH } from '@/lib/teacher-hr';
+import { weeklySessions, SESSION_HOURS, WEEKS_PER_MONTH } from '@/lib/teacher-hr';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
@@ -16,8 +16,8 @@ import { DeleteButton } from '@/components/ui/DeleteButton';
 import { TeacherRecordCard } from '@/components/teachers/TeacherRecordCard';
 
 const STATUSES: Teacher['status'][] = ['재직', '휴직', '퇴직'];
-const ROLES: TeacherRole[] = ['강사', '튜터'];
-const ROLE_FILTERS = ['전체', '강사', '튜터'];
+const ROLES: TeacherRole[] = ['연구원', '튜터'];
+const ROLE_FILTERS = ['전체', '연구원', '튜터'];
 
 const won = (n: number) => n.toLocaleString('ko-KR') + '원';
 
@@ -45,10 +45,11 @@ export default function TeachersPage() {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId]     = useState<string | null>(null);
   const [fName, setFName]       = useState('');
-  const [fRole, setFRole]       = useState<TeacherRole>('강사');
+  const [fRole, setFRole]       = useState<TeacherRole>('연구원');
   const [fPhone, setFPhone]     = useState('');
   const [fHire, setFHire]       = useState('');
   const [fWage, setFWage]       = useState(0);
+  const [fAnnual, setFAnnual]   = useState(0);
   const [fIncentive, setFIncentive] = useState(0);
   const [fStatus, setFStatus]   = useState<Teacher['status']>('재직');
   const [fSubjectIds, setFSubjectIds] = useState<string[]>([]);
@@ -57,15 +58,15 @@ export default function TeachersPage() {
 
   function openCreate() {
     setEditId(null);
-    setFName(''); setFRole('강사'); setFPhone(''); setFHire(''); setFStatus('재직');
-    setFWage(0); setFIncentive(0);
+    setFName(''); setFRole('연구원'); setFPhone(''); setFHire(''); setFStatus('재직');
+    setFWage(0); setFAnnual(0); setFIncentive(0);
     setFSubjectIds([]); setFClassIds(new Set()); setFNewSubject('');
     setShowForm(true);
   }
   function openEdit(t: Teacher) {
     setEditId(t.id);
     setFName(t.name); setFRole(t.role); setFPhone(t.phone ?? ''); setFHire(t.hire_date ?? ''); setFStatus(t.status);
-    setFWage(t.hourly_wage ?? 0); setFIncentive(t.incentive ?? 0);
+    setFWage(t.hourly_wage ?? 0); setFAnnual(t.annual_salary ?? 0); setFIncentive(t.incentive ?? 0);
     setFSubjectIds([...t.subject_ids]);
     setFClassIds(new Set(localClasses.filter(c => c.teacher_id === t.id).map(c => c.id)));
     setFNewSubject('');
@@ -102,7 +103,9 @@ export default function TeachersPage() {
       id, campus_id: 'campus-001', name: fName.trim(), role: fRole,
       subject_ids: [...fSubjectIds], phone: fPhone.trim() || undefined,
       hire_date: fHire || undefined,
-      hourly_wage: fWage || undefined, incentive: fIncentive || undefined,
+      annual_salary: fRole === '연구원' ? (fAnnual || undefined) : undefined,
+      hourly_wage: fRole === '튜터' ? (fWage || undefined) : undefined,
+      incentive: fIncentive || undefined,
       status: fStatus,
     };
     setLocalTeachers(p => editId ? p.map(t => t.id === id ? teacher : t) : [...p, teacher]);
@@ -121,25 +124,28 @@ export default function TeachersPage() {
   const formClasses = eligibleClasses(fSubjectIds, localClasses);
 
   // 폼에서 선택한 반 기준 예상 월급여 미리보기
+  // 연구원: 연봉 ÷ 12 / 튜터: 시급 × 선택 반 추정 시수
   const formWeekly = localClasses.filter(c => fClassIds.has(c.id)).reduce((s, c) => s + weeklySessions(c), 0);
   const formHours = formWeekly * SESSION_HOURS * WEEKS_PER_MONTH;
-  const formSalary = Math.round(formHours * fWage) + fIncentive;
+  const formSalary = fRole === '연구원'
+    ? Math.round(fAnnual / 12)
+    : Math.round(formHours * fWage) + fIncentive;
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-bold text-[#37352F]">강사 관리</h1>
+        <h1 className="text-xl font-bold text-[#1A1D29]">강사 관리</h1>
         <Button onClick={openCreate}>＋ 강사 추가</Button>
       </div>
 
       {/* 역할 필터 */}
-      <div className="inline-flex rounded-lg border border-[#E9E9E7] bg-white p-0.5 mb-4">
+      <div className="inline-flex rounded-lg border border-[#E8EBF1] bg-white p-0.5 mb-4">
         {ROLE_FILTERS.map(r => (
           <button
             key={r}
             onClick={() => setRoleFilter(r)}
             className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-              roleFilter === r ? 'bg-[#FFF1EC] text-[#FF6C37] font-medium' : 'text-[#787774] hover:text-[#37352F]'
+              roleFilter === r ? 'bg-[#EAF1FF] text-[#2F6BFF] font-medium' : 'text-[#6B7280] hover:text-[#1A1D29]'
             }`}
           >
             {r}
@@ -150,13 +156,12 @@ export default function TeachersPage() {
       {/* 강사 목록 */}
       <Card className="p-0 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-[#F7F7F5] text-[#787774]">
+          <thead className="bg-[#F4F6FA] text-[#6B7280]">
             <tr>
               <th className="text-left font-medium px-4 py-3">이름</th>
               <th className="text-left font-medium px-4 py-3">역할</th>
               <th className="text-left font-medium px-4 py-3">가르칠 수 있는 과목</th>
               <th className="text-left font-medium px-4 py-3">담임 반</th>
-              <th className="text-right font-medium px-4 py-3">예상 월급여</th>
               <th className="text-left font-medium px-4 py-3">입사일</th>
               <th className="text-left font-medium px-4 py-3">상태</th>
               <th className="px-4 py-3"></th>
@@ -164,22 +169,19 @@ export default function TeachersPage() {
           </thead>
           <tbody>
             {visibleTeachers.map(t => (
-              <tr key={t.id} className="border-t border-[#E9E9E7] hover:bg-[#FAFAF9]">
+              <tr key={t.id} className="border-t border-[#E8EBF1] hover:bg-[#F4F6FA]">
                 <td className="px-4 py-3">
-                  <button onClick={() => setRecordTeacher(t)} className="text-[#37352F] font-medium hover:text-[#FF6C37] hover:underline">{t.name}</button>
+                  <button onClick={() => setRecordTeacher(t)} className="text-[#1A1D29] font-medium hover:text-[#2F6BFF] hover:underline">{t.name}</button>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${t.role === '강사' ? 'bg-[#FFF1EC] text-[#FF6C37]' : 'bg-[#E8F0FE] text-[#1A73E8]'}`}>{t.role}</span>
+                  <span className="text-xs font-medium px-2 py-0.5 rounded bg-[#EAF1FF] text-[#2F6BFF]">{t.role}</span>
                 </td>
-                <td className="px-4 py-3 text-[#37352F]">{t.subject_ids.map(subjectName).join(', ')}</td>
-                <td className="px-4 py-3 text-[#787774]">{assignedCount(t.id)}개</td>
-                <td className="px-4 py-3 text-right text-[#37352F] tabular-nums">
-                  {t.hourly_wage ? won(monthlySalary(t, localClasses).total) : <span className="text-[#9B9A97]">미설정</span>}
-                </td>
-                <td className="px-4 py-3 text-[#787774] tabular-nums">{t.hire_date ?? '-'}</td>
-                <td className="px-4 py-3 text-[#787774]">{t.status}</td>
+                <td className="px-4 py-3 text-[#1A1D29]">{t.subject_ids.map(subjectName).join(', ')}</td>
+                <td className="px-4 py-3 text-[#6B7280]">{assignedCount(t.id)}개</td>
+                <td className="px-4 py-3 text-[#6B7280] tabular-nums">{t.hire_date ?? '-'}</td>
+                <td className="px-4 py-3 text-[#6B7280]">{t.status}</td>
                 <td className="px-4 py-3 text-right whitespace-nowrap">
-                  <button type="button" onClick={() => openEdit(t)} className="text-sm text-[#37352F] hover:underline mr-3">수정</button>
+                  <button type="button" onClick={() => openEdit(t)} className="text-sm text-[#1A1D29] hover:underline mr-3">수정</button>
                   <DeleteButton onClick={() => removeTeacher(t.id)}>삭제</DeleteButton>
                 </td>
               </tr>
@@ -205,7 +207,7 @@ export default function TeachersPage() {
       <Modal
         open={showForm}
         onClose={() => setShowForm(false)}
-        title={editId ? '강사 수정' : '강사 추가'}
+        title={`${fRole} ${editId ? '수정' : '추가'}`}
         size="lg"
         footer={
           <>
@@ -216,7 +218,7 @@ export default function TeachersPage() {
       >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <Input label={<>이름 <span className="text-[#EB5757]">*</span></>} value={fName} onChange={e => setFName(e.target.value)} placeholder="예: 메튜" />
+            <Input label={<>이름 <span className="text-[#F2474B]">*</span></>} value={fName} onChange={e => setFName(e.target.value)} placeholder="예: 메튜" />
             <Select label="역할" value={fRole} onChange={e => setFRole(e.target.value as TeacherRole)} options={ROLES.map(r => ({ value: r, label: r }))} />
           </div>
           <div className="grid grid-cols-3 gap-3">
@@ -225,23 +227,31 @@ export default function TeachersPage() {
             <Select label="상태" value={fStatus} onChange={e => setFStatus(e.target.value as Teacher['status'])} options={STATUSES.map(s => ({ value: s, label: s }))} />
           </div>
 
-          {/* 급여 — 시급·인센티브 + 예상 월급여 자동 산출 */}
+          {/* 급여 — 연구원: 연봉 / 튜터: 시급 + 학기 인센티브 + 예상 월급여 자동 산출 */}
           <div>
             <div className="grid grid-cols-2 gap-3">
-              <MoneyInput label="시급" value={fWage} onValueChange={setFWage} suffix="원" placeholder="예: 35,000" />
-              <MoneyInput label="월 인센티브" value={fIncentive} onValueChange={setFIncentive} suffix="원" placeholder="예: 200,000" />
+              {fRole === '연구원' ? (
+                <MoneyInput label="연봉" value={fAnnual} onValueChange={setFAnnual} suffix="원" placeholder="예: 42,000,000" />
+              ) : (
+                <MoneyInput label="시급" value={fWage} onValueChange={setFWage} suffix="원" placeholder="예: 15,000" />
+              )}
+              <MoneyInput label="학기 인센티브" value={fIncentive} onValueChange={setFIncentive} suffix="원" placeholder="예: 600,000" />
             </div>
-            <div className="mt-2 bg-[#F7F7F5] rounded-md px-3 py-2.5 text-sm text-[#787774]">
+            <div className="mt-2 bg-[#F4F6FA] rounded-md px-3 py-2.5 text-sm text-[#6B7280]">
               예상 월급여{' '}
-              <span className="font-semibold text-[#37352F]">{won(formSalary)}</span>
-              <span className="text-xs text-[#9B9A97]"> · 선택 반 주 {formWeekly}회 × {SESSION_HOURS}h ≈ 월 {Math.round(formHours)}h 기준(추정)</span>
+              <span className="font-semibold text-[#1A1D29]">{won(formSalary)}</span>
+              <span className="text-xs text-[#9CA3AF]">
+                {fRole === '연구원'
+                  ? ' · 연봉 ÷ 12 기준'
+                  : ` · 선택 반 주 ${formWeekly}회 × ${SESSION_HOURS}h ≈ 월 ${Math.round(formHours)}h 기준(추정)`}
+              </span>
             </div>
           </div>
 
           {/* 가르칠 수 있는 과목 — 칩 선택 + 신규 과목 인라인 추가 */}
           <div>
-            <label className="block text-sm font-medium text-[#37352F] mb-1.5">
-              가르칠 수 있는 과목 <span className="text-[#EB5757]">*</span> <span className="text-xs font-normal text-[#787774]">(복수 선택)</span>
+            <label className="block text-sm font-medium text-[#1A1D29] mb-1.5">
+              가르칠 수 있는 과목 <span className="text-[#F2474B]">*</span> <span className="text-xs font-normal text-[#6B7280]">(복수 선택)</span>
             </label>
             <div className="flex flex-wrap gap-2 mb-2">
               {localSubjects.map(s => (
@@ -251,8 +261,8 @@ export default function TeachersPage() {
                   onClick={() => toggleFSubject(s.id)}
                   className={`px-3 py-1.5 rounded-md text-sm border transition-all ${
                     fSubjectIds.includes(s.id)
-                      ? 'bg-[#FF6C37] text-white border-[#FF6C37]'
-                      : 'bg-[#F7F7F5] text-[#787774] border-[#E9E9E7] hover:border-[#FF6C37]/50'
+                      ? 'bg-[#2F6BFF] text-white border-[#2F6BFF]'
+                      : 'bg-[#F4F6FA] text-[#6B7280] border-[#E8EBF1] hover:border-[#2F6BFF]/50'
                   }`}
                 >
                   {s.name}
@@ -273,21 +283,21 @@ export default function TeachersPage() {
 
           {/* 맡을 반 — 선택 과목 해당 반만 */}
           <div>
-            <label className="block text-sm font-medium text-[#37352F] mb-1.5">맡을 반 <span className="text-xs font-normal text-[#787774]">(담임)</span></label>
+            <label className="block text-sm font-medium text-[#1A1D29] mb-1.5">맡을 반 <span className="text-xs font-normal text-[#6B7280]">(담임)</span></label>
             {fSubjectIds.length === 0 ? (
-              <p className="text-sm text-[#787774] bg-[#F7F7F5] border border-[#E9E9E7] rounded-md px-3 py-3">과목을 먼저 선택하세요.</p>
+              <p className="text-sm text-[#6B7280] bg-[#F4F6FA] border border-[#E8EBF1] rounded-md px-3 py-3">과목을 먼저 선택하세요.</p>
             ) : formClasses.length === 0 ? (
-              <p className="text-sm text-[#787774] bg-[#F7F7F5] border border-[#E9E9E7] rounded-md px-3 py-3">선택한 과목의 반이 없습니다.</p>
+              <p className="text-sm text-[#6B7280] bg-[#F4F6FA] border border-[#E8EBF1] rounded-md px-3 py-3">선택한 과목의 반이 없습니다.</p>
             ) : (
-              <div className="border border-[#E9E9E7] rounded-md divide-y max-h-48 overflow-y-auto">
+              <div className="border border-[#E8EBF1] rounded-md divide-y max-h-48 overflow-y-auto">
                 {formClasses.map(c => {
                   const other = c.teacher_id && c.teacher_id !== editId ? c.teacher : '';
                   return (
-                    <label key={c.id} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[#F7F7F5]">
-                      <input type="checkbox" checked={fClassIds.has(c.id)} onChange={() => toggleFClass(c.id)} className="w-4 h-4 accent-[#FF6C37]" />
-                      <span className="text-sm text-[#37352F]">{c.name}</span>
+                    <label key={c.id} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[#F4F6FA]">
+                      <input type="checkbox" checked={fClassIds.has(c.id)} onChange={() => toggleFClass(c.id)} className="w-4 h-4 accent-[#2F6BFF]" />
+                      <span className="text-sm text-[#1A1D29]">{c.name}</span>
                       {other && fClassIds.has(c.id) && (
-                        <span className="text-xs text-[#FF6C37] ml-auto">현재 담임 {other} → 교체</span>
+                        <span className="text-xs text-[#2F6BFF] ml-auto">현재 담임 {other} → 교체</span>
                       )}
                     </label>
                   );

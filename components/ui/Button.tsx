@@ -16,17 +16,17 @@ export function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  const base = 'inline-flex items-center justify-center font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+  const base = 'inline-flex items-center justify-center font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variants = {
-    primary:   'bg-[#FF6C37] text-white hover:bg-[#E85A27]',
-    secondary: 'bg-[#F1F1EF] text-[#37352F] hover:bg-[#E5E5E3]',
-    danger:    'bg-[#EB5757] text-white hover:bg-red-600',
-    ghost:     'text-[#37352F] hover:bg-[#F7F7F5]',
+    primary:   'bg-[#2F6BFF] text-white hover:bg-[#1F57E6]',
+    secondary: 'bg-[#EEF1F5] text-[#1A1D29] hover:bg-[#E2E6EE]',
+    danger:    'bg-[#F2474B] text-white hover:bg-[#D93539]',
+    ghost:     'text-[#1A1D29] hover:bg-[#EEF1F5]',
   };
 
   const sizes = {
-    sm: 'px-3 py-1.5 text-xs gap-1',
+    sm: 'px-3.5 py-1.5 text-xs gap-1',
     md: 'px-4 py-2 text-sm gap-1.5',
     lg: 'px-5 py-2.5 text-sm gap-2',
   };

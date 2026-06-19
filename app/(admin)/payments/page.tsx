@@ -130,17 +130,16 @@ export default function PaymentsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-[#37352F]">수납 관리</h1>
-        <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 조건별 수납 조회 · 미납자 문자 발송</p>
+        <h1 className="text-xl font-bold text-[#1A1D29]">수납 관리</h1>
       </div>
 
       {/* 탭바 */}
-      <div className="flex gap-1 border-b border-[#E9E9E7] mb-4">
+      <div className="flex gap-1 border-b border-[#E8EBF1] mb-4">
         {TAB_DEFS.map(t => (
           <button
             key={t.key}
             onClick={() => { setTabKey(t.key); setSelectedIds(new Set()); setSelectedStudent(null); }}
-            className={`px-4 py-2.5 text-sm -mb-px border-b-2 transition-colors ${tabKey === t.key ? 'border-[#FF6C37] text-[#FF6C37] font-semibold' : 'border-transparent text-[#787774] hover:text-[#37352F]'}`}
+            className={`px-4 py-2.5 text-sm -mb-px border-b-2 transition-colors ${tabKey === t.key ? 'border-[#2F6BFF] text-[#2F6BFF] font-semibold' : 'border-transparent text-[#6B7280] hover:text-[#1A1D29]'}`}
           >
             {t.label} <span className="tabular-nums">({tabCounts[t.key]})</span>
           </button>
@@ -148,7 +147,7 @@ export default function PaymentsPage() {
       </div>
 
       {/* 필터 */}
-      <div className="bg-white border border-[#E9E9E7] rounded-lg p-3 mb-4 space-y-2">
+      <div className="bg-white border border-[#E8EBF1] rounded-lg p-3 mb-4 space-y-2">
         <div className="flex gap-2 flex-wrap items-center">
           <Input type="month" value={monthFilter} onChange={e => setMonthFilter(e.target.value)} className="w-36" />
           <Input placeholder="학생 이름" value={studentName} onChange={e => setStudentName(e.target.value)} className="w-36" />
@@ -171,9 +170,9 @@ export default function PaymentsPage() {
         </div>
         {tabKey === '완납' && (
           <div className="flex gap-2 items-center flex-wrap">
-            <span className="text-xs text-[#787774] shrink-0">수납일</span>
+            <span className="text-xs text-[#6B7280] shrink-0">수납일</span>
             <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-36" />
-            <span className="text-xs text-[#787774]">~</span>
+            <span className="text-xs text-[#6B7280]">~</span>
             <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-36" />
           </div>
         )}
@@ -181,15 +180,15 @@ export default function PaymentsPage() {
 
       {/* 요약줄 */}
       <div className="flex items-center justify-between mb-3 px-1">
-        <p className="text-sm text-[#787774]">
-          <span className="font-semibold text-[#37352F] tabular-nums">{sum.count}건</span>
-          {tabKey === '미납' && <> · 미납 합계 <span className="font-semibold text-[#EB5757] tabular-nums">{fmt(sum.total)}</span></>}
+        <p className="text-sm text-[#6B7280]">
+          <span className="font-semibold text-[#1A1D29] tabular-nums">{sum.count}건</span>
+          {tabKey === '미납' && <> · 미납 합계 <span className="font-semibold text-[#F2474B] tabular-nums">{fmt(sum.total)}</span></>}
           {tabKey === '완납' && (
-            <> · 수납 합계 <span className="font-semibold text-[#0F7B6C] tabular-nums">{fmt(sum.total)}</span>
-              {sum.refund < 0 && <span className="text-[#7C5CFF] tabular-nums"> (환불 {fmt(sum.refund)} 포함)</span>}
+            <> · 수납 합계 <span className="font-semibold text-[#28C76F] tabular-nums">{fmt(sum.total)}</span>
+              {sum.refund < 0 && <span className="text-[#2F6BFF] tabular-nums"> (환불 {fmt(sum.refund)} 포함)</span>}
             </>
           )}
-          {tabKey === '예정' && <> · 예정 합계 <span className="font-semibold text-[#37352F] tabular-nums">{fmt(sum.total)}</span></>}
+          {tabKey === '예정' && <> · 예정 합계 <span className="font-semibold text-[#1A1D29] tabular-nums">{fmt(sum.total)}</span></>}
         </p>
         {tabKey === '미납' && (
           <Button size="sm" disabled={selectedCount === 0}
@@ -204,22 +203,22 @@ export default function PaymentsPage() {
         <div className="flex gap-5">
           {/* 좌측: 축소 목록 */}
           <div className="w-72 flex-shrink-0">
-            <div className="bg-white border border-[#E9E9E7] rounded-lg overflow-hidden divide-y divide-[#E9E9E7] max-h-[640px] overflow-y-auto">
+            <div className="bg-white border border-[#E8EBF1] rounded-lg overflow-hidden divide-y divide-[#E8EBF1] max-h-[640px] overflow-y-auto">
               {rows.map(r => (
                 <button key={r.inv.id} onClick={() => setSelectedStudent(r.student)}
-                  className={`w-full text-left px-4 py-3 transition-colors hover:bg-[#F7F7F5] ${selectedStudent.id === r.student.id ? 'bg-[#FFF1EC]' : ''}`}>
+                  className={`w-full text-left px-4 py-3 transition-colors hover:bg-[#F4F6FA] ${selectedStudent.id === r.student.id ? 'bg-[#EAF1FF]' : ''}`}>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-[#37352F]">{r.student.name}</span>
+                    <span className="text-sm font-medium text-[#1A1D29]">{r.student.name}</span>
                     <Badge variant={r.status === '완납' ? 'paid' : r.status === '예정' ? 'warn' : r.status === '환불' ? 'primary' : 'unpaid'}>{r.status}</Badge>
                   </div>
                   <div className="flex items-center justify-between mt-0.5">
-                    <span className="text-xs text-[#787774]">{r.student.grade}</span>
-                    <span className="text-xs text-[#787774] tabular-nums">{fmt(r.amount)}</span>
+                    <span className="text-xs text-[#6B7280]">{r.student.grade}</span>
+                    <span className="text-xs text-[#6B7280] tabular-nums">{fmt(r.amount)}</span>
                   </div>
                 </button>
               ))}
               {rows.length === 0 && (
-                <p className="text-sm text-[#787774] py-8 text-center">조건에 맞는 원생이 없습니다.</p>
+                <p className="text-sm text-[#6B7280] py-8 text-center">조건에 맞는 원생이 없습니다.</p>
               )}
             </div>
           </div>
@@ -227,7 +226,7 @@ export default function PaymentsPage() {
           {/* 우측: 디테일 */}
           <div className="flex-1 space-y-4">
             <button onClick={() => setSelectedStudent(null)}
-              className="text-sm text-[#787774] hover:text-[#37352F] transition-colors">
+              className="text-sm text-[#6B7280] hover:text-[#1A1D29] transition-colors">
               ← 전체 현황으로
             </button>
 
@@ -235,9 +234,9 @@ export default function PaymentsPage() {
             <Card>
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="text-base font-bold text-[#37352F]">{selectedStudent.name}</h2>
-                  <p className="text-sm text-[#787774]">{selectedStudent.grade} · {cls?.schedule} · {cls?.course}</p>
-                  <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-[#787774]">
+                  <h2 className="text-base font-bold text-[#1A1D29]">{selectedStudent.name}</h2>
+                  <p className="text-sm text-[#6B7280]">{selectedStudent.grade} · {cls?.schedule} · {cls?.course}</p>
+                  <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-[#6B7280]">
                     {selectedStudent.school && <span>학교 {selectedStudent.school}</span>}
                     <span>모 {selectedStudent.parent_phone}</span>
                     {selectedStudent.father_phone && <span>부 {selectedStudent.father_phone}</span>}
@@ -256,16 +255,16 @@ export default function PaymentsPage() {
                 </div>
               </div>
               <div className="mt-4 grid grid-cols-3 gap-4">
-                <div className="bg-[#F7F7F5] rounded-lg p-3 text-center">
-                  <p className="text-xs text-[#787774]">이번달 청구액</p>
-                  <p className="text-lg font-bold text-[#37352F] tabular-nums">{fmt(totalAmount)}</p>
+                <div className="bg-[#F4F6FA] rounded-lg p-3 text-center">
+                  <p className="text-xs text-[#6B7280]">이번달 청구액</p>
+                  <p className="text-lg font-bold text-[#1A1D29] tabular-nums">{fmt(totalAmount)}</p>
                 </div>
-                <div className="bg-[#F7F7F5] rounded-lg p-3 text-center">
-                  <p className="text-xs text-[#787774]">납입 기준일</p>
-                  <p className="text-lg font-bold text-[#37352F]">매월 {cls?.payment_due_day}일</p>
+                <div className="bg-[#F4F6FA] rounded-lg p-3 text-center">
+                  <p className="text-xs text-[#6B7280]">납입 기준일</p>
+                  <p className="text-lg font-bold text-[#1A1D29]">매월 {cls?.payment_due_day}일</p>
                 </div>
-                <div className="bg-[#F7F7F5] rounded-lg p-3 text-center">
-                  <p className="text-xs text-[#787774]">납입 상태</p>
+                <div className="bg-[#F4F6FA] rounded-lg p-3 text-center">
+                  <p className="text-xs text-[#6B7280]">납입 상태</p>
                   <Badge variant={studentInvoices[0]?.status === '완납' ? 'paid' : studentInvoices[0]?.status === '환불' ? 'primary' : 'unpaid'} className="text-sm mt-1">
                     {studentInvoices[0]?.status ?? '미생성'}
                   </Badge>
@@ -281,14 +280,14 @@ export default function PaymentsPage() {
                   { label: '교구 대여비 (과세)', amount: cls.material_fee },
                   { label: '콘텐츠 사용비', amount: cls.content_fee },
                 ].map(item => (
-                  <div key={item.label} className="flex items-center justify-between py-2 border-b border-[#E9E9E7] last:border-0">
-                    <span className="text-sm text-[#37352F]">{item.label}</span>
+                  <div key={item.label} className="flex items-center justify-between py-2 border-b border-[#E8EBF1] last:border-0">
+                    <span className="text-sm text-[#1A1D29]">{item.label}</span>
                     <span className="text-sm font-medium tabular-nums">{fmt(item.amount)}</span>
                   </div>
                 ))}
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-sm font-semibold text-[#37352F]">합계</span>
-                  <span className="text-base font-bold text-[#FF6C37] tabular-nums">{fmt(totalAmount)}</span>
+                  <span className="text-sm font-semibold text-[#1A1D29]">합계</span>
+                  <span className="text-base font-bold text-[#2F6BFF] tabular-nums">{fmt(totalAmount)}</span>
                 </div>
               </div>
             </Card>
@@ -298,7 +297,7 @@ export default function PaymentsPage() {
               <div className="flex gap-1 mb-4 -mt-2">
                 {tabs.map(tab => (
                   <button key={tab} onClick={() => setActiveTab(tab)}
-                    className={`px-3 py-1.5 text-sm rounded-md transition-colors ${activeTab === tab ? 'bg-[#FFF1EC] text-[#FF6C37] font-medium' : 'text-[#787774] hover:bg-[#F7F7F5]'}`}>
+                    className={`px-3 py-1.5 text-sm rounded-md transition-colors ${activeTab === tab ? 'bg-[#EAF1FF] text-[#2F6BFF] font-medium' : 'text-[#6B7280] hover:bg-[#F4F6FA]'}`}>
                     {tab}
                   </button>
                 ))}
@@ -317,7 +316,7 @@ export default function PaymentsPage() {
                       render: r => {
                         const inv = invoices.find(i => i.id === String(r.invoice_id));
                         const cl = inv ? classes.find(c => c.id === inv.class_id) : null;
-                        return <span className="text-xs text-[#37352F]">{cl ? cl.name : '-'}</span>;
+                        return <span className="text-xs text-[#1A1D29]">{cl ? cl.name : '-'}</span>;
                       },
                     },
                     {
@@ -338,7 +337,7 @@ export default function PaymentsPage() {
                       header: '카드종류',
                       render: r => {
                         const detail = r.card_detail ? ` (${r.card_detail})` : '';
-                        return <span className="text-xs text-[#787774]">{String(r.card_type) || '-'}{detail}</span>;
+                        return <span className="text-xs text-[#6B7280]">{String(r.card_type) || '-'}{detail}</span>;
                       },
                     },
                     {
@@ -350,7 +349,7 @@ export default function PaymentsPage() {
                   data={studentPayments as unknown as Record<string, unknown>[]}
                 />
               ) : (
-                <p className="text-sm text-[#787774] py-4 text-center">수납 이력이 없습니다.</p>
+                <p className="text-sm text-[#6B7280] py-4 text-center">수납 이력이 없습니다.</p>
               )}
             </Card>
           </div>
@@ -383,8 +382,8 @@ export default function PaymentsPage() {
             <Input label="수강년월" type="month" defaultValue={monthFilter} />
             <Input label="수납일자" type="date" defaultValue={TODAY} />
           </div>
-          <div className="bg-[#F7F7F5] rounded-lg px-3 py-2 text-sm text-[#37352F]">
-            <span className="text-xs text-[#787774] mr-2">수강기간</span>
+          <div className="bg-[#F4F6FA] rounded-lg px-3 py-2 text-sm text-[#1A1D29]">
+            <span className="text-xs text-[#6B7280] mr-2">수강기간</span>
             {cls ? `${cls.start_date} ~ ${cls.end_date}` : '-'}
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -403,13 +402,13 @@ export default function PaymentsPage() {
             <MoneyInput label="할인금액" defaultValue={0} suffix="원" />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-[#FFF8F5] border border-[#FFD4C2] rounded-lg px-3 py-2">
-              <p className="text-xs text-[#787774] mb-0.5">수납대상금액</p>
-              <p className="text-sm font-bold text-[#FF6C37] tabular-nums">{fmt(totalAmount)}</p>
+            <div className="bg-[#EAF1FF] border border-[#C9DBFF] rounded-lg px-3 py-2">
+              <p className="text-xs text-[#6B7280] mb-0.5">수납대상금액</p>
+              <p className="text-sm font-bold text-[#2F6BFF] tabular-nums">{fmt(totalAmount)}</p>
             </div>
-            <div className="bg-[#F7F7F5] border border-[#E9E9E7] rounded-lg px-3 py-2">
-              <p className="text-xs text-[#787774] mb-0.5">누적수납</p>
-              <p className="text-sm font-bold text-[#37352F] tabular-nums">
+            <div className="bg-[#F4F6FA] border border-[#E8EBF1] rounded-lg px-3 py-2">
+              <p className="text-xs text-[#6B7280] mb-0.5">누적수납</p>
+              <p className="text-sm font-bold text-[#1A1D29] tabular-nums">
                 {fmt(studentPayments.reduce((s, p) => s + p.amount, 0))}
               </p>
             </div>
@@ -431,21 +430,21 @@ export default function PaymentsPage() {
             <Input label="결제단말기" placeholder="단말기 ID" />
           </div>
           <div>
-            <p className="text-xs font-medium text-[#37352F] mb-1.5">현금영수증</p>
+            <p className="text-xs font-medium text-[#1A1D29] mb-1.5">현금영수증</p>
             <div className="flex gap-4">
-              <label className="flex items-center gap-1.5 text-sm text-[#37352F] cursor-pointer">
-                <input type="radio" name="cash_receipt" value="발행" defaultChecked className="accent-[#FF6C37] w-4 h-4" />
+              <label className="flex items-center gap-1.5 text-sm text-[#1A1D29] cursor-pointer">
+                <input type="radio" name="cash_receipt" value="발행" defaultChecked className="accent-[#2F6BFF] w-4 h-4" />
                 발행
               </label>
-              <label className="flex items-center gap-1.5 text-sm text-[#37352F] cursor-pointer">
-                <input type="radio" name="cash_receipt" value="미발행" className="accent-[#FF6C37] w-4 h-4" />
+              <label className="flex items-center gap-1.5 text-sm text-[#1A1D29] cursor-pointer">
+                <input type="radio" name="cash_receipt" value="미발행" className="accent-[#2F6BFF] w-4 h-4" />
                 미발행
               </label>
             </div>
           </div>
           <Input label="특이사항" placeholder="메모 입력" />
           {paySuccess && (
-            <div className="bg-[#EDF7F5] border border-[#0F7B6C]/20 rounded-lg px-4 py-3 text-sm font-semibold text-[#0F7B6C]">
+            <div className="bg-[#E6F9EF] border border-[#28C76F]/20 rounded-lg px-4 py-3 text-sm font-semibold text-[#28C76F]">
               ✓ 수납 처리 완료. 청구서 상태가 완납으로 변경됩니다.
             </div>
           )}

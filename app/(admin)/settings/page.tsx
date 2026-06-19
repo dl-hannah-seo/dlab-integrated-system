@@ -68,8 +68,7 @@ export default function SettingsPage() {
     <div>
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-[#37352F]">설정</h1>
-          <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 운영 설정</p>
+          <h1 className="text-xl font-bold text-[#1A1D29]">설정</h1>
         </div>
         <Button onClick={handleSave} loading={saved}>{saved ? '저장 완료!' : '변경사항 저장'}</Button>
       </div>
@@ -89,27 +88,27 @@ export default function SettingsPage() {
         <Card title="키오스크 설정">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#37352F] mb-2">인증 방식</label>
+              <label className="block text-sm font-medium text-[#1A1D29] mb-2">인증 방식</label>
               <div className="flex gap-3">
                 {[
                   { value: 'phone8', label: '전화번호 뒤 8자리' },
                   { value: 'phone4', label: '전화번호 뒤 4자리' },
                 ].map(opt => (
-                  <label key={opt.value} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-colors ${kioskMode === opt.value ? 'border-[#FF6C37] bg-[#FFF1EC]' : 'border-[#E9E9E7] bg-white'}`}>
+                  <label key={opt.value} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-colors ${kioskMode === opt.value ? 'border-[#2F6BFF] bg-[#EAF1FF]' : 'border-[#E8EBF1] bg-white'}`}>
                     <input type="radio" name="kioskMode" value={opt.value} checked={kioskMode === opt.value}
-                      onChange={() => setKioskMode(opt.value as 'phone8' | 'phone4')} className="accent-[#FF6C37]" />
-                    <span className="text-sm text-[#37352F]">{opt.label}</span>
+                      onChange={() => setKioskMode(opt.value as 'phone8' | 'phone4')} className="accent-[#2F6BFF]" />
+                    <span className="text-sm text-[#1A1D29]">{opt.label}</span>
                   </label>
                 ))}
               </div>
             </div>
-            <div className="flex items-center justify-between py-3 border-b border-[#E9E9E7]">
+            <div className="flex items-center justify-between py-3 border-b border-[#E8EBF1]">
               <div>
-                <p className="text-sm font-medium text-[#37352F]">포인트 시스템 활성화</p>
-                <p className="text-xs text-[#787774]">체크인 시 DP 포인트 적립 및 칭호 기능</p>
+                <p className="text-sm font-medium text-[#1A1D29]">포인트 시스템 활성화</p>
+                <p className="text-xs text-[#6B7280]">체크인 시 DP 포인트 적립 및 칭호 기능</p>
               </div>
               <button onClick={() => setPointEnabled(v => !v)}
-                className={`relative w-11 h-6 rounded-full transition-colors ${pointEnabled ? 'bg-[#FF6C37]' : 'bg-[#E9E9E7]'}`}>
+                className={`relative w-11 h-6 rounded-full transition-colors ${pointEnabled ? 'bg-[#2F6BFF]' : 'bg-[#E8EBF1]'}`}>
                 <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${pointEnabled ? 'left-6' : 'left-1'}`} />
               </button>
             </div>
@@ -119,21 +118,21 @@ export default function SettingsPage() {
         {/* 출결 설정 */}
         <Card title="출결 자동화">
           <div className="space-y-4">
-            <div className="flex items-center justify-between py-3 border-b border-[#E9E9E7]">
+            <div className="flex items-center justify-between py-3 border-b border-[#E8EBF1]">
               <div>
-                <p className="text-sm font-medium text-[#37352F]">결석 자동 전환</p>
-                <p className="text-xs text-[#787774]">수업 시작 후 일정 시간이 지나면 미도착자를 결석 처리</p>
+                <p className="text-sm font-medium text-[#1A1D29]">결석 자동 전환</p>
+                <p className="text-xs text-[#6B7280]">수업 시작 후 일정 시간이 지나면 미도착자를 결석 처리</p>
               </div>
               <button onClick={() => setAutoAbsent(v => !v)}
-                className={`relative w-11 h-6 rounded-full transition-colors ${autoAbsent ? 'bg-[#FF6C37]' : 'bg-[#E9E9E7]'}`}>
+                className={`relative w-11 h-6 rounded-full transition-colors ${autoAbsent ? 'bg-[#2F6BFF]' : 'bg-[#E8EBF1]'}`}>
                 <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${autoAbsent ? 'left-6' : 'left-1'}`} />
               </button>
             </div>
             {autoAbsent && (
               <div className="flex items-center gap-3">
-                <span className="text-sm text-[#37352F]">수업 시작 후</span>
+                <span className="text-sm text-[#1A1D29]">수업 시작 후</span>
                 <Input type="number" value={autoAbsentMin} onChange={e => setAutoAbsentMin(e.target.value)} className="w-20" />
-                <span className="text-sm text-[#37352F]">분 후 자동 결석 처리</span>
+                <span className="text-sm text-[#1A1D29]">분 후 자동 결석 처리</span>
               </div>
             )}
           </div>
@@ -142,13 +141,13 @@ export default function SettingsPage() {
         {/* 알림톡 설정 */}
         <Card title="알림톡 (카카오)">
           <div className="space-y-4">
-            <div className="flex items-center justify-between py-3 border-b border-[#E9E9E7]">
+            <div className="flex items-center justify-between py-3 border-b border-[#E8EBF1]">
               <div>
-                <p className="text-sm font-medium text-[#37352F]">알림톡 발송 활성화</p>
-                <p className="text-xs text-[#787774]">결석 처리, 보강 확정, 수납 안내 알림톡</p>
+                <p className="text-sm font-medium text-[#1A1D29]">알림톡 발송 활성화</p>
+                <p className="text-xs text-[#6B7280]">결석 처리, 보강 확정, 수납 안내 알림톡</p>
               </div>
               <button onClick={() => setAlimtokEnabled(v => !v)}
-                className={`relative w-11 h-6 rounded-full transition-colors ${alimtokEnabled ? 'bg-[#FF6C37]' : 'bg-[#E9E9E7]'}`}>
+                className={`relative w-11 h-6 rounded-full transition-colors ${alimtokEnabled ? 'bg-[#2F6BFF]' : 'bg-[#E8EBF1]'}`}>
                 <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${alimtokEnabled ? 'left-6' : 'left-1'}`} />
               </button>
             </div>
@@ -166,21 +165,21 @@ export default function SettingsPage() {
           title="메시지 템플릿"
           action={<Button size="sm" onClick={openNewTpl}>+ 새 템플릿</Button>}
         >
-          <p className="text-xs text-[#787774] mb-3">문자/알림톡 발송 화면(원생 관리·창구수납·시간표 등)에서 선택하는 템플릿입니다. {'{'}원생명{'}'} 등 변수는 발송 시 자동 치환됩니다.</p>
+          <p className="text-xs text-[#6B7280] mb-3">문자/알림톡 발송 화면(원생 관리·창구수납·시간표 등)에서 선택하는 템플릿입니다. {'{'}원생명{'}'} 등 변수는 발송 시 자동 치환됩니다.</p>
           <div className="space-y-2">
-            {templates.length === 0 && <p className="text-sm text-[#787774]">등록된 템플릿이 없습니다.</p>}
+            {templates.length === 0 && <p className="text-sm text-[#6B7280]">등록된 템플릿이 없습니다.</p>}
             {templates.map(t => (
-              <div key={t.id} className="border border-[#E9E9E7] rounded-lg px-4 py-3">
+              <div key={t.id} className="border border-[#E8EBF1] rounded-lg px-4 py-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-[#37352F]">{t.name}</p>
+                      <p className="text-sm font-medium text-[#1A1D29]">{t.name}</p>
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium badge-submitted">{t.trigger}</span>
                     </div>
-                    <p className="text-xs text-[#787774] mt-1 whitespace-pre-line line-clamp-2">{t.body}</p>
+                    <p className="text-xs text-[#6B7280] mt-1 whitespace-pre-line line-clamp-2">{t.body}</p>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    <button onClick={() => openEditTpl(t)} className="text-sm text-[#37352F] hover:underline">편집</button>
+                    <button onClick={() => openEditTpl(t)} className="text-sm text-[#1A1D29] hover:underline">편집</button>
                     <DeleteButton onClick={() => deleteTpl(t.id)}>삭제</DeleteButton>
                   </div>
                 </div>
@@ -197,7 +196,7 @@ export default function SettingsPage() {
             <Input label="이메일" defaultValue="hjseo@daddyslab.com" />
             <Input label="전화번호" defaultValue="010-0000-0000" />
           </div>
-          <div className="mt-4 pt-4 border-t border-[#E9E9E7]">
+          <div className="mt-4 pt-4 border-t border-[#E8EBF1]">
             <Button variant="secondary" size="sm">비밀번호 변경</Button>
           </div>
         </Card>
@@ -224,13 +223,13 @@ export default function SettingsPage() {
             </div>
             <div>
               <Textarea label="메시지 내용" rows={6} value={tplBody} onChange={e => setTplBody(e.target.value)} />
-              <p className="text-xs text-[#787774] mt-1">{'{'}원생명{'}'} {'{'}등원시간{'}'} {'{'}보강일시{'}'} 등 변수는 발송 시 자동 치환됩니다.</p>
+              <p className="text-xs text-[#6B7280] mt-1">{'{'}원생명{'}'} {'{'}등원시간{'}'} {'{'}보강일시{'}'} 등 변수는 발송 시 자동 치환됩니다.</p>
             </div>
             <div>
-              <p className="text-xs font-semibold text-[#787774] mb-1.5">미리보기</p>
-              <div className="bg-[#FEF6E0] border border-[#E9E9E7] rounded-xl px-4 py-3 max-w-[320px]">
-                <p className="text-[11px] text-[#787774] mb-1.5">카카오 알림톡</p>
-                <p className="text-sm text-[#37352F] whitespace-pre-line leading-relaxed">{tplBody.split('{원생명}').join('홍길동')}</p>
+              <p className="text-xs font-semibold text-[#6B7280] mb-1.5">미리보기</p>
+              <div className="bg-[#FFF4E0] border border-[#E8EBF1] rounded-xl px-4 py-3 max-w-[320px]">
+                <p className="text-[11px] text-[#6B7280] mb-1.5">카카오 알림톡</p>
+                <p className="text-sm text-[#1A1D29] whitespace-pre-line leading-relaxed">{tplBody.split('{원생명}').join('홍길동')}</p>
               </div>
             </div>
           </div>

@@ -63,20 +63,20 @@ export function SmsPanel() {
       <div className="px-5 py-4 space-y-5">
         {/* 수신자 */}
         <div>
-          <p className="text-xs font-semibold text-[#787774] mb-2">수신자</p>
-          <div className="flex flex-wrap gap-1.5 p-3 bg-[#F7F7F5] rounded-lg min-h-[48px]">
+          <p className="text-xs font-semibold text-[#6B7280] mb-2">수신자</p>
+          <div className="flex flex-wrap gap-1.5 p-3 bg-[#F4F6FA] rounded-lg min-h-[48px]">
             {recipients.length === 0 && (
-              <span className="text-xs text-[#787774]">수신자를 선택하세요</span>
+              <span className="text-xs text-[#6B7280]">수신자를 선택하세요</span>
             )}
             {recipients.map(r => (
               <span
                 key={r.studentId}
-                className="flex items-center gap-1 px-2.5 py-1 bg-white border border-[#E9E9E7] rounded-full text-xs text-[#37352F]"
+                className="flex items-center gap-1 px-2.5 py-1 bg-white border border-[#E8EBF1] rounded-full text-xs text-[#1A1D29]"
               >
                 {r.name} 부모님
                 <button
                   onClick={() => removeRecipient(r.studentId)}
-                  className="text-[#787774] hover:text-[#EB5757] ml-0.5 transition-colors"
+                  className="text-[#6B7280] hover:text-[#F2474B] ml-0.5 transition-colors"
                 >
                   ✕
                 </button>
@@ -87,7 +87,7 @@ export function SmsPanel() {
 
         {/* 템플릿 */}
         <div>
-          <p className="text-xs font-semibold text-[#787774] mb-2">템플릿</p>
+          <p className="text-xs font-semibold text-[#6B7280] mb-2">템플릿</p>
           <div className="flex gap-2">
             {(['absence', 'unpaid', 'makeup', 'custom'] as SmsTemplate[]).map(t => (
               <button
@@ -95,8 +95,8 @@ export function SmsPanel() {
                 onClick={() => handleTemplateChange(t)}
                 className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
                   template === t
-                    ? 'bg-[#FF6C37] text-white border-[#FF6C37]'
-                    : 'bg-white text-[#787774] border-[#E9E9E7] hover:border-[#FF6C37]/50'
+                    ? 'bg-[#2F6BFF] text-white border-[#2F6BFF]'
+                    : 'bg-white text-[#6B7280] border-[#E8EBF1] hover:border-[#2F6BFF]/50'
                 }`}
               >
                 {TEMPLATE_LABELS[t]}
@@ -107,22 +107,22 @@ export function SmsPanel() {
 
         {/* 메시지 */}
         <div>
-          <p className="text-xs font-semibold text-[#787774] mb-2">메시지</p>
+          <p className="text-xs font-semibold text-[#6B7280] mb-2">메시지</p>
           <textarea
             value={message}
             onChange={e => setMessage(e.target.value.slice(0, 90))}
             rows={4}
             placeholder="메시지를 입력하세요"
-            className="w-full px-3 py-2.5 text-sm text-[#37352F] bg-white border border-[#E9E9E7] rounded-lg resize-none focus:outline-none focus:ring-1 focus:ring-[#FF6C37] focus:border-[#FF6C37]"
+            className="w-full px-3 py-2.5 text-sm text-[#1A1D29] bg-white border border-[#E8EBF1] rounded-lg resize-none focus:outline-none focus:ring-1 focus:ring-[#2F6BFF] focus:border-[#2F6BFF]"
           />
-          <p className={`text-right text-xs mt-1 ${message.length >= 85 ? 'text-[#EB5757]' : 'text-[#787774]'}`}>
+          <p className={`text-right text-xs mt-1 ${message.length >= 85 ? 'text-[#F2474B]' : 'text-[#6B7280]'}`}>
             {message.length} / 90자
           </p>
         </div>
 
         {/* 발송 */}
         {sent ? (
-          <div className="text-center py-3 bg-[#EDF7F5] rounded-lg text-sm font-semibold text-[#0F7B6C]">
+          <div className="text-center py-3 bg-[#E6F9EF] rounded-lg text-sm font-semibold text-[#28C76F]">
             ✓ 발송 완료
           </div>
         ) : (

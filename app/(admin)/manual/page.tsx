@@ -1,6 +1,12 @@
+'use client';
+
 // 가맹 운영 매뉴얼 — 내부 정적 페이지.
-// D.LAB 캠퍼스 운영 가이드(노션)의 핵심 구분을 시스템 내에서 바로 확인.
-// 항목은 데스크 운영 참고용 정적 목록(외부 링크 아님).
+// 카테고리(상담·수업·교육·행정·홍보·문서)별 일반 항목만 노출하고,
+// 항목 클릭 시 "준비중" 안내 창을 표시한다. (콘텐츠 준비 전)
+
+import { useState } from 'react';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 
 interface ManualSection {
   title: string;
@@ -11,81 +17,105 @@ const sections: ManualSection[] = [
   {
     title: '상담',
     items: [
-      '학부모 상담 매뉴얼 표준화 가이드 (방문상담)',
-      '설명회 신청자 프리인터뷰 (전화상담)',
+      '신규 상담 프로세스',
+      '학부모 상담 가이드',
       '상담 FAQ',
-      'CT-TEST 상담',
-      '정기 상담',
-      '기타 상담',
-      '디랩 커리큘럼',
-      '수강료 및 교재·교구비',
-      '설명회 자료',
-      'SW진로진학',
-      '수업 사진, 영상 발송',
+      '재원생 정기 상담',
     ],
   },
   {
     title: '수업',
     items: [
-      'D.LAB 교안 관리',
-      '엘리스 사용 가이드',
-      '디랩온 사용 가이드',
-      'Open LAB. 운영 방법',
-      '노션 E-Portfolio 가이드',
-      'Ex#PAGE 과정',
-      '디랩 프로젝트 아카이빙',
-      '디랩 대회·입시 산출물 아카이브',
-      '면접 챗봇',
-      '디랩 추천 대회리스트',
-      '설명회·체험수업 프로세스',
-      '학교별 수행평가 항목 및 방학일정 확인 방법',
-      '방학특강 운영 가이드라인',
-      '특강 운영',
-      '개별 체험 수업 (상시)',
+      '수업 운영 가이드',
+      '교안 관리',
+      '체험수업 프로세스',
+      '특강·방학특강 운영',
     ],
   },
   {
-    title: 'AI 교육',
+    title: '교육',
     items: [
-      'Coding Triangle 소개서',
-      'Altes 이용 가이드',
-      '온라인 워크샵 자료',
-      'AI 바이브 코딩 해커톤 운영',
-      'MGT LAB 홍보 관련',
-      '성인 AI교육 수업 자료',
+      '강사 교육 프로그램',
+      '신규 강사 온보딩',
+      '커리큘럼 이해',
+      '교육 플랫폼 사용법',
+    ],
+  },
+  {
+    title: '행정',
+    items: [
+      '수납·정산 관리',
+      '출결 관리',
+      '학생·반 등록',
+      '인사·근태 관리',
+    ],
+  },
+  {
+    title: '홍보',
+    items: [
+      '채널별 홍보 가이드',
+      '설명회 운영',
+      'SNS·블로그 운영',
+      '홍보물 제작 가이드',
+    ],
+  },
+  {
+    title: '문서',
+    items: [
+      '운영 표준 양식',
+      '계약·동의서 서식',
+      '공지·안내문 템플릿',
+      '보고서 양식',
     ],
   },
 ];
 
 export default function ManualPage() {
+  const [openItem, setOpenItem] = useState<string | null>(null);
+
   return (
     <div>
       <header className="mb-8">
-        <h1 className="text-2xl font-bold text-[#37352F]">가맹 운영 매뉴얼</h1>
-        <p className="mt-1.5 text-sm text-[#787774]">
-          D.LAB 캠퍼스 운영 가이드 — 데스크 운영에 필요한 핵심 항목을 모았습니다.
-        </p>
+        <h1 className="text-2xl font-bold text-[#1A1D29]">가맹 운영 매뉴얼</h1>
       </header>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {sections.map((section) => (
           <section
             key={section.title}
-            className="rounded-lg border border-[#E9E9E7] bg-white overflow-hidden"
+            className="rounded-lg border border-[#E8EBF1] bg-white overflow-hidden"
           >
-            <h2 className="bg-[#F7F7F5] px-4 py-2.5 text-sm font-semibold text-[#37352F] border-b border-[#E9E9E7]">
+            <h2 className="bg-[#F4F6FA] px-4 py-2.5 text-sm font-semibold text-[#1A1D29] border-b border-[#E8EBF1]">
               {section.title}
             </h2>
-            <ul className="divide-y divide-[#F1F1EF]">
+            <ul className="divide-y divide-[#EEF1F5]">
               {section.items.map((item) => (
-                <li key={item} className="px-4 py-2.5 text-sm text-[#37352F]">
-                  {item}
+                <li key={item}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenItem(item)}
+                    className="w-full px-4 py-2.5 text-left text-sm text-[#1A1D29] hover:bg-[#F4F6FA] hover:text-[#2F6BFF] transition-colors"
+                  >
+                    {item}
+                  </button>
                 </li>
               ))}
             </ul>
           </section>
         ))}
       </div>
+
+      <Modal
+        open={openItem !== null}
+        onClose={() => setOpenItem(null)}
+        title={openItem ?? ''}
+        footer={<Button onClick={() => setOpenItem(null)}>확인</Button>}
+      >
+        <div className="py-6 text-center">
+          <p className="text-base font-medium text-[#1A1D29]">아직 준비중입니다.</p>
+          <p className="mt-1.5 text-sm text-[#6B7280]">해당 매뉴얼 콘텐츠는 곧 제공될 예정입니다.</p>
+        </div>
+      </Modal>
     </div>
   );
 }

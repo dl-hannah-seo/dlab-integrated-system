@@ -75,25 +75,26 @@ export const subjects: Subject[] = [
 ];
 
 // ── 강사 ──────────────────────────────────────────────────────
-export type TeacherRole = '강사' | '튜터';
+export type TeacherRole = '연구원' | '튜터';
 
 export interface Teacher {
   id: string;
   campus_id: string;
   name: string;
-  role: TeacherRole;             // 강사 / 튜터
+  role: TeacherRole;             // 연구원 / 튜터
   subject_ids: string[];         // 가르칠 수 있는 과목 = "강사 수준"
   phone?: string;
   hire_date?: string;            // 입사일 YYYY-MM-DD
-  hourly_wage?: number;          // 시급(원) — 월 급여 자동 산출 기준
-  incentive?: number;            // 월 인센티브(원)
+  annual_salary?: number;        // 연봉(원) — 연구원: 월 급여 = 연봉 ÷ 12
+  hourly_wage?: number;          // 시급(원) — 튜터: 월 급여 자동 산출 기준
+  incentive?: number;            // 학기 인센티브(원)
   status: '재직' | '휴직' | '퇴직';
 }
 
 export const teachers: Teacher[] = [
-  { id: 'tch-ron',   campus_id: 'campus-001', name: '론',   role: '강사', subject_ids: ['sub-python'],                phone: '010-1234-5678', hire_date: '2023-03-02', hourly_wage: 35000, incentive: 200000, status: '재직' },
-  { id: 'tch-seed',  campus_id: 'campus-001', name: '씨드', role: '강사', subject_ids: ['sub-python', 'sub-arduino'], phone: '010-1234-5678', hire_date: '2022-09-01', hourly_wage: 38000, incentive: 250000, status: '재직' },
-  { id: 'tch-ruth',  campus_id: 'campus-001', name: '루스', role: '강사', subject_ids: ['sub-custom'],                phone: '010-1234-5678', hire_date: '2024-01-08', hourly_wage: 33000, incentive: 150000, status: '재직' },
+  { id: 'tch-ron',   campus_id: 'campus-001', name: '론',   role: '연구원', subject_ids: ['sub-python'],                phone: '010-1234-5678', hire_date: '2023-03-02', annual_salary: 42000000, incentive: 200000, status: '재직' },
+  { id: 'tch-seed',  campus_id: 'campus-001', name: '씨드', role: '연구원', subject_ids: ['sub-python', 'sub-arduino'], phone: '010-1234-5678', hire_date: '2022-09-01', annual_salary: 45600000, incentive: 250000, status: '재직' },
+  { id: 'tch-ruth',  campus_id: 'campus-001', name: '루스', role: '연구원', subject_ids: ['sub-custom'],                phone: '010-1234-5678', hire_date: '2024-01-08', annual_salary: 39600000, incentive: 150000, status: '재직' },
   { id: 'tch-liam',  campus_id: 'campus-001', name: '리암', role: '튜터', subject_ids: ['sub-python'],                phone: '010-1234-5678', hire_date: '2025-03-03', hourly_wage: 15000, incentive: 50000, status: '재직' },
   { id: 'tch-hobin', campus_id: 'campus-001', name: '허빈', role: '튜터', subject_ids: ['sub-custom', 'sub-arduino'], phone: '010-1234-5678', hire_date: '2024-07-15', hourly_wage: 14000, incentive: 40000, status: '재직' },
 ];
@@ -581,6 +582,9 @@ students.forEach(s => {
 // ── 원생별 상담이력 ─────────────────────────────────────────
 export type ConsultMethod = '전화' | '대면' | '문자·카톡' | '기타';
 
+/** 상담 대상(누구와 상담했는지) — 미지정 시 학생 본인으로 간주 */
+export type ConsultTarget = '학생' | '학부모';
+
 export interface Consultation {
   id: string;
   student_id: string;
@@ -588,6 +592,7 @@ export interface Consultation {
   method: ConsultMethod;
   counselor: string;   // 상담자
   content: string;     // 상담내용
+  target?: ConsultTarget; // 상담 대상(학생/학부모), 미지정=학생
 }
 
 // 일부 학생 샘플 (빈 상태/채워진 상태 모두 확인용)
@@ -1417,3 +1422,100 @@ export const leads: Lead[] = [
   { id: 'lead-11', name: '서지안', parent_phone: DEMO_PHONE, grade: '초4', source: '블로그', interest_subject: '웹/앱', stage: '미등록', inquiry_date: '2026-05-30', memo: '타 학원 등록' },
   { id: 'lead-12', name: '노은서', parent_phone: DEMO_PHONE, grade: '초5', source: '전화문의', interest_subject: '맞춤수업', stage: '미등록', inquiry_date: '2026-06-03', memo: '비용 부담' },
 ];
+
+// ── 예비원생(리드) 다회 상담 — 1·2·3차 누적 ───────────────────
+// 동일 학생의 상담을 차수(seq)로 쌓는다. 신규상담 탭의 행 클릭 → 탭 모달에서 조회/추가.
+export interface LeadConsult {
+  id: string;
+  lead_id: string;
+  seq: number;       // 1차·2차·3차…
+  date: string;      // 상담일 YYYY-MM-DD
+  memo: string;      // 상담 내용(자유 입력) — 추후 AI 요약 자동 채움 예정
+}
+
+export const leadConsults: LeadConsult[] = [
+  // 정하윤(lead-04) — 2차까지 진행
+  { id: 'lc-04-1', lead_id: 'lead-04', seq: 1, date: '2026-06-10', memo: '인스타 보고 문의. 초6 파이썬 입문 희망. 주말반 가능 여부 안내.' },
+  { id: 'lc-04-2', lead_id: 'lead-04', seq: 2, date: '2026-06-14', memo: '방문 상담. 레벨테스트 후 토 09:00반 추천. 형제 할인 문의함.' },
+  // 강시우(lead-06) — 3차까지 진행(비용 비교 중)
+  { id: 'lc-06-1', lead_id: 'lead-06', seq: 1, date: '2026-06-08', memo: '아두이노 관심. 학교 방과후 경험 있음.' },
+  { id: 'lc-06-2', lead_id: 'lead-06', seq: 2, date: '2026-06-12', memo: '학부모 전화. 커리큘럼·교재비 안내.' },
+  { id: 'lc-06-3', lead_id: 'lead-06', seq: 3, date: '2026-06-17', memo: '타 학원과 비용 비교 중 — 다음 주 재연락 약속.' },
+  // 윤지호(lead-07) — 1차
+  { id: 'lc-07-1', lead_id: 'lead-07', seq: 1, date: '2026-06-05', memo: '형제 동시 등록 고려. 시간대 조율 필요.' },
+];
+
+// ── 강사 피드백 — 그리팅·중간·파이널 3회(학기 중 학부모 상담) ──
+export type FeedbackPhase = '그리팅' | '중간' | '파이널';
+export const FEEDBACK_PHASES: FeedbackPhase[] = ['그리팅', '중간', '파이널'];
+
+export interface Feedback {
+  id: string;
+  student_id: string;
+  semester_id: string;   // 학기(현재 진행 = sem-01)
+  phase: FeedbackPhase;
+  done: boolean;
+  memo: string;
+  date: string;          // 완료일 YYYY-MM-DD (미완료면 '')
+  counselor: string;     // 진행 강사명
+}
+
+/** 피드백 기준 학기(현재 진행 중) */
+export const CURRENT_SEMESTER_ID = 'sem-01';
+
+// 시드: 완료된 피드백만 레코드로 둔다(없으면 미완료로 간주). 단계별 완료율이 반마다 다르게 보이도록 분포.
+// 그리팅은 대체로 완료, 중간은 일부, 파이널은 거의 미완료.
+export const feedbacks: Feedback[] = (() => {
+  const out: Feedback[] = [];
+  const enrolled = students.filter(s => s.status === '재원');
+  // 반별로 그리팅/중간/파이널 완료 인원 비율을 다르게 시드
+  const phaseRatio: Record<FeedbackPhase, number> = { '그리팅': 0.8, '중간': 0.4, '파이널': 0.1 };
+  const byClass: Record<string, Student[]> = {};
+  enrolled.forEach(s => { (byClass[s.class_id] ??= []).push(s); });
+  Object.values(byClass).forEach(roster => {
+    FEEDBACK_PHASES.forEach(phase => {
+      const n = Math.round(roster.length * phaseRatio[phase]);
+      roster.slice(0, n).forEach((s, i) => {
+        const cls = classes.find(c => c.id === s.class_id);
+        out.push({
+          id: `fb-${s.id}-${phase}`,
+          student_id: s.id,
+          semester_id: CURRENT_SEMESTER_ID,
+          phase,
+          done: true,
+          date: `2026-06-${String(10 + (i % 8)).padStart(2, '0')}`,
+          memo: `${phase} 피드백 완료 — 학습 태도·진도 공유.`,
+          counselor: cls?.teacher ?? '',
+        });
+      });
+    });
+  });
+  return out;
+})();
+
+// ── 예비원생 → 원생 전환(데모: students 배열로 이동) ──────────────
+let _convertSeq = 0;
+/** 리드를 재원생으로 변환해 students 배열에 추가하고, 추가된 학생을 반환. */
+export function convertLeadToStudent(lead: Lead): Student {
+  _convertSeq += 1;
+  const s: Student = {
+    id: `s-new-${_convertSeq}`,
+    campus_id: campus.id,
+    name: lead.name,
+    grade: lead.grade ?? '초4',
+    school: '미입력',
+    parent_phone: DEMO_PHONE,
+    student_phone: '',
+    status: '재원',
+    first_enrolled_at: TODAY,
+    source: lead.source,
+    points: 0,
+    class_id: '',
+    streak: 0,
+    title: '초보 코더',
+    division: (lead.grade ?? '초').startsWith('중') ? '중등부' : (lead.grade ?? '초').startsWith('고') ? '고등부' : '초등부',
+    memo: lead.memo,
+  };
+  students.push(s);
+  return s;
+}

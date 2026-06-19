@@ -6,7 +6,7 @@ export const metadata: Metadata = {
 
 export default function MarketplaceLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen" style={{ background: '#F7F7F5', color: '#37352F' }}>
+    <div className="min-h-screen" style={{ background: '#F4F6FA', color: '#1A1D29' }}>
       {children}
     </div>
   );

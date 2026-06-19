@@ -6,8 +6,12 @@ import {
   updateConsultation,
   removeConsultation,
   consultationGapStudents,
+  studentsInScope,
+  consultCountInMonth,
+  consultCountInDays,
+  consultedRate,
 } from './consultations';
-import type { Consultation, Student } from './mock-data';
+import type { Consultation, Enrollment, Student } from './mock-data';
 
 const sample: Consultation[] = [
   { id: 'cons-s-01-1', student_id: 's-01', date: '2026-03-12', method: '대면', counselor: '김', content: 'A' },
@@ -86,5 +90,58 @@ describe('consultationGapStudents', () => {
   it('재원생만 대상(퇴원 제외)', () => {
     const r = consultationGapStudents(students, cons, asOf, 90);
     expect(r.some(e => e.student.id === 'left')).toBe(false);
+  });
+});
+
+describe('studentsInScope', () => {
+  const stu = (id: string, status: Student['status'] = '재원'): Student =>
+    ({
+      id, name: id, campus_id: 'c', grade: '초5', school: 'X', parent_phone: '', student_phone: '',
+      status, first_enrolled_at: '2025-01-01', source: '', points: 0, class_id: 'cl-01', streak: 0, title: '',
+    } as Student);
+  const enr = (id: string, student_id: string, class_id: string, ended_at: string | null): Enrollment =>
+    ({ id, student_id, class_id, started_at: '2026-03-01', ended_at, end_reason: null });
+
+  const students = [stu('a'), stu('b'), stu('c'), stu('left', '퇴원')];
+  const enrollments = [
+    enr('e1', 'a', 'cl-01', null),
+    enr('e2', 'b', 'cl-02', null),
+    enr('e3', 'c', 'cl-01', '2026-04-30'), // 종료된 수강
+    enr('e4', 'left', 'cl-01', null),
+  ];
+
+  it('classIds=null이면 전체 재원생(퇴원 제외)', () => {
+    expect(studentsInScope(students, enrollments, null).map(s => s.id)).toEqual(['a', 'b', 'c']);
+  });
+  it('classIds 주면 해당 반 진행중 수강 재원생만', () => {
+    // cl-01 진행중: a(재원), c는 종료, left는 퇴원 → a만
+    expect(studentsInScope(students, enrollments, ['cl-01']).map(s => s.id)).toEqual(['a']);
+  });
+  it('여러 반 합집합', () => {
+    expect(studentsInScope(students, enrollments, ['cl-01', 'cl-02']).map(s => s.id)).toEqual(['a', 'b']);
+  });
+});
+
+describe('상담 KPI 집계', () => {
+  const cons: Consultation[] = [
+    { id: '1', student_id: 'a', date: '2026-06-12', method: '전화', counselor: '김', content: '' },
+    { id: '2', student_id: 'b', date: '2026-06-08', method: '대면', counselor: '김', content: '' },
+    { id: '3', student_id: 'a', date: '2026-05-20', method: '전화', counselor: '김', content: '' },
+  ];
+  const asOf = '2026-06-14';
+
+  it('consultCountInMonth: 같은 달만', () => {
+    expect(consultCountInMonth(cons, asOf)).toBe(2); // 06-12, 06-08
+  });
+  it('consultCountInDays: 최근 7일(당일 포함)', () => {
+    expect(consultCountInDays(cons, asOf, 7)).toBe(2); // 06-08~06-14 → 06-12, 06-08
+    expect(consultCountInDays(cons, asOf, 1)).toBe(0); // 06-14 당일만 → 없음
+  });
+  it('consultedRate: 최근 90일 상담 보유 재원생 비율', () => {
+    const stu = (id: string): Student =>
+      ({ id, name: id, status: '재원' } as Student);
+    // a,b는 상담 있음, c는 없음 → 2/3 = 67%
+    expect(consultedRate([stu('a'), stu('b'), stu('c')], cons, asOf, 90)).toBe(67);
+    expect(consultedRate([], cons, asOf, 90)).toBe(0);
   });
 });

@@ -16,7 +16,8 @@ const rankedStudents = [...students].filter(s => s.status === '재원').sort((a,
 
 let purSeq = 0;
 
-export function StudentDashboard({ student, onLogout }: { student: Student; onLogout: () => void }) {
+export function StudentDashboard({ student, onLogout, mode = 'mobile' }: { student: Student; onLogout: () => void; mode?: 'mobile' | 'web' }) {
+  const isWeb = mode === 'web';
   const [tab, setTab] = useState<Tab>('내 수업');
   const [balance, setBalance] = useState(baseBalance(student));
   const [sessionPurchases, setSessionPurchases] = useState<Purchase[]>([]);
@@ -42,31 +43,35 @@ export function StudentDashboard({ student, onLogout }: { student: Student; onLo
     showToast(`${name} 교환 완료! 🎁`);
   }
 
-  return (
-    <div className="mx-auto" style={{ maxWidth: 560 }}>
-      {/* 헤더 */}
-      <div className="flex items-center gap-4 rounded-2xl p-5 mb-4" style={{ background: 'linear-gradient(135deg, var(--kiosk-orange), var(--kiosk-orange2))' }}>
-        <div className="text-3xl kiosk-float">🎮</div>
-        <div className="flex-1">
-          <div className="text-xl font-extrabold text-white">{student.name}님</div>
-          <div className="text-sm text-white/90">Lv.{levelOf(points)} · {student.title || '새내기'} · {myRank}위</div>
-        </div>
-        <button onClick={onLogout} className="px-3 py-2 rounded-xl text-sm font-bold text-white" style={{ background: 'rgba(0,0,0,0.2)' }}>로그아웃</button>
+  // 헤더 (양 모드 공용)
+  const headerEl = (
+    <div className="flex items-center gap-4 rounded-2xl p-5 mb-4" style={{ background: 'linear-gradient(135deg, var(--kiosk-orange), var(--kiosk-orange2))' }}>
+      <div className="text-3xl kiosk-float">🎮</div>
+      <div className="flex-1">
+        <div className="text-xl font-extrabold text-white">{student.name}님</div>
+        <div className="text-sm text-white/90">Lv.{levelOf(points)} · {student.title || '새내기'} · {myRank}위</div>
       </div>
+      <button onClick={onLogout} className="px-3 py-2 rounded-xl text-sm font-bold text-white" style={{ background: 'rgba(0,0,0,0.2)' }}>로그아웃</button>
+    </div>
+  );
 
-      {/* 탭 (모바일 2×2, 데스크톱 4열) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mb-4">
-        {TABS.map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className="py-2.5 rounded-xl text-sm font-bold transition-all"
-            style={tab === t
-              ? { background: 'var(--kiosk-orange)', color: 'white' }
-              : { background: 'var(--kiosk-surface)', color: 'var(--kiosk-muted)', border: '1px solid var(--kiosk-border)' }}>
-            {t}
-          </button>
-        ))}
-      </div>
+  // 탭 내비 (모바일: 가로 2×2 / 웹: 세로 사이드바)
+  const navEl = (
+    <div className={isWeb ? 'flex flex-col gap-1.5' : 'grid grid-cols-2 sm:grid-cols-4 gap-1.5 mb-4'}>
+      {TABS.map(t => (
+        <button key={t} onClick={() => setTab(t)}
+          className={`rounded-xl text-sm font-bold transition-all ${isWeb ? 'py-3 px-4 text-left' : 'py-2.5'}`}
+          style={tab === t
+            ? { background: 'var(--kiosk-orange)', color: 'white' }
+            : { background: 'var(--kiosk-surface)', color: 'var(--kiosk-muted)', border: '1px solid var(--kiosk-border)' }}>
+          {t}
+        </button>
+      ))}
+    </div>
+  );
 
+  const contentEl = (
+    <>
       {/* 내 수업 */}
       {tab === '내 수업' && (
         <div className="rounded-2xl p-6 border" style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
@@ -90,7 +95,7 @@ export function StudentDashboard({ student, onLogout }: { student: Student; onLo
             <h2 className="text-base font-extrabold text-white">🛍️ 포인트 상점</h2>
             <span className="text-xs font-bold px-2.5 py-1 rounded-md" style={{ background: 'rgba(245,200,66,0.15)', color: 'var(--kiosk-gold)' }}>사용가능 {balance}P</span>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className={isWeb ? 'grid grid-cols-2 xl:grid-cols-3 gap-2' : 'flex flex-col gap-2'}>
             {kioskShopItems.map(item => {
               const can = balance >= item.cost;
               return (
@@ -185,11 +190,30 @@ export function StudentDashboard({ student, onLogout }: { student: Student; onLo
         </div>
       )}
 
-      {toast && (
-        <div className="fixed left-1/2 bottom-10 -translate-x-1/2 px-6 py-3.5 rounded-xl font-extrabold text-white shadow-lg z-50" style={{ background: 'var(--kiosk-orange)' }}>
-          {toast}
+    </>
+  );
+
+  const toastEl = toast && (
+    <div className="fixed left-1/2 bottom-10 -translate-x-1/2 px-6 py-3.5 rounded-xl font-extrabold text-white shadow-lg z-50" style={{ background: 'var(--kiosk-orange)' }}>
+      {toast}
+    </div>
+  );
+
+  return (
+    <div className="mx-auto" style={{ maxWidth: isWeb ? 1080 : 560 }}>
+      {headerEl}
+      {isWeb ? (
+        <div className="grid gap-4 items-start" style={{ gridTemplateColumns: '200px minmax(0, 1fr)' }}>
+          {navEl}
+          <div>{contentEl}</div>
         </div>
+      ) : (
+        <>
+          {navEl}
+          {contentEl}
+        </>
       )}
+      {toastEl}
     </div>
   );
 }

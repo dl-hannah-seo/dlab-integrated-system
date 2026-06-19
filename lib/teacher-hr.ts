@@ -23,17 +23,21 @@ export function monthlyTeachingHours(teacherId: string, classes: Class[]): numbe
 }
 
 export interface SalaryBreakdown {
-  hours: number;       // 월 추정 시수
-  basePay: number;     // 시급 × 시수 (원, 반올림)
-  incentive: number;   // 월 인센티브
+  hours: number;       // 월 추정 시수 (연구원은 0 — 시수 무관)
+  basePay: number;     // 연구원: 연봉 ÷ 12 / 튜터: 시급 × 시수 (원, 반올림)
+  incentive: number;   // 학기 인센티브
   total: number;       // 월 급여 합계
 }
 
-/** 강사 월 급여 자동 산출(추정) */
+/** 월 급여 자동 산출 — 연구원: 연봉 ÷ 12, 튜터: 시급 × 추정 시수 */
 export function monthlySalary(teacher: Teacher, classes: Class[]): SalaryBreakdown {
+  const incentive = teacher.incentive ?? 0;
+  if (teacher.role === '연구원') {
+    const basePay = Math.round((teacher.annual_salary ?? 0) / 12);
+    return { hours: 0, basePay, incentive, total: basePay + incentive };
+  }
   const hours = monthlyTeachingHours(teacher.id, classes);
   const basePay = Math.round(hours * (teacher.hourly_wage ?? 0));
-  const incentive = teacher.incentive ?? 0;
   return { hours, basePay, incentive, total: basePay + incentive };
 }
 

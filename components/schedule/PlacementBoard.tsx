@@ -3,16 +3,21 @@
 import { Fragment, useRef, useState } from 'react';
 import {
   classes as mockClasses, classGroups, students, enrollments as mockEnrollments,
-  invoices, dashboardData, TODAY, Class, Enrollment, InvoiceStatus, Student,
+  invoices, dashboardData, TODAY, CURRENT_SEMESTER_ID, Class, Enrollment, InvoiceStatus, Student,
 } from '@/lib/mock-data';
 import {
   buildBoard, boardCellKey, isClassFull, moveStudent, activeCount, UNASSIGNED, RosterEntry,
 } from '@/lib/placement-board';
+import { classPhaseRates } from '@/lib/feedback';
+import { useFeedbacks } from '@/components/panels/FeedbackContext';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { StudentQuickPanel } from '@/components/schedule/StudentQuickPanel';
 
 const DAY_NAME: Record<string, string> = { '토': '토요일', '화목': '화·목요일', '월수금': '월·수·금요일' };
+
+// 학부모 피드백 단계별 색상 (주간 보기·팝오버와 동일)
+const PHASE_COLOR: Record<string, string> = { '그리팅': '#28C76F', '중간': '#2F6BFF', '파이널': '#2F6BFF' };
 
 // 학생 수가 이 값을 넘으면 카드 안 명단을 2열로
 const TWO_COL_THRESHOLD = 6;
@@ -24,11 +29,11 @@ const ROOM_W = 172;   // 강의실 열 최소 폭
 // ── 결제 상태 음영 ─────────────────────────────────────────────
 function paymentChip(status: InvoiceStatus | null): { bg: string; border: string; text: string; dim: boolean } {
   switch (status) {
-    case '완납':  return { bg: '#DBEAFE', border: '#93C5FD', text: '#1E40AF', dim: false }; // 파랑
-    case '미납':  return { bg: '#FECACA', border: '#F87171', text: '#991B1B', dim: false }; // 빨강
-    case '부분납': return { bg: '#FEF3C7', border: '#FCD34D', text: '#92400E', dim: false }; // 주황
-    case '환불':  return { bg: '#F3F4F6', border: '#E5E7EB', text: '#6B7280', dim: true };
-    default:      return { bg: '#F7F7F5', border: '#E9E9E7', text: '#787774', dim: true }; // 미청구
+    case '완납':  return { bg: '#EAF1FF', border: '#5C8BFF', text: '#1F57E6', dim: false }; // 파랑
+    case '미납':  return { bg: '#FBC4C6', border: '#F2787B', text: '#D93539', dim: false }; // 빨강
+    case '부분납': return { bg: '#FFF4E0', border: '#F4B000', text: '#92400E', dim: false }; // 주황
+    case '환불':  return { bg: '#EEF1F5', border: '#E8EBF1', text: '#6B7280', dim: true };
+    default:      return { bg: '#F4F6FA', border: '#E8EBF1', text: '#6B7280', dim: true }; // 미청구
   }
 }
 
@@ -43,6 +48,7 @@ type PendingMove = { studentId: string; studentName: string; from: Class; to: Cl
 
 export function PlacementBoard() {
   const billingMonth = dashboardData.billing_month;
+  const { feedbacks } = useFeedbacks();
   const [localEnrollments, setLocalEnrollments] = useState<Enrollment[]>(mockEnrollments);
 
   const [dragging, setDragging] = useState<{ studentId: string; fromClassId: string } | null>(null);
@@ -101,31 +107,31 @@ export function PlacementBoard() {
       {/* 컨트롤 바 — 좌우 이동 + 범례 */}
       <div className="mb-3 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-[#787774]">강의실</span>
-          <div className="inline-flex rounded-lg border border-[#E9E9E7] bg-white p-0.5">
+          <span className="text-xs text-[#6B7280]">강의실</span>
+          <div className="inline-flex rounded-lg border border-[#E8EBF1] bg-white p-0.5">
             <button
               onClick={() => scrollByCols(-1)}
-              className="px-2.5 py-1 text-base leading-none text-[#787774] hover:text-[#37352F] hover:bg-[#F7F7F5] rounded-md transition-colors"
+              className="px-2.5 py-1 text-base leading-none text-[#6B7280] hover:text-[#1A1D29] hover:bg-[#F4F6FA] rounded-md transition-colors"
               aria-label="강의실 왼쪽으로"
             >‹</button>
             <button
               onClick={() => scrollByCols(1)}
-              className="px-2.5 py-1 text-base leading-none text-[#787774] hover:text-[#37352F] hover:bg-[#F7F7F5] rounded-md transition-colors"
+              className="px-2.5 py-1 text-base leading-none text-[#6B7280] hover:text-[#1A1D29] hover:bg-[#F4F6FA] rounded-md transition-colors"
               aria-label="강의실 오른쪽으로"
             >›</button>
           </div>
-          <span className="text-[11px] text-[#9B9A97]">← → 키 또는 가로 스크롤로 이동</span>
+          <span className="text-[11px] text-[#9CA3AF]">← → 키 또는 가로 스크롤로 이동</span>
         </div>
 
         {/* 결제 구분 범례 */}
         <div className="flex items-center gap-3">
-          <span className="text-xs text-[#787774]">결제</span>
+          <span className="text-xs text-[#6B7280]">결제</span>
           {LEGEND.map(item => {
             const c = paymentChip(item.status);
             return (
               <span key={item.label} className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded" style={{ background: c.bg, border: `1px solid ${c.border}` }} />
-                <span className="text-xs text-[#37352F]">{item.label}</span>
+                <span className="text-xs text-[#1A1D29]">{item.label}</span>
               </span>
             );
           })}
@@ -134,7 +140,7 @@ export function PlacementBoard() {
 
       {/* 보드 */}
       {board.rows.length === 0 ? (
-        <div className="bg-white border border-[#E9E9E7] rounded-lg px-5 py-12 text-center text-sm text-[#787774]">
+        <div className="bg-white border border-[#E8EBF1] rounded-lg px-5 py-12 text-center text-sm text-[#6B7280]">
           편성된 반이 없습니다.
         </div>
       ) : (
@@ -145,17 +151,17 @@ export function PlacementBoard() {
             if (e.key === 'ArrowRight') { e.preventDefault(); scrollByCols(1); }
             if (e.key === 'ArrowLeft') { e.preventDefault(); scrollByCols(-1); }
           }}
-          className="overflow-x-auto border border-[#E9E9E7] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#FF6C37]/30"
+          className="overflow-x-auto border border-[#E8EBF1] rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#2F6BFF]/30"
         >
           <div style={{ minWidth: innerMinW }}>
             {/* 강의실 헤더 */}
-            <div className="grid border-b border-[#E9E9E7]" style={{ gridTemplateColumns: gridCols }}>
-              <div className="sticky left-0 z-20 bg-[#F1F1EF] px-3 py-2.5 border-r border-[#E9E9E7]">
-                <span className="text-[10px] font-semibold text-[#787774] uppercase tracking-wide">요일 · 시간</span>
+            <div className="grid border-b border-[#E8EBF1]" style={{ gridTemplateColumns: gridCols }}>
+              <div className="sticky left-0 z-20 bg-[#EEF1F5] px-3 py-2.5 border-r border-[#E8EBF1]">
+                <span className="text-[10px] font-semibold text-[#6B7280] uppercase tracking-wide">요일 · 시간</span>
               </div>
               {board.rooms.map(room => (
-                <div key={room} className="px-3 py-2.5 text-center border-l border-[#E9E9E7] bg-[#F7F7F5]">
-                  <span className={`text-sm font-semibold ${room === UNASSIGNED ? 'text-[#9B9A97]' : 'text-[#37352F]'}`}>
+                <div key={room} className="px-3 py-2.5 text-center border-l border-[#E8EBF1] bg-[#F4F6FA]">
+                  <span className={`text-sm font-semibold ${room === UNASSIGNED ? 'text-[#9CA3AF]' : 'text-[#1A1D29]'}`}>
                     {room}
                   </span>
                 </div>
@@ -168,31 +174,32 @@ export function PlacementBoard() {
               return (
                 <Fragment key={row.key}>
                   {newDay && (
-                    <div className="bg-[#FFF8F5] border-b border-[#F0E0D8]">
-                      <span className="sticky left-0 inline-block px-3 py-1 text-xs font-bold text-[#FF6C37]">
+                    <div className="bg-[#EAF1FF] border-b border-[#DCE7FF]">
+                      <span className="sticky left-0 inline-block px-3 py-1 text-xs font-bold text-[#2F6BFF]">
                         {DAY_NAME[row.dayGroup] ?? row.dayGroup}
                       </span>
                     </div>
                   )}
                   <div
-                    className="grid border-b border-[#E9E9E7]"
+                    className="grid border-b border-[#E8EBF1]"
                     style={{ gridTemplateColumns: gridCols }}
                   >
                     {/* 좌측 요일·시간 라벨 (고정) */}
-                    <div className="sticky left-0 z-10 bg-[#F7F7F5] border-r border-[#E9E9E7] px-3 py-2 flex items-start">
-                      <span className="text-xs font-semibold text-[#37352F] whitespace-nowrap">{row.label}</span>
+                    <div className="sticky left-0 z-10 bg-[#F4F6FA] border-r border-[#E8EBF1] px-3 py-2 flex items-start">
+                      <span className="text-xs font-semibold text-[#1A1D29] whitespace-nowrap">{row.label}</span>
                     </div>
 
                     {board.rooms.map(room => {
                       const cells = board.cells[boardCellKey(room, row.key)] ?? [];
                       return (
-                        <div key={room} className="border-l border-[#E9E9E7] p-1.5 space-y-1.5">
+                        <div key={room} className="border-l border-[#E8EBF1] p-1.5 space-y-1.5">
                           {cells.map(cell => (
                             <ClassCard
                               key={cell.cls.id}
                               cls={cell.cls}
                               roster={cell.roster}
                               count={activeCount(cell.cls.id, localEnrollments)}
+                              phaseRates={classPhaseRates(students, feedbacks, cell.cls.id, CURRENT_SEMESTER_ID)}
                               isDragOver={dragOverClassId === cell.cls.id}
                               onChipDragStart={studentId => setDragging({ studentId, fromClassId: cell.cls.id })}
                               onChipDragEnd={() => { setDragging(null); setDragOverClassId(null); }}
@@ -224,7 +231,7 @@ export function PlacementBoard() {
 
       {/* 토스트 */}
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#37352F] text-white text-sm px-4 py-2.5 rounded-lg shadow-lg">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#1A1D29] text-white text-sm px-4 py-2.5 rounded-lg shadow-lg">
           {toast}
         </div>
       )}
@@ -243,12 +250,12 @@ export function PlacementBoard() {
             </>
           }
         >
-          <p className="text-sm text-[#37352F]">
+          <p className="text-sm text-[#1A1D29]">
             <span className="font-semibold">{pending.studentName}</span> 학생을{' '}
             <span className="font-semibold">{pending.from.schedule} · {pending.from.course}</span>에서{' '}
             <span className="font-semibold">{pending.to.schedule} · {pending.to.course}</span>(으)로 이동하시겠습니까?
           </p>
-          <p className="text-xs text-[#787774] mt-2">원래 반은 퇴반 처리되고 새 반에 입반됩니다.</p>
+          <p className="text-xs text-[#6B7280] mt-2">원래 반은 퇴반 처리되고 새 반에 입반됩니다.</p>
         </Modal>
       )}
     </div>
@@ -257,12 +264,13 @@ export function PlacementBoard() {
 
 // ── 반 카드 ─────────────────────────────────────────────────────
 function ClassCard({
-  cls, roster, count, isDragOver,
+  cls, roster, count, phaseRates, isDragOver,
   onChipDragStart, onChipDragEnd, onDragEnterCard, onDragLeaveCard, onDropCard, onChipClick,
 }: {
   cls: Class;
   roster: RosterEntry[];
   count: number;
+  phaseRates: { phase: string; rate: number }[];
   isDragOver: boolean;
   onChipDragStart: (studentId: string) => void;
   onChipDragEnd: () => void;
@@ -280,24 +288,24 @@ function ClassCard({
       onDragLeave={onDragLeaveCard}
       onDrop={onDropCard}
       className={`rounded-lg border transition-colors ${
-        isDragOver ? 'border-[#FF6C37] bg-[#FFF8F5]' : 'border-[#E9E9E7] bg-white'
+        isDragOver ? 'border-[#2F6BFF] bg-[#EAF1FF]' : 'border-[#E8EBF1] bg-white'
       }`}
     >
       {/* 카드 헤더 */}
-      <div className="px-2 py-1.5 border-b border-[#E9E9E7]">
+      <div className="px-2 py-1.5 border-b border-[#E8EBF1]">
         <div className="flex items-center justify-between gap-1">
-          <span className="text-xs font-semibold text-[#37352F] truncate">{cls.course}</span>
-          <span className={`text-[10px] tabular-nums flex-shrink-0 ${full ? 'text-[#DC2626] font-medium' : 'text-[#787774]'}`}>
+          <span className="text-xs font-semibold text-[#1A1D29] truncate">{cls.course}</span>
+          <span className={`text-[10px] tabular-nums flex-shrink-0 ${full ? 'text-[#F2474B] font-medium' : 'text-[#6B7280]'}`}>
             {count}/{cls.capacity}
           </span>
         </div>
-        <span className="text-[10px] text-[#9B9A97]">{cls.teacher} 선생님</span>
+        <span className="text-[10px] text-[#9CA3AF]">{cls.teacher} 선생님</span>
       </div>
 
       {/* 학생 칩 목록 */}
       <div className={`p-1.5 min-h-[36px] ${twoCol ? 'grid grid-cols-2 gap-1' : 'space-y-1'}`}>
         {roster.length === 0 ? (
-          <p className="text-[10px] text-[#BFBFBD] text-center py-1.5">학생 없음</p>
+          <p className="text-[10px] text-[#AEB4C0] text-center py-1.5">학생 없음</p>
         ) : (
           roster.map(({ student, paymentStatus }) => {
             const c = paymentChip(paymentStatus);
@@ -326,6 +334,30 @@ function ClassCard({
           })
         )}
       </div>
+
+      {/* 학부모 피드백 완료율 3종 — 그리팅·중간·파이널 (모든 반 공통) */}
+      {roster.length > 0 && (
+        <div className="grid grid-cols-3 border-t border-[#E8EBF1]">
+          {phaseRates.map(({ phase, rate }, i) => (
+            <div
+              key={phase}
+              title={`${phase} 피드백 ${rate}%`}
+              className={`px-1 py-1 text-center ${i > 0 ? 'border-l border-[#EEF1F5]' : ''}`}
+            >
+              <div className="text-[9px] leading-none text-[#9CA3AF]">{phase}</div>
+              <div
+                className="mt-0.5 text-[11px] font-semibold leading-none tabular-nums"
+                style={{ color: PHASE_COLOR[phase] }}
+              >
+                {rate}%
+              </div>
+              <div className="mt-1 h-1 w-full rounded-full bg-[#EEF1F5]">
+                <div className="h-full rounded-full" style={{ width: `${rate}%`, background: PHASE_COLOR[phase] }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

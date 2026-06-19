@@ -11,11 +11,11 @@ const CARD_DEFS: { key: StatusFilter; label: string }[] = [
 ];
 
 const ACTIVE: Record<StatusFilter, string> = {
-  전체: 'border-[#37352F] bg-[#F1F1EF] text-[#37352F]',
-  완납: 'border-[#0F7B6C] bg-[#EDF7F5] text-[#0F7B6C]',
-  미납: 'border-[#EB5757] bg-[#FDECEC] text-[#EB5757]',
-  예정: 'border-[#D9822B] bg-[#FFF4E5] text-[#D9822B]',
-  환불: 'border-[#7C5CFF] bg-[#F0EBFF] text-[#7C5CFF]',
+  전체: 'border-[#1A1D29] bg-[#EEF1F5] text-[#1A1D29]',
+  완납: 'border-[#28C76F] bg-[#E6F9EF] text-[#28C76F]',
+  미납: 'border-[#F2474B] bg-[#FEE9EA] text-[#F2474B]',
+  예정: 'border-[#1F57E6] bg-[#FFF4E0] text-[#1F57E6]',
+  환불: 'border-[#2F6BFF] bg-[#EAF1FF] text-[#2F6BFF]',
 };
 
 interface Props {
@@ -36,9 +36,9 @@ export function StatusCards({ summary, selected, onSelect }: Props) {
             <button
               key={key}
               onClick={() => onSelect(key)}
-              className={`rounded-lg border px-4 py-3 text-center transition-colors ${on ? ACTIVE[key] : 'border-[#E9E9E7] bg-white text-[#37352F] hover:bg-[#F7F7F5]'}`}
+              className={`rounded-lg border px-4 py-3 text-center transition-colors ${on ? ACTIVE[key] : 'border-[#E8EBF1] bg-white text-[#1A1D29] hover:bg-[#F4F6FA]'}`}
             >
-              <span className="block text-xs text-[#787774]">{label}</span>
+              <span className="block text-xs text-[#6B7280]">{label}</span>
               <span className="block text-xl font-bold tabular-nums">
                 {summary.counts[key]}{key === '전체' ? '명' : '건'}
               </span>
@@ -47,7 +47,7 @@ export function StatusCards({ summary, selected, onSelect }: Props) {
         })}
       </div>
       {unpaid && (
-        <div className="rounded-md px-4 py-2 text-sm bg-[#FDECEC] text-[#EB5757]">
+        <div className="rounded-md px-4 py-2 text-sm bg-[#FEE9EA] text-[#F2474B]">
           미납 합계 <b className="tabular-nums">{fmt(summary.unpaidTotal)}</b> · {summary.counts[selected]}건
         </div>
       )}

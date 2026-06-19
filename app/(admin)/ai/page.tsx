@@ -76,19 +76,18 @@ export default function AiPage() {
     <div>
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-[#37352F]">AI 인사이트</h1>
-          <p className="text-sm text-[#787774] mt-1">Claude 기반 학원 운영 인사이트 · 판교 캠퍼스</p>
+          <h1 className="text-xl font-bold text-[#1A1D29]">AI 인사이트</h1>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FFF1EC] border border-[#FF6C37]/20 rounded-lg">
-          <span className="w-2 h-2 rounded-full bg-[#FF6C37] animate-pulse" />
-          <span className="text-xs font-medium text-[#FF6C37]">Claude Sonnet 4.6</span>
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-[#EAF1FF] border border-[#2F6BFF]/20 rounded-lg">
+          <span className="w-2 h-2 rounded-full bg-[#2F6BFF] animate-pulse" />
+          <span className="text-xs font-medium text-[#2F6BFF]">Claude Sonnet 4.6</span>
         </div>
       </div>
 
       {/* 배너 */}
-      <div className="mb-6 px-5 py-4 bg-gradient-to-r from-[#FFF1EC] to-[#EDF7F5] border border-[#FF6C37]/20 rounded-xl">
-        <p className="text-sm font-semibold text-[#37352F] mb-1">📌 AI가 학원 데이터를 분석합니다</p>
-        <p className="text-xs text-[#787774]">수납, 출결, 원생 현황 데이터를 바탕으로 운영 인사이트와 액션 아이템을 자동 생성합니다. Phase 2에서 실시간 Claude API와 연동됩니다.</p>
+      <div className="mb-6 px-5 py-4 bg-gradient-to-r from-[#EAF1FF] to-[#E6F9EF] border border-[#2F6BFF]/20 rounded-xl">
+        <p className="text-sm font-semibold text-[#1A1D29] mb-1">📌 AI가 학원 데이터를 분석합니다</p>
+        <p className="text-xs text-[#6B7280]">수납, 출결, 원생 현황 데이터를 바탕으로 운영 인사이트와 액션 아이템을 자동 생성합니다. Phase 2에서 실시간 Claude API와 연동됩니다.</p>
       </div>
 
       <div className="space-y-4">
@@ -99,11 +98,11 @@ export default function AiPage() {
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="text-xl">{item.icon}</span>
-                <h3 className="text-base font-semibold text-[#37352F]">{item.title}</h3>
-                <span className="text-xs px-2 py-0.5 bg-[#F7F7F5] border border-[#E9E9E7] rounded-full text-[#787774]">{item.badge}</span>
+                <h3 className="text-base font-semibold text-[#1A1D29]">{item.title}</h3>
+                <span className="text-xs px-2 py-0.5 bg-[#F4F6FA] border border-[#E8EBF1] rounded-full text-[#6B7280]">{item.badge}</span>
               </div>
               {generated.has(item.id) ? (
-                <span className="text-xs text-[#0F7B6C] font-medium">✓ 생성 완료</span>
+                <span className="text-xs text-[#28C76F] font-medium">✓ 생성 완료</span>
               ) : (
                 <Button size="sm" variant="secondary" onClick={() => generate(item.id)} loading={generating === item.id}>
                   {generating === item.id ? '분석 중...' : 'AI 분석 실행'}
@@ -113,17 +112,17 @@ export default function AiPage() {
 
             {generated.has(item.id) ? (
               <>
-                <div className="bg-[#F7F7F5] rounded-lg p-4 mb-3">
-                  <p className="text-sm text-[#37352F] whitespace-pre-line leading-relaxed">{item.summary}</p>
+                <div className="bg-[#F4F6FA] rounded-lg p-4 mb-3">
+                  <p className="text-sm text-[#1A1D29] whitespace-pre-line leading-relaxed">{item.summary}</p>
                 </div>
-                <div className="flex items-start gap-2 px-3 py-2.5 bg-[#EDF7F5] rounded-lg border border-[#0F7B6C]/15">
-                  <span className="text-[#0F7B6C]">💡</span>
-                  <p className="text-xs text-[#37352F]"><span className="font-semibold text-[#0F7B6C]">AI 인사이트: </span>{item.insight}</p>
+                <div className="flex items-start gap-2 px-3 py-2.5 bg-[#E6F9EF] rounded-lg border border-[#28C76F]/15">
+                  <span className="text-[#28C76F]">💡</span>
+                  <p className="text-xs text-[#1A1D29]"><span className="font-semibold text-[#28C76F]">AI 인사이트: </span>{item.insight}</p>
                 </div>
               </>
             ) : (
-              <div className="bg-[#F7F7F5] rounded-lg p-8 text-center border border-dashed border-[#E9E9E7]">
-                <p className="text-sm text-[#787774]">버튼을 눌러 AI 분석을 실행하세요</p>
+              <div className="bg-[#F4F6FA] rounded-lg p-8 text-center border border-dashed border-[#E8EBF1]">
+                <p className="text-sm text-[#6B7280]">버튼을 눌러 AI 분석을 실행하세요</p>
               </div>
             )}
           </Card>

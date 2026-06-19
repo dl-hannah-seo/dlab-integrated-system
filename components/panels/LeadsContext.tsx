@@ -13,6 +13,7 @@ export type NewLead = {
   interest_subject: string;
   stage?: LeadStage;
   memo?: string;
+  inquiry_date?: string;
 };
 
 interface LeadsCtx {
@@ -36,7 +37,7 @@ export function LeadsProvider({ children }: { children: React.ReactNode }) {
       source: data.source,
       interest_subject: data.interest_subject,
       stage: data.stage ?? '신규문의',
-      inquiry_date: TODAY,
+      inquiry_date: data.inquiry_date || TODAY,
       memo: data.memo || undefined,
     };
     setLeads(prev => [lead, ...prev]);

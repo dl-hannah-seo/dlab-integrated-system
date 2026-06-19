@@ -102,8 +102,7 @@ export default function SemestersPage() {
     <div>
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-[#37352F]">학기 편성 관리</h1>
-          <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 개설 학기 및 과정 설정</p>
+          <h1 className="text-xl font-bold text-[#1A1D29]">학기 편성 관리</h1>
         </div>
         <Button size="sm" onClick={() => setShowModal(true)}>
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -116,13 +115,13 @@ export default function SemestersPage() {
       {/* 요약 */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
-          { label: '전체 학기', value: localSemesters.length, color: 'text-[#37352F]' },
-          { label: '진행 중', value: active, color: 'text-[#0F7B6C]' },
-          { label: '예정', value: upcoming, color: 'text-[#FF6C37]' },
+          { label: '전체 학기', value: localSemesters.length, color: 'text-[#1A1D29]' },
+          { label: '진행 중', value: active, color: 'text-[#28C76F]' },
+          { label: '예정', value: upcoming, color: 'text-[#2F6BFF]' },
         ].map(item => (
           <Card key={item.label} className="!p-0">
             <div className="px-5 py-4 text-center">
-              <p className="text-xs text-[#787774] mb-1">{item.label}</p>
+              <p className="text-xs text-[#6B7280] mb-1">{item.label}</p>
               <p className={`text-2xl font-bold tabular-nums ${item.color}`}>{item.value}</p>
             </div>
           </Card>
@@ -138,36 +137,36 @@ export default function SemestersPage() {
 
           return (
             <div key={sem.id}
-              className={`bg-white border rounded-xl p-5 transition-colors ${status === '종료' ? 'opacity-60' : 'border-[#E9E9E7]'}`}
-              style={status === '진행 중' ? { borderColor: '#0F7B6C', boxShadow: '0 0 0 1px #0F7B6C22' } : {}}>
+              className={`bg-white border rounded-xl p-5 transition-colors ${status === '종료' ? 'opacity-60' : 'border-[#E8EBF1]'}`}
+              style={status === '진행 중' ? { borderColor: '#28C76F', boxShadow: '0 0 0 1px #28C76F22' } : {}}>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2.5">
-                    <h2 className="text-base font-bold text-[#37352F]">{sem.year}년 {sem.season}</h2>
+                    <h2 className="text-base font-bold text-[#1A1D29]">{sem.year}년 {sem.season}</h2>
                     <Badge variant={statusVariant(status)}>{status}</Badge>
                     {sem.status && (
-                      <span className="text-xs text-[#787774] bg-[#F7F7F5] px-1.5 py-0.5 rounded">수동 설정</span>
+                      <span className="text-xs text-[#6B7280] bg-[#F4F6FA] px-1.5 py-0.5 rounded">수동 설정</span>
                     )}
-                    <span className="text-xs text-[#787774]">반 {semClasses.length}개</span>
+                    <span className="text-xs text-[#6B7280]">반 {semClasses.length}개</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5 mb-3">
                     {sem.courses.map(c => (
-                      <span key={c} className="px-2.5 py-0.5 bg-[#FFF1EC] text-[#FF6C37] rounded-full text-xs font-medium">{c}</span>
+                      <span key={c} className="px-2.5 py-0.5 bg-[#EAF1FF] text-[#2F6BFF] rounded-full text-xs font-medium">{c}</span>
                     ))}
                   </div>
                   {semClasses.length > 0 && (
-                    <p className="text-xs text-[#787774]">
+                    <p className="text-xs text-[#6B7280]">
                       수강 기간: {semClasses.map(c => c.start_date).sort()[0]} ~ {semClasses.map(c => c.end_date).sort().reverse()[0]}
                     </p>
                   )}
                   {semClasses.length === 0 && (
-                    <p className="text-xs text-[#787774]">아직 생성된 반이 없습니다. 반 관리에서 반을 추가하세요.</p>
+                    <p className="text-xs text-[#6B7280]">아직 생성된 반이 없습니다. 반 관리에서 반을 추가하세요.</p>
                   )}
                 </div>
                 <div className="flex items-center gap-2 ml-4">
                   <button
                     onClick={() => openEdit(sem)}
-                    className="text-xs text-[#787774] hover:text-[#37352F] px-2 py-1 rounded hover:bg-[#F7F7F5] transition-colors"
+                    className="text-xs text-[#6B7280] hover:text-[#1A1D29] px-2 py-1 rounded hover:bg-[#F4F6FA] transition-colors"
                   >
                     편집
                   </button>
@@ -212,7 +211,7 @@ export default function SemestersPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#37352F] mb-1.5">개설 과정</label>
+            <label className="block text-sm font-medium text-[#1A1D29] mb-1.5">개설 과정</label>
             <div className="flex gap-2 mb-2">
               <Input
                 placeholder="과정명 입력 후 Enter (예: 파이썬 기초)"
@@ -226,24 +225,24 @@ export default function SemestersPage() {
             {formCourses.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {formCourses.map(c => (
-                  <span key={c} className="flex items-center gap-1.5 px-3 py-1 bg-[#FFF1EC] text-[#FF6C37] rounded-full text-sm font-medium">
+                  <span key={c} className="flex items-center gap-1.5 px-3 py-1 bg-[#EAF1FF] text-[#2F6BFF] rounded-full text-sm font-medium">
                     {c}
                     <button onClick={() => setFormCourses(p => p.filter(x => x !== c))}
-                      className="text-[#FF6C37]/50 hover:text-[#FF6C37] leading-none text-base">×</button>
+                      className="text-[#2F6BFF]/50 hover:text-[#2F6BFF] leading-none text-base">×</button>
                   </span>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-[#787774]">과정을 1개 이상 추가하세요.</p>
+              <p className="text-xs text-[#6B7280]">과정을 1개 이상 추가하세요.</p>
             )}
           </div>
 
           {formCourses.length > 0 && (
-            <div className="bg-[#F7F7F5] border border-[#E9E9E7] rounded-lg px-4 py-3 text-sm">
-              <span className="font-semibold text-[#37352F]">{formYear}년 {formSeason}학기</span>
-              <span className="text-[#787774]">에 </span>
-              <span className="text-[#FF6C37] font-medium">{formCourses.join(' · ')}</span>
-              <span className="text-[#787774]"> 과정이 편성됩니다.</span>
+            <div className="bg-[#F4F6FA] border border-[#E8EBF1] rounded-lg px-4 py-3 text-sm">
+              <span className="font-semibold text-[#1A1D29]">{formYear}년 {formSeason}학기</span>
+              <span className="text-[#6B7280]">에 </span>
+              <span className="text-[#2F6BFF] font-medium">{formCourses.join(' · ')}</span>
+              <span className="text-[#6B7280]"> 과정이 편성됩니다.</span>
             </div>
           )}
         </div>
@@ -281,7 +280,7 @@ export default function SemestersPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#37352F] mb-1.5">개설 과정</label>
+              <label className="block text-sm font-medium text-[#1A1D29] mb-1.5">개설 과정</label>
               <div className="flex gap-2 mb-2">
                 <Input
                   placeholder="과정명 입력 후 Enter"
@@ -295,15 +294,15 @@ export default function SemestersPage() {
               {editCourses.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {editCourses.map(c => (
-                    <span key={c} className="flex items-center gap-1.5 px-3 py-1 bg-[#FFF1EC] text-[#FF6C37] rounded-full text-sm font-medium">
+                    <span key={c} className="flex items-center gap-1.5 px-3 py-1 bg-[#EAF1FF] text-[#2F6BFF] rounded-full text-sm font-medium">
                       {c}
                       <button onClick={() => setEditCourses(p => p.filter(x => x !== c))}
-                        className="text-[#FF6C37]/50 hover:text-[#FF6C37] leading-none text-base">×</button>
+                        className="text-[#2F6BFF]/50 hover:text-[#2F6BFF] leading-none text-base">×</button>
                     </span>
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-[#787774]">과정을 1개 이상 추가하세요.</p>
+                <p className="text-xs text-[#6B7280]">과정을 1개 이상 추가하세요.</p>
               )}
             </div>
 
@@ -319,7 +318,7 @@ export default function SemestersPage() {
                   { value: '종료', label: '종료' },
                 ]}
               />
-              <p className="text-xs text-[#787774] mt-1">
+              <p className="text-xs text-[#6B7280] mt-1">
                 수동 설정 시 반의 수강 기간과 무관하게 지정한 상태로 표시됩니다.
               </p>
             </div>

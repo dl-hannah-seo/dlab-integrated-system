@@ -56,13 +56,13 @@ export function SmsComposeModal({ student, cls, session, onClose, onSent }: SmsC
       title={`문자 보내기 · ${student.name}`}
       footer={
         <>
-          <button onClick={onClose} className="px-3 py-1.5 text-sm text-[#787774] hover:text-[#37352F]">
+          <button onClick={onClose} className="px-3 py-1.5 text-sm text-[#6B7280] hover:text-[#1A1D29]">
             취소
           </button>
           <button
             onClick={send}
             disabled={!message.trim()}
-            className="px-3.5 py-1.5 text-sm rounded-md bg-[#FF6C37] text-white hover:bg-[#E85F2C] disabled:opacity-50"
+            className="px-3.5 py-1.5 text-sm rounded-md bg-[#2F6BFF] text-white hover:bg-[#1F57E6] disabled:opacity-50"
           >
             전송
           </button>
@@ -70,8 +70,8 @@ export function SmsComposeModal({ student, cls, session, onClose, onSent }: SmsC
       }
     >
       <div className="space-y-4">
-        <div className="text-xs text-[#787774]">
-          받는 사람 <span className="text-[#37352F]">학부모 · {student.parent_phone}</span>
+        <div className="text-xs text-[#6B7280]">
+          받는 사람 <span className="text-[#1A1D29]">학부모 · {student.parent_phone}</span>
         </div>
         <Select
           label="템플릿"
@@ -88,7 +88,7 @@ export function SmsComposeModal({ student, cls, session, onClose, onSent }: SmsC
           onChange={e => setMessage(e.target.value)}
           rows={5}
         />
-        <p className="text-xs text-[#BEBDBA]">데모 환경입니다 — 실제 발송 대신 전송 확인 후 상담이력(문자·카톡)에 기록됩니다.</p>
+        <p className="text-xs text-[#AEB4C0]">데모 환경입니다 — 실제 발송 대신 전송 확인 후 상담이력(문자·카톡)에 기록됩니다.</p>
       </div>
     </Modal>
   );

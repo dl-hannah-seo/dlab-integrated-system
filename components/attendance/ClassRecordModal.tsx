@@ -17,9 +17,9 @@ import {
 } from '@/lib/mock-data';
 
 const DOT_COLOR: Record<AttendanceStatus, string> = {
-  attend:  '#0F7B6C',
-  absent:  '#EB5757',
-  makeup:  '#D9A80A',
+  attend:  '#28C76F',
+  absent:  '#F2474B',
+  makeup:  '#C18A14',
   pending: '#FFFFFF',
 };
 
@@ -62,18 +62,18 @@ export function ClassRecordModal({ cls, records, onClose, onEdit }: ClassRecordM
   return (
     <Modal open onClose={onClose} size="xl" title={`${cls.schedule} ${cls.course} · 담당 ${cls.teacher}`}>
       {flash && (
-        <div className="mb-3 rounded-md bg-[#EDF7F5] border border-[#0F7B6C]/30 px-3 py-2 text-xs text-[#0F7B6C]">
+        <div className="mb-3 rounded-md bg-[#E6F9EF] border border-[#28C76F]/30 px-3 py-2 text-xs text-[#28C76F]">
           {flash}
         </div>
       )}
-      <div className="flex items-center gap-4 mb-4 text-xs text-[#787774]">
-        <span>평균 출석률 <b className="text-[#37352F]">{avgRate}%</b></span>
+      <div className="flex items-center gap-4 mb-4 text-xs text-[#6B7280]">
+        <span>평균 출석률 <b className="text-[#1A1D29]">{avgRate}%</b></span>
         <span>회차 {matrix.sessions.length}</span>
         <span>재원 {matrix.rows.length}명</span>
         <span className="ml-auto flex items-center gap-2">
-          <Legend color="#0F7B6C" label="출석" />
-          <Legend color="#D9A80A" label="보강" />
-          <Legend color="#EB5757" label="결석" />
+          <Legend color="#28C76F" label="출석" />
+          <Legend color="#C18A14" label="보강" />
+          <Legend color="#F2474B" label="결석" />
           <Legend color="#FFFFFF" label="미도착" border />
         </span>
       </div>
@@ -82,10 +82,10 @@ export function ClassRecordModal({ cls, records, onClose, onEdit }: ClassRecordM
         <table className="border-collapse">
           <thead>
             <tr>
-              <th className="sticky left-0 bg-white text-left text-xs font-medium text-[#787774] px-2 py-2 min-w-[72px]">이름</th>
+              <th className="sticky left-0 bg-white text-left text-xs font-medium text-[#6B7280] px-2 py-2 min-w-[72px]">이름</th>
               {matrix.sessions.map(s => (
                 <th key={s.id} className="px-2 py-2 text-center text-xs font-medium min-w-[44px]">
-                  <span className={s.session_date === TODAY ? 'text-[#FF6C37]' : 'text-[#787774]'}>
+                  <span className={s.session_date === TODAY ? 'text-[#2F6BFF]' : 'text-[#6B7280]'}>
                     {s.session_date === TODAY ? '오늘' : mmdd(s.session_date)}
                   </span>
                 </th>
@@ -94,8 +94,8 @@ export function ClassRecordModal({ cls, records, onClose, onEdit }: ClassRecordM
           </thead>
           <tbody>
             {matrix.rows.map(row => (
-              <tr key={row.student.id} className="border-t border-[#F1F0EF]">
-                <td className="sticky left-0 bg-white text-xs text-[#37352F] px-2 py-1.5 whitespace-nowrap">{row.student.name}</td>
+              <tr key={row.student.id} className="border-t border-[#EEF1F5]">
+                <td className="sticky left-0 bg-white text-xs text-[#1A1D29] px-2 py-1.5 whitespace-nowrap">{row.student.name}</td>
                 {row.cells.map(cell => {
                   const key = `${cell.session.id}:${row.student.id}`;
                   const isToday = cell.session.session_date === TODAY;
@@ -104,17 +104,17 @@ export function ClassRecordModal({ cls, records, onClose, onEdit }: ClassRecordM
                     <td key={key} className="px-2 py-1.5 text-center relative">
                       <button
                         onClick={() => setEditing(editing === key ? null : key)}
-                        className={`relative inline-flex items-center justify-center w-6 h-6 rounded-md hover:ring-2 hover:ring-[#FF6C37]/30 ${isToday ? 'ring-1 ring-[#FF6C37]/50' : ''}`}
+                        className={`relative inline-flex items-center justify-center w-6 h-6 rounded-md hover:ring-2 hover:ring-[#2F6BFF]/30 ${isToday ? 'ring-1 ring-[#2F6BFF]/50' : ''}`}
                         title={isManual ? '수정됨' : undefined}
                       >
                         <span
                           className="inline-block w-3 h-3 rounded-full"
                           style={{
                             background: DOT_COLOR[cell.status],
-                            border: cell.status === 'pending' ? '2px solid #C7C6C3' : 'none',
+                            border: cell.status === 'pending' ? '2px solid #AEB4C0' : 'none',
                           }}
                         />
-                        {isManual && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#FF6C37]" />}
+                        {isManual && <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#2F6BFF]" />}
                       </button>
                       {editing === key && (
                         <StatusPopover
@@ -162,8 +162,8 @@ export function ClassRecordModal({ cls, records, onClose, onEdit }: ClassRecordM
 
 function Legend({ color, label, border }: { color: string; label: string; border?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-1 text-[#787774]">
-      <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: color, border: border ? '2px solid #C7C6C3' : 'none' }} />
+    <span className="inline-flex items-center gap-1 text-[#6B7280]">
+      <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: color, border: border ? '2px solid #AEB4C0' : 'none' }} />
       {label}
     </span>
   );

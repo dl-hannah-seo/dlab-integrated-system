@@ -32,7 +32,7 @@ interface BadgeProps {
 
 export function Badge({ variant = 'default', children, className = '' }: BadgeProps) {
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${variantClass[variant]} ${className}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${variantClass[variant]} ${className}`}>
       {children}
     </span>
   );
@@ -41,10 +41,10 @@ export function Badge({ variant = 'default', children, className = '' }: BadgePr
 /** 출결 상태 점 표시 */
 export function AttendanceDot({ status }: { status: 'attend' | 'absent' | 'pending' | 'makeup' }) {
   const colors = {
-    attend:  'bg-[#0F7B6C]',
-    absent:  'bg-[#EB5757]',
-    pending: 'border-2 border-[#787774] bg-transparent',
-    makeup:  'bg-[#D9A80A]',
+    attend:  'bg-[#28C76F]',
+    absent:  'bg-[#F2474B]',
+    pending: 'border-2 border-[#9CA3AF] bg-transparent',
+    makeup:  'bg-[#C18A14]',
   };
   return <span className={`inline-block w-2.5 h-2.5 rounded-full ${colors[status]}`} />;
 }

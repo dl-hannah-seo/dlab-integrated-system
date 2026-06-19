@@ -14,7 +14,7 @@ export function DeleteButton({ children, className = '', ...props }: DeleteButto
   return (
     <button
       type="button"
-      className={`text-sm text-[#EB5757] hover:underline ${className}`}
+      className={`text-sm text-[#F2474B] hover:underline ${className}`}
       {...props}
     >
       {children}

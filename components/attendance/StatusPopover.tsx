@@ -4,10 +4,10 @@ import { useState, useEffect, useRef } from 'react';
 import type { AttendanceStatus } from '@/lib/mock-data';
 
 const OPTIONS: { value: AttendanceStatus; label: string; color: string }[] = [
-  { value: 'attend',  label: '출석',   color: '#0F7B6C' },
-  { value: 'absent',  label: '결석',   color: '#EB5757' },
-  { value: 'makeup',  label: '보강',   color: '#D9A80A' },
-  { value: 'pending', label: '미도착', color: '#787774' },
+  { value: 'attend',  label: '출석',   color: '#28C76F' },
+  { value: 'absent',  label: '결석',   color: '#F2474B' },
+  { value: 'makeup',  label: '보강',   color: '#C18A14' },
+  { value: 'pending', label: '미도착', color: '#6B7280' },
 ];
 
 interface StatusPopoverProps {
@@ -50,29 +50,29 @@ export function StatusPopover({ current, currentReason, onSelect, onClose, onReq
   return (
     <div
       ref={ref}
-      className="absolute z-20 mt-1 w-44 rounded-lg border border-[#E9E9E7] bg-white shadow-lg p-1"
+      className="absolute z-20 mt-1 w-44 rounded-lg border border-[#E8EBF1] bg-white shadow-lg p-1"
       onClick={e => e.stopPropagation()}
     >
       {pending === 'absent' ? (
         <div className="p-2">
-          <p className="text-xs font-medium text-[#37352F] mb-1.5">결석 사유 (선택)</p>
+          <p className="text-xs font-medium text-[#1A1D29] mb-1.5">결석 사유 (선택)</p>
           <input
             autoFocus
             value={reason}
             onChange={e => setReason(e.target.value)}
             placeholder="예: 가족 여행"
-            className="w-full border border-[#E9E9E7] rounded-md px-2 py-1 text-xs text-[#37352F] focus:outline-none focus:border-[#FF6C37]"
+            className="w-full border border-[#E8EBF1] rounded-md px-2 py-1 text-xs text-[#1A1D29] focus:outline-none focus:border-[#2F6BFF]"
           />
           <div className="flex justify-end gap-1.5 mt-2">
             <button
               onClick={onClose}
-              className="px-2 py-1 text-xs text-[#787774] hover:text-[#37352F]"
+              className="px-2 py-1 text-xs text-[#6B7280] hover:text-[#1A1D29]"
             >
               취소
             </button>
             <button
               onClick={() => onSelect('absent', reason.trim() || null)}
-              className="px-2.5 py-1 text-xs rounded-md bg-[#EB5757] text-white hover:bg-[#D94545]"
+              className="px-2.5 py-1 text-xs rounded-md bg-[#F2474B] text-white hover:bg-[#F2474B]"
             >
               결석 저장
             </button>
@@ -84,30 +84,30 @@ export function StatusPopover({ current, currentReason, onSelect, onClose, onReq
             <button
               key={o.value}
               onClick={() => choose(o.value)}
-              className={`flex items-center gap-2 w-full px-2.5 py-1.5 text-xs rounded-md text-left hover:bg-[#F7F7F5] ${o.value === current ? 'bg-[#F7F7F5]' : ''}`}
+              className={`flex items-center gap-2 w-full px-2.5 py-1.5 text-xs rounded-md text-left hover:bg-[#F4F6FA] ${o.value === current ? 'bg-[#F4F6FA]' : ''}`}
             >
               <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: o.color }} />
-              <span className="text-[#37352F]">{o.label}</span>
-              {o.value === current && <span className="ml-auto text-[#0F7B6C]">✓</span>}
+              <span className="text-[#1A1D29]">{o.label}</span>
+              {o.value === current && <span className="ml-auto text-[#28C76F]">✓</span>}
             </button>
           ))}
           {current === 'absent' && (onRequestSms || onRequestMakeup) && (
-            <div className="mt-1 pt-1 border-t border-[#F1F0EF]">
-              <p className="px-2.5 py-1 text-[10px] text-[#BEBDBA]">결석 후속</p>
+            <div className="mt-1 pt-1 border-t border-[#EEF1F5]">
+              <p className="px-2.5 py-1 text-[10px] text-[#AEB4C0]">결석 후속</p>
               {onRequestSms && (
                 <button
                   onClick={onRequestSms}
-                  className="flex items-center gap-2 w-full px-2.5 py-1.5 text-xs rounded-md text-left hover:bg-[#FFF1EC]"
+                  className="flex items-center gap-2 w-full px-2.5 py-1.5 text-xs rounded-md text-left hover:bg-[#EAF1FF]"
                 >
-                  <span>📩</span><span className="text-[#37352F]">문자 보내기</span>
+                  <span>📩</span><span className="text-[#1A1D29]">문자 보내기</span>
                 </button>
               )}
               {onRequestMakeup && (
                 <button
                   onClick={onRequestMakeup}
-                  className="flex items-center gap-2 w-full px-2.5 py-1.5 text-xs rounded-md text-left hover:bg-[#FFF1EC]"
+                  className="flex items-center gap-2 w-full px-2.5 py-1.5 text-xs rounded-md text-left hover:bg-[#EAF1FF]"
                 >
-                  <span>📅</span><span className="text-[#37352F]">보강 잡기</span>
+                  <span>📅</span><span className="text-[#1A1D29]">보강 잡기</span>
                 </button>
               )}
             </div>

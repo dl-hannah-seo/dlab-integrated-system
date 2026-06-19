@@ -386,8 +386,7 @@ export default function ClassesPage() {
     <div>
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-[#37352F]">반 관리</h1>
-          <p className="text-sm text-[#787774] mt-1">학기별 반 생성/삭제 · 편집 · 수강료 설정 · 이전 학기 복제 · 입반 등록</p>
+          <h1 className="text-xl font-bold text-[#1A1D29]">수업 구성</h1>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" size="sm" onClick={() => setShowClone(true)}>이전 학기 복제</Button>
@@ -403,15 +402,15 @@ export default function ClassesPage() {
       <div className="flex gap-6">
         {/* 좌측 트리 */}
         <div className="w-64 flex-shrink-0">
-          <div className="bg-white border border-[#E9E9E7] rounded-lg overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-[#E9E9E7] bg-[#F7F7F5] flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#787774] uppercase tracking-wide">반 목록</span>
+          <div className="bg-white border border-[#E8EBF1] rounded-lg overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-[#E8EBF1] bg-[#F4F6FA] flex items-center justify-between">
+              <span className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide">반 목록</span>
               <button
                 onClick={() => setFilterActive(p => !p)}
                 className="flex items-center gap-1 group"
               >
                 <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors ${
-                  !filterActive ? 'bg-[#FF6C37] border-[#FF6C37]' : 'border-[#C7C6C3] bg-white'
+                  !filterActive ? 'bg-[#2F6BFF] border-[#2F6BFF]' : 'border-[#AEB4C0] bg-white'
                 }`}>
                   {!filterActive && (
                     <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="white" strokeWidth={2.5}>
@@ -419,17 +418,17 @@ export default function ClassesPage() {
                     </svg>
                   )}
                 </span>
-                <span className="text-xs text-[#787774] group-hover:text-[#37352F] transition-colors">종강반 표시</span>
+                <span className="text-xs text-[#6B7280] group-hover:text-[#1A1D29] transition-colors">종강반 표시</span>
               </button>
             </div>
-            <div className="divide-y divide-[#E9E9E7]">
+            <div className="divide-y divide-[#E8EBF1]">
               {semesterTree.length === 0 && (
-                <p className="px-4 py-6 text-xs text-[#787774] text-center">표시할 학기가 없습니다</p>
+                <p className="px-4 py-6 text-xs text-[#6B7280] text-center">표시할 학기가 없습니다</p>
               )}
               {semesterTree.map(({ key, sem, semClasses }) => (
                 <div key={key}>
                   <div
-                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#37352F] hover:bg-[#F7F7F5] transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-[#1A1D29] hover:bg-[#F4F6FA] transition-colors cursor-pointer"
                     onClick={() => setExpanded(p => ({ ...p, [key]: !p[key] }))}
                   >
                     <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
@@ -439,7 +438,7 @@ export default function ClassesPage() {
                     <span className="flex-1">{key}</span>
                     <button
                       onClick={e => { e.stopPropagation(); openEditSem(sem); }}
-                      className="p-0.5 rounded hover:bg-[#E9E9E7] text-[#787774] transition-colors"
+                      className="p-0.5 rounded hover:bg-[#E8EBF1] text-[#6B7280] transition-colors"
                       title="그룹명 편집"
                     >
                       <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -450,9 +449,9 @@ export default function ClassesPage() {
 
                   {expanded[key] && (
                     semClasses.length === 0 ? (
-                      <div className="px-6 py-2 text-xs text-[#787774]">
+                      <div className="px-6 py-2 text-xs text-[#6B7280]">
                         반이 없습니다.{' '}
-                        <button className="text-[#FF6C37] underline" onClick={() => {
+                        <button className="text-[#2F6BFF] underline" onClick={() => {
                           setCreateSemId(sem.id);
                           setShowCreate(true);
                         }}>+ 반 추가</button>
@@ -464,12 +463,12 @@ export default function ClassesPage() {
                           onClick={() => setSelectedClass(cls)}
                           className={`w-full text-left px-6 py-2 text-sm transition-colors ${
                             selectedClass?.id === cls.id
-                              ? 'bg-[#FFF1EC] text-[#FF6C37] font-medium'
-                              : 'text-[#37352F] hover:bg-[#F7F7F5]'
+                              ? 'bg-[#EAF1FF] text-[#2F6BFF] font-medium'
+                              : 'text-[#1A1D29] hover:bg-[#F4F6FA]'
                           }`}
                         >
                           <div className="font-medium">{cls.schedule}</div>
-                          <div className="text-xs text-[#787774] truncate">{cls.course} · {cls.teacher}</div>
+                          <div className="text-xs text-[#6B7280] truncate">{cls.course} · {cls.teacher}</div>
                         </button>
                       ))
                     )
@@ -486,41 +485,41 @@ export default function ClassesPage() {
             <Card>
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <p className="text-xs font-mono text-[#787774] mb-0.5">{selectedClass.name}</p>
-                  <p className="text-base font-bold text-[#37352F]">{selectedClass.schedule} · {selectedClass.course}</p>
+                  <p className="text-xs font-mono text-[#6B7280] mb-0.5">{selectedClass.name}</p>
+                  <p className="text-base font-bold text-[#1A1D29]">{selectedClass.schedule} · {selectedClass.course}</p>
                 </div>
                 <Button variant="secondary" size="sm" onClick={() => openEdit(selectedClass)}>편집</Button>
               </div>
               <div className="grid grid-cols-3 gap-4">
-                <div className="bg-[#F7F7F5] rounded-lg p-4 text-center">
-                  <div className="text-2xl font-bold text-[#37352F] tabular-nums">
+                <div className="bg-[#F4F6FA] rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-[#1A1D29] tabular-nums">
                     {selectedClass.enrolled_count}
-                    <span className="text-base font-normal text-[#787774]">/{selectedClass.capacity}</span>
+                    <span className="text-base font-normal text-[#6B7280]">/{selectedClass.capacity}</span>
                   </div>
-                  <div className="text-xs text-[#787774] mt-1">수강 인원</div>
+                  <div className="text-xs text-[#6B7280] mt-1">수강 인원</div>
                 </div>
-                <div className="bg-[#F7F7F5] rounded-lg p-4 text-center">
-                  <div className="text-xl font-bold text-[#37352F] tabular-nums">
+                <div className="bg-[#F4F6FA] rounded-lg p-4 text-center">
+                  <div className="text-xl font-bold text-[#1A1D29] tabular-nums">
                     {computeWeeks(selectedClass.start_date, selectedClass.end_date)}주
                   </div>
-                  <div className="text-xs text-[#787774] mt-0.5">
+                  <div className="text-xs text-[#6B7280] mt-0.5">
                     {selectedClass.start_date.slice(5).replace('-', '/')} ~ {selectedClass.end_date.slice(5).replace('-', '/')}
                   </div>
                 </div>
-                <div className="bg-[#F7F7F5] rounded-lg p-4 text-center">
-                  <div className="text-lg font-bold text-[#FF6C37] tabular-nums">
+                <div className="bg-[#F4F6FA] rounded-lg p-4 text-center">
+                  <div className="text-lg font-bold text-[#2F6BFF] tabular-nums">
                     {formatMoney(selectedClass.tuition_fee + selectedClass.material_fee + selectedClass.content_fee)}
                   </div>
-                  <div className="text-xs text-[#787774] mt-1">월 수강료 합계</div>
+                  <div className="text-xs text-[#6B7280] mt-1">월 수강료 합계</div>
                 </div>
               </div>
             </Card>
 
             <Card>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-[#37352F]">
+                <span className="text-sm font-semibold text-[#1A1D29]">
                   수강 학생
-                  <span className="ml-1.5 text-[#787774] font-normal">
+                  <span className="ml-1.5 text-[#6B7280] font-normal">
                     {enrolledStudents.length}/{selectedClass.capacity}
                   </span>
                 </span>
@@ -534,26 +533,26 @@ export default function ClassesPage() {
                 </Button>
               </div>
               {enrolledStudents.length === 0 ? (
-                <p className="text-sm text-[#787774] py-2">등록된 학생이 없습니다.</p>
+                <p className="text-sm text-[#6B7280] py-2">등록된 학생이 없습니다.</p>
               ) : (
                 <div className="grid grid-cols-2 gap-x-4">
                   {enrolledStudents.map(student => (
-                    <div key={student!.id} className="py-2 border-b border-[#E9E9E7]">
+                    <div key={student!.id} className="py-2 border-b border-[#E8EBF1]">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-[#37352F]">{student!.name}</span>
+                        <span className="text-sm font-medium text-[#1A1D29]">{student!.name}</span>
                         <button
                           onClick={() => setPendingUnenroll({ id: student!.id, name: student!.name })}
-                          className="text-xs text-[#787774] hover:text-[#DC2626] transition-colors px-2 py-0.5 rounded hover:bg-[#FEF2F2] flex-shrink-0"
+                          className="text-xs text-[#6B7280] hover:text-[#F2474B] transition-colors px-2 py-0.5 rounded hover:bg-[#FEE9EA] flex-shrink-0"
                         >
                           퇴반
                         </button>
                       </div>
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-xs text-[#787774]">{student!.grade} · {student!.school}</span>
+                        <span className="text-xs text-[#6B7280]">{student!.grade} · {student!.school}</span>
                         <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                          student!.status === '재원' ? 'bg-[#F0FDF4] text-[#0F7B6C]' :
-                          student!.status === '휴원' ? 'bg-[#FFF8E1] text-[#B45309]' :
-                          'bg-[#FEF2F2] text-[#DC2626]'
+                          student!.status === '재원' ? 'bg-[#E6F9EF] text-[#28C76F]' :
+                          student!.status === '휴원' ? 'bg-[#FFF4E0] text-[#B45309]' :
+                          'bg-[#FEE9EA] text-[#F2474B]'
                         }`}>
                           {student!.status}
                         </span>
@@ -571,14 +570,14 @@ export default function ClassesPage() {
                   { label: '교구 대여비 (과세)', amount: selectedClass.material_fee },
                   { label: '콘텐츠 사용비', amount: selectedClass.content_fee },
                 ].map(item => (
-                  <div key={item.label} className="flex items-center justify-between py-2 border-b border-[#E9E9E7] last:border-0">
-                    <span className="text-sm text-[#37352F]">{item.label}</span>
+                  <div key={item.label} className="flex items-center justify-between py-2 border-b border-[#E8EBF1] last:border-0">
+                    <span className="text-sm text-[#1A1D29]">{item.label}</span>
                     <span className="text-sm font-medium tabular-nums">{formatMoney(item.amount)}</span>
                   </div>
                 ))}
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-sm font-semibold text-[#37352F]">합계</span>
-                  <span className="text-base font-bold text-[#FF6C37] tabular-nums">
+                  <span className="text-sm font-semibold text-[#1A1D29]">합계</span>
+                  <span className="text-base font-bold text-[#2F6BFF] tabular-nums">
                     {formatMoney(selectedClass.tuition_fee + selectedClass.material_fee + selectedClass.content_fee)}
                   </span>
                 </div>
@@ -597,15 +596,15 @@ export default function ClassesPage() {
                   { label: '잔여석', value: `${selectedClass.capacity - selectedClass.enrolled_count}석` },
                 ].map(item => (
                   <div key={item.label}>
-                    <div className="text-xs text-[#787774]">{item.label}</div>
-                    <div className="text-sm font-medium text-[#37352F] mt-0.5">{item.value}</div>
+                    <div className="text-xs text-[#6B7280]">{item.label}</div>
+                    <div className="text-sm font-medium text-[#1A1D29] mt-0.5">{item.value}</div>
                   </div>
                 ))}
               </div>
-              <div className="mt-5 pt-4 border-t border-[#E9E9E7] flex items-center justify-between">
+              <div className="mt-5 pt-4 border-t border-[#E8EBF1] flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-[#37352F]">반 삭제</p>
-                  <p className="text-xs text-[#787774] mt-0.5">삭제하면 이 반 설정이 영구히 제거됩니다.</p>
+                  <p className="text-sm font-medium text-[#1A1D29]">반 삭제</p>
+                  <p className="text-xs text-[#6B7280] mt-0.5">삭제하면 이 반 설정이 영구히 제거됩니다.</p>
                 </div>
                 <DeleteButton onClick={() => setConfirmDeleteClass(true)}>반 삭제</DeleteButton>
               </div>
@@ -613,7 +612,7 @@ export default function ClassesPage() {
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-20">
-            <p className="text-sm text-[#787774]">좌측에서 반을 선택하세요</p>
+            <p className="text-sm text-[#6B7280]">좌측에서 반을 선택하세요</p>
           </div>
         )}
       </div>
@@ -667,23 +666,23 @@ export default function ClassesPage() {
 
           {/* 요일 */}
           <div>
-            <label className="block text-sm font-medium text-[#37352F] mb-1.5">
-              요일 <span className="text-xs font-normal text-[#787774]">(복수 선택 가능)</span>
+            <label className="block text-sm font-medium text-[#1A1D29] mb-1.5">
+              요일 <span className="text-xs font-normal text-[#6B7280]">(복수 선택 가능)</span>
             </label>
             <div className="flex gap-2">
               {DAYS.map(day => (
                 <button key={day} type="button" onClick={() => toggleDay(day)}
                   className={`w-10 h-10 rounded-lg text-sm font-medium transition-all ${
                     createDays.includes(day)
-                      ? 'bg-[#FF6C37] text-white shadow-sm'
-                      : 'bg-[#F7F7F5] text-[#787774] border border-[#E9E9E7] hover:border-[#FF6C37]/50'
+                      ? 'bg-[#2F6BFF] text-white shadow-sm'
+                      : 'bg-[#F4F6FA] text-[#6B7280] border border-[#E8EBF1] hover:border-[#2F6BFF]/50'
                   }`}>
                   {day}
                 </button>
               ))}
             </div>
             {createDays.length > 0 && (
-              <p className="text-xs text-[#FF6C37] mt-1.5 font-medium">선택: {createDays.join('·')}요일</p>
+              <p className="text-xs text-[#2F6BFF] mt-1.5 font-medium">선택: {createDays.join('·')}요일</p>
             )}
           </div>
 
@@ -727,11 +726,11 @@ export default function ClassesPage() {
             onChange={e => setCreateRoom(e.target.value)}
           />
 
-          <div className={`rounded-lg px-4 py-3 border ${autoName ? 'bg-[#F0FDF4] border-[#0F7B6C]/20' : 'bg-[#F7F7F5] border-[#E9E9E7]'}`}>
-            <p className="text-xs text-[#787774] mb-1">자동 생성 반명</p>
+          <div className={`rounded-lg px-4 py-3 border ${autoName ? 'bg-[#E6F9EF] border-[#28C76F]/20' : 'bg-[#F4F6FA] border-[#E8EBF1]'}`}>
+            <p className="text-xs text-[#6B7280] mb-1">자동 생성 반명</p>
             {autoName
-              ? <p className="text-sm font-mono font-semibold text-[#0F7B6C]">{autoName}</p>
-              : <p className="text-sm text-[#787774]">학기·요일·시간·과정·담임을 입력하면 자동 생성됩니다</p>
+              ? <p className="text-sm font-mono font-semibold text-[#28C76F]">{autoName}</p>
+              : <p className="text-sm text-[#6B7280]">학기·요일·시간·과정·담임을 입력하면 자동 생성됩니다</p>
             }
           </div>
 
@@ -741,11 +740,11 @@ export default function ClassesPage() {
             <Input label="수강 종료일" type="date" value={createEnd} onChange={e => setCreateEnd(e.target.value)} />
           </div>
           {computedWeeks > 0 && (
-            <p className="text-xs text-[#0F7B6C] -mt-2">→ {computedWeeks}주 과정</p>
+            <p className="text-xs text-[#28C76F] -mt-2">→ {computedWeeks}주 과정</p>
           )}
 
-          <div className="border-t border-[#E9E9E7] pt-4">
-            <p className="text-xs font-semibold text-[#787774] mb-3">수강료 세부내역 (청구 템플릿)</p>
+          <div className="border-t border-[#E8EBF1] pt-4">
+            <p className="text-xs font-semibold text-[#6B7280] mb-3">수강료 세부내역 (청구 템플릿)</p>
             <div className="grid grid-cols-3 gap-2">
               <Input
                 label="교육비 (비과세)"
@@ -769,7 +768,7 @@ export default function ClassesPage() {
                 suffix="원"
               />
             </div>
-            <p className="text-right text-sm font-bold text-[#FF6C37] mt-2">
+            <p className="text-right text-sm font-bold text-[#2F6BFF] mt-2">
               합계 {formatMoney(createTuition + createMaterial + createContent)}
             </p>
           </div>
@@ -801,11 +800,11 @@ export default function ClassesPage() {
         }
       >
         <div className="space-y-4">
-          <div className="bg-[#FFF1EC] border border-[#FF6C37]/20 rounded-lg px-5 py-4 flex items-start gap-3">
-            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#FF6C37" strokeWidth={2} className="mt-0.5 flex-shrink-0">
+          <div className="bg-[#EAF1FF] border border-[#2F6BFF]/20 rounded-lg px-5 py-4 flex items-start gap-3">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2F6BFF" strokeWidth={2} className="mt-0.5 flex-shrink-0">
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p className="text-xs text-[#787774] mt-0.5">원본 학기의 반 구성(요일·시간·수강료·담임)을 대상 학기로 복사합니다. 아래에서 학생 배정까지 함께 복제할 수 있습니다.</p>
+            <p className="text-xs text-[#6B7280] mt-0.5">원본 학기의 반 구성(요일·시간·수강료·담임)을 대상 학기로 복사합니다. 아래에서 학생 배정까지 함께 복제할 수 있습니다.</p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Select
@@ -827,18 +826,18 @@ export default function ClassesPage() {
               type="checkbox"
               checked={cloneStudents}
               onChange={e => setCloneStudents(e.target.checked)}
-              className="h-4 w-4 rounded border-[#D3D3D1] accent-[#FF6C37]"
+              className="h-4 w-4 rounded border-[#E8EBF1] accent-[#2F6BFF]"
             />
-            <span className="text-sm text-[#37352F]">재원 학생도 함께 복제 (각 반의 현재 수강생을 새 학기 반으로 이동)</span>
+            <span className="text-sm text-[#1A1D29]">재원 학생도 함께 복제 (각 반의 현재 수강생을 새 학기 반으로 이동)</span>
           </label>
-          <div className="bg-[#F7F7F5] rounded-lg px-4 py-3 text-sm text-[#787774]">
-            <span className="font-semibold text-[#37352F]">{semLabel(cloneFrom)}</span>의 반{' '}
-            <span className="font-semibold text-[#37352F]">{cloneSourceClasses.length}개</span>를{' '}
-            <span className="font-semibold text-[#37352F]">{semLabel(cloneTo)}</span>(으)로 복제합니다.
+          <div className="bg-[#F4F6FA] rounded-lg px-4 py-3 text-sm text-[#6B7280]">
+            <span className="font-semibold text-[#1A1D29]">{semLabel(cloneFrom)}</span>의 반{' '}
+            <span className="font-semibold text-[#1A1D29]">{cloneSourceClasses.length}개</span>를{' '}
+            <span className="font-semibold text-[#1A1D29]">{semLabel(cloneTo)}</span>(으)로 복제합니다.
             {cloneStudents && (
-              <> 재원 학생 <span className="font-semibold text-[#37352F]">{cloneStudentCount}명</span>도 함께 이동합니다.</>
+              <> 재원 학생 <span className="font-semibold text-[#1A1D29]">{cloneStudentCount}명</span>도 함께 이동합니다.</>
             )}
-            {cloneFrom === cloneTo && <span className="block text-[#E03E3E] mt-1">원본과 대상 학기가 같습니다.</span>}
+            {cloneFrom === cloneTo && <span className="block text-[#F2474B] mt-1">원본과 대상 학기가 같습니다.</span>}
           </div>
         </div>
       </Modal>
@@ -892,16 +891,16 @@ export default function ClassesPage() {
 
           {/* 요일 */}
           <div>
-            <label className="block text-sm font-medium text-[#37352F] mb-1.5">
-              요일 <span className="text-xs font-normal text-[#787774]">(복수 선택 가능)</span>
+            <label className="block text-sm font-medium text-[#1A1D29] mb-1.5">
+              요일 <span className="text-xs font-normal text-[#6B7280]">(복수 선택 가능)</span>
             </label>
             <div className="flex gap-2">
               {DAYS.map(day => (
                 <button key={day} type="button" onClick={() => toggleEditDay(day)}
                   className={`w-10 h-10 rounded-lg text-sm font-medium transition-all ${
                     editDays.includes(day)
-                      ? 'bg-[#FF6C37] text-white shadow-sm'
-                      : 'bg-[#F7F7F5] text-[#787774] border border-[#E9E9E7] hover:border-[#FF6C37]/50'
+                      ? 'bg-[#2F6BFF] text-white shadow-sm'
+                      : 'bg-[#F4F6FA] text-[#6B7280] border border-[#E8EBF1] hover:border-[#2F6BFF]/50'
                   }`}>
                   {day}
                 </button>
@@ -933,14 +932,14 @@ export default function ClassesPage() {
             <Input label="수강 종료일" type="date" value={editEnd} onChange={e => setEditEnd(e.target.value)} />
           </div>
 
-          <div className="border-t border-[#E9E9E7] pt-4">
-            <p className="text-xs font-semibold text-[#787774] mb-3">수강료 세부내역</p>
+          <div className="border-t border-[#E8EBF1] pt-4">
+            <p className="text-xs font-semibold text-[#6B7280] mb-3">수강료 세부내역</p>
             <div className="grid grid-cols-3 gap-2">
               <Input label="교육비 (비과세)" type="text" value={editTuition.toLocaleString('ko-KR')} onChange={e => setEditTuition(parseMoney(e.target.value))} suffix="원" />
               <Input label="교구 대여비 (과세)" type="text" value={editMaterial.toLocaleString('ko-KR')} onChange={e => setEditMaterial(parseMoney(e.target.value))} suffix="원" />
               <Input label="콘텐츠 사용비" type="text" value={editContent.toLocaleString('ko-KR')} onChange={e => setEditContent(parseMoney(e.target.value))} suffix="원" />
             </div>
-            <p className="text-right text-sm font-bold text-[#FF6C37] mt-2">
+            <p className="text-right text-sm font-bold text-[#2F6BFF] mt-2">
               합계 {formatMoney(editTuition + editMaterial + editContent)}
             </p>
           </div>
@@ -1002,17 +1001,17 @@ export default function ClassesPage() {
             </>
           }
         >
-          <p className="text-sm text-[#37352F]">
+          <p className="text-sm text-[#1A1D29]">
             <span className="font-mono font-semibold">{selectedClass.name}</span> 반을 삭제하시겠습니까?
           </p>
           {selectedClass.enrolled_count > 0 && (
-            <div className="mt-3 bg-[#FFF1EC] border border-[#FF6C37]/20 rounded-md px-3 py-2">
-              <p className="text-xs text-[#FF6C37] font-medium">
+            <div className="mt-3 bg-[#EAF1FF] border border-[#2F6BFF]/20 rounded-md px-3 py-2">
+              <p className="text-xs text-[#2F6BFF] font-medium">
                 현재 {selectedClass.enrolled_count}명이 수강 중입니다. 삭제 전 학생을 다른 반으로 이동하세요.
               </p>
             </div>
           )}
-          <p className="text-xs text-[#787774] mt-2">이 작업은 되돌릴 수 없습니다.</p>
+          <p className="text-xs text-[#6B7280] mt-2">이 작업은 되돌릴 수 없습니다.</p>
         </Modal>
       )}
 
@@ -1032,7 +1031,7 @@ export default function ClassesPage() {
             </>
           }
         >
-          <p className="text-sm text-[#37352F]">
+          <p className="text-sm text-[#1A1D29]">
             <span className="font-semibold">{pendingEnroll.name}</span> 학생을{' '}
             <span className="font-semibold">{selectedClass.schedule} · {selectedClass.course}</span>에 입반하시겠습니까?
           </p>
@@ -1055,10 +1054,10 @@ export default function ClassesPage() {
             </>
           }
         >
-          <p className="text-sm text-[#37352F]">
+          <p className="text-sm text-[#1A1D29]">
             <span className="font-semibold">{pendingUnenroll.name}</span> 학생을 이 반에서 퇴반 처리하시겠습니까?
           </p>
-          <p className="text-xs text-[#787774] mt-2">퇴반 후에도 원생 관리에서 다시 입반할 수 있습니다.</p>
+          <p className="text-xs text-[#6B7280] mt-2">퇴반 후에도 원생 관리에서 다시 입반할 수 있습니다.</p>
         </Modal>
       )}
 
@@ -1076,21 +1075,21 @@ export default function ClassesPage() {
             value={enrollSearch}
             onChange={e => setEnrollSearch(e.target.value)}
           />
-          <div className="mt-3 max-h-72 overflow-y-auto divide-y divide-[#E9E9E7]">
+          <div className="mt-3 max-h-72 overflow-y-auto divide-y divide-[#E8EBF1]">
             {enrollableStudents.length === 0 ? (
-              <p className="text-sm text-[#787774] py-4 text-center">
+              <p className="text-sm text-[#6B7280] py-4 text-center">
                 {enrollSearch ? '검색 결과가 없습니다.' : '입반 가능한 학생이 없습니다.'}
               </p>
             ) : (
               enrollableStudents.map(s => (
                 <div key={s.id} className="flex items-center justify-between py-2.5">
                   <div>
-                    <span className="text-sm font-medium text-[#37352F]">{s.name}</span>
-                    <span className="text-xs text-[#787774] ml-2">{s.grade} · {s.school}</span>
+                    <span className="text-sm font-medium text-[#1A1D29]">{s.name}</span>
+                    <span className="text-xs text-[#6B7280] ml-2">{s.grade} · {s.school}</span>
                   </div>
                   <button
                     onClick={() => setPendingEnroll({ id: s.id, name: s.name })}
-                    className="text-xs font-medium text-[#FF6C37] hover:bg-[#FFF1EC] px-2 py-1 rounded transition-colors"
+                    className="text-xs font-medium text-[#2F6BFF] hover:bg-[#EAF1FF] px-2 py-1 rounded transition-colors"
                   >
                     입반
                   </button>

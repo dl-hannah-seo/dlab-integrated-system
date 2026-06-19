@@ -53,7 +53,7 @@ export function DonutChart({
 
   return (
     <div className="flex items-center gap-5">
-      <svg width={size} height={size} className="shrink-0">
+      <svg width={size} height={size} className="shrink-0 chart-fade-in">
         {paths.map(p => (
           <path key={p.label} d={p.path} fill={p.color} />
         ))}
@@ -63,7 +63,7 @@ export function DonutChart({
             y={centerCaption ? cy - 4 : cy}
             textAnchor="middle"
             dominantBaseline="middle"
-            className="fill-[#37352F] font-bold"
+            className="fill-[#1A1D29] font-bold"
             style={{ fontSize: 22 }}
           >
             {centerValue}
@@ -75,7 +75,7 @@ export function DonutChart({
             y={cy + 16}
             textAnchor="middle"
             dominantBaseline="middle"
-            className="fill-[#787774]"
+            className="fill-[#6B7280]"
             style={{ fontSize: 10 }}
           >
             {centerCaption}
@@ -89,15 +89,15 @@ export function DonutChart({
           return (
             <div key={slice.label} className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: slice.color }} />
-              <span className="text-sm text-[#37352F] truncate flex items-center gap-1.5">
+              <span className="text-sm text-[#1A1D29] truncate flex items-center gap-1.5">
                 {slice.label}
                 {slice.badge && (
-                  <span className="text-[10px] font-semibold text-[#FF6C37] bg-[#FFF1EC] px-1.5 py-0.5 rounded">
+                  <span className="text-[10px] font-semibold text-[#2F6BFF] bg-[#EAF1FF] px-1.5 py-0.5 rounded">
                     {slice.badge}
                   </span>
                 )}
               </span>
-              <span className="ml-auto text-sm font-medium tabular-nums text-[#37352F] pl-2 shrink-0">
+              <span className="ml-auto text-sm font-medium tabular-nums text-[#1A1D29] pl-2 shrink-0">
                 {showAmounts
                   ? display.toLocaleString('ko-KR') + '원'
                   : pct + '%'}

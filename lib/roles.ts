@@ -10,6 +10,14 @@ export const DEMO_TEACHER_NAME = '씨드';
 
 export const ROLES: Role[] = ['원장', '교사', 'SO', '학생'];
 
+/** 데모 계정 표시 이름(상담자 기본값 등) — 실제 인증 아님 */
+export const ACCOUNT_NAME: Record<Role, string> = {
+  '원장': '케이',
+  '교사': DEMO_TEACHER_NAME,
+  'SO': '데스크 담당자',
+  '학생': '',
+};
+
 export const ROLE_META: Record<Role, { label: string; sub: string }> = {
   '원장': { label: '캠퍼스 원장', sub: 'manager · 자기 캠퍼스 전체' },
   '교사': { label: '교사(연구원)', sub: 'staff · 담당 반' },
@@ -20,9 +28,9 @@ export const ROLE_META: Record<Role, { label: string; sub: string }> = {
 // 역할별 노출 메뉴 (Sidebar href 기준). 학생은 admin 메뉴 없음(→ 포털).
 const MENU_ALLOWLIST: Record<Role, string[]> = {
   // AI 인사이트(/ai)는 메뉴에서 제거 — 대시보드 AI 인사이트 히어로로 통합됨
-  '원장': ['/dashboard', '/schedule', '/attendance', '/classes', '/teachers', '/students', '/leads', '/payments', '/revenue', '/points', '/settings'],
+  '원장': ['/dashboard', '/promotion', '/leads', '/schedule', '/attendance', '/classes', '/students', '/teachers', '/payments', '/revenue', '/points', '/settings'],
   '교사': ['/dashboard', '/schedule', '/attendance', '/students', '/leads', '/points'],
-  'SO': ['/dashboard', '/schedule', '/attendance', '/classes', '/students', '/leads', '/payments', '/points'],
+  'SO': ['/dashboard', '/promotion', '/leads', '/schedule', '/attendance', '/classes', '/students', '/payments', '/points'],
   '학생': [],
 };
 
@@ -49,15 +57,20 @@ export type MenuLayoutEntry =
   | { type: 'item'; href: string }
   | { type: 'section'; id: string; label: string; hrefs: string[] };
 
+// 원장·SO 공통 레이아웃 — 홍보·상담은 상단 단독, 교육/운영·관리는 접이식 그룹.
+// 그룹 안 메뉴 노출은 allowlist로 판정되므로 SO에서는 강사·손익·설정이 자동 제외됨.
+const SHARED_LAYOUT: MenuLayoutEntry[] = [
+  { type: 'item', href: '/dashboard' },
+  { type: 'item', href: '/promotion' },
+  { type: 'item', href: '/leads' },
+  { type: 'section', id: 'education', label: '교육/운영', hrefs: ['/schedule', '/attendance', '/classes'] },
+  { type: 'section', id: 'manage', label: '관리', hrefs: ['/students', '/teachers', '/payments', '/revenue', '/points'] },
+  { type: 'item', href: '/settings' },
+];
+
 const MENU_LAYOUT: Partial<Record<Role, MenuLayoutEntry[]>> = {
-  // 원장: 디지털 친숙도 고려해 자주 쓰는 건 위로, 나머지는 두 그룹(접힘)으로 정돈
-  '원장': [
-    { type: 'item', href: '/dashboard' },
-    { type: 'item', href: '/schedule' },
-    { type: 'section', id: 'status', label: '현황 조회', hrefs: ['/attendance', '/revenue'] },
-    { type: 'section', id: 'manage', label: '상세 관리', hrefs: ['/classes', '/teachers', '/students', '/leads', '/payments', '/points'] },
-    { type: 'item', href: '/settings' },
-  ],
+  '원장': SHARED_LAYOUT,
+  'SO': SHARED_LAYOUT,
 };
 
 export function menuLayoutForRole(role: Role): MenuLayoutEntry[] | null {

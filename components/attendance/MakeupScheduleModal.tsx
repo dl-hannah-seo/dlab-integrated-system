@@ -44,13 +44,13 @@ export function MakeupScheduleModal({ student, cls, session, onClose, onConfirm 
       title={`보강 잡기 · ${student.name}`}
       footer={
         <>
-          <button onClick={onClose} className="px-3 py-1.5 text-sm text-[#787774] hover:text-[#37352F]">
+          <button onClick={onClose} className="px-3 py-1.5 text-sm text-[#6B7280] hover:text-[#1A1D29]">
             취소
           </button>
           <button
             onClick={confirm}
             disabled={!date}
-            className="px-3.5 py-1.5 text-sm rounded-md bg-[#FF6C37] text-white hover:bg-[#E85F2C] disabled:opacity-50"
+            className="px-3.5 py-1.5 text-sm rounded-md bg-[#2F6BFF] text-white hover:bg-[#1F57E6] disabled:opacity-50"
           >
             보강 등록
           </button>
@@ -58,8 +58,8 @@ export function MakeupScheduleModal({ student, cls, session, onClose, onConfirm 
       }
     >
       <div className="space-y-4">
-        <div className="text-xs text-[#787774]">
-          대상 <span className="text-[#37352F]">{cls.schedule} {cls.course}</span> · 결석{' '}
+        <div className="text-xs text-[#6B7280]">
+          대상 <span className="text-[#1A1D29]">{cls.schedule} {cls.course}</span> · 결석{' '}
           {`${Number(session.session_date.slice(5, 7))}/${Number(session.session_date.slice(8, 10))}`}회차
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -73,7 +73,7 @@ export function MakeupScheduleModal({ student, cls, session, onClose, onConfirm 
           rows={3}
           placeholder="예: 1:1 보강, 강의실 변경 등"
         />
-        <p className="text-xs text-[#BEBDBA]">등록하면 보강 세션이 일정에 추가되고 해당 결석이 보강으로 처리됩니다.</p>
+        <p className="text-xs text-[#AEB4C0]">등록하면 보강 세션이 일정에 추가되고 해당 결석이 보강으로 처리됩니다.</p>
       </div>
     </Modal>
   );

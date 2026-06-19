@@ -33,11 +33,11 @@ export function SlidePanel({ open, onClose, title, children, width = 'md' }: Sli
           open ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E9E9E7] flex-shrink-0">
-          <h2 className="text-base font-semibold text-[#37352F]">{title}</h2>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8EBF1] flex-shrink-0">
+          <h2 className="text-base font-semibold text-[#1A1D29]">{title}</h2>
           <button
             onClick={onClose}
-            className="text-[#787774] hover:text-[#37352F] transition-colors"
+            className="text-[#6B7280] hover:text-[#1A1D29] transition-colors"
             aria-label="닫기"
           >
             <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

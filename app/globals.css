@@ -30,19 +30,26 @@
   font-display: swap;
 }
 
-/* ── 관리자 웹 디자인 토큰 ── */
+/* ── 관리자 웹 디자인 토큰 (Coinbase 브랜드 시스템) ── */
 @theme inline {
-  --color-bg:             #FFFFFF;
-  --color-sidebar:        #F7F7F5;
-  --color-text:           #37352F;
-  --color-text-secondary: #787774;
-  --color-border:         #E9E9E7;
-  --color-primary:        #FF6C37;
-  --color-primary-hover:  #E85A27;
-  --color-primary-light:  #FFF1EC;
-  --color-danger:         #EB5757;
-  --color-success:        #0F7B6C;
-  --color-row-hover:      #F7F7F5;
+  --color-bg:             #FFFFFF;   /* 카드 표면 (흰색) */
+  --color-canvas:         #F4F6FA;   /* 페이지 캔버스 (연회색) — 카드가 떠 있는 배경 */
+  --color-sidebar:        #1C1E26;   /* 다크 사이드바 (니어블랙 차콜) */
+  --color-sidebar-text:   #9CA3AF;   /* 사이드바 비활성 텍스트 */
+  --color-surface-strong: #EEF1F5;   /* 보조 버튼·검색칩·아이콘 플레이트 */
+  --color-text:           #1A1D29;   /* ink */
+  --color-text-secondary: #6B7280;   /* body */
+  --color-muted:          #9CA3AF;   /* muted */
+  --color-border:         #E8EBF1;   /* hairline */
+  --color-border-soft:    #F0F2F6;   /* hairline-soft */
+  --color-primary:        #2F6BFF;   /* 액션 블루 (전반 사용) */
+  --color-primary-hover:  #1F57E6;   /* primary-active */
+  --color-primary-light:  #EAF1FF;   /* 파랑 옅은 틴트 */
+  --color-danger:         #F2474B;   /* 빨강 (In route·미납) */
+  --color-success:        #28C76F;   /* 초록 (Completed·증가) */
+  --color-row-hover:      #F7F9FC;
+
+  --font-mono: 'JetBrains Mono', 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 }
 
 /* ── 키오스크 전용 토큰 (/kiosk 스코프) ── */
@@ -69,7 +76,7 @@ html {
 body {
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 400;
-  color: #37352F;
+  color: #1A1D29;
   background: #FFFFFF;
   -webkit-font-smoothing: antialiased;
 }
@@ -78,21 +85,33 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* ── 배지 클래스 ── */
-.badge-submitted    { background: #FFF1EC; color: #FF6C37; }
-.badge-reviewing    { background: #FFF8E6; color: #D9A80A; }
-.badge-confirmed    { background: #EDF7F5; color: #0F7B6C; }
-.badge-admin-reviewed { background: #E3F2E6; color: #0B6E1A; }
-.badge-completed    { background: #F1F1EF; color: #787774; }
-.badge-paid         { background: #E8F0FE; color: #1A73E8; }
-.badge-danger       { background: #FDECEA; color: #EB5757; }
-.badge-warn         { background: #FFF8E6; color: #D9A80A; }
+/* ── Coinbase 숫자 표기: 가격·증감·통계 등 수치는 모노 ── */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ── 디스플레이 헤딩: 큰 제목은 가벼운 무게 + 음수 자간(에디토리얼 톤) ── */
+.display-tight {
+  letter-spacing: -0.02em;
+}
+
+/* ── 배지 클래스 (파랑/초록/빨강/회색 + 앰버) ── */
+.badge-submitted    { background: #EAF1FF; color: #2F6BFF; }
+.badge-reviewing    { background: #FFF4E0; color: #C18A14; }
+.badge-confirmed    { background: #E6F9EF; color: #28C76F; }
+.badge-admin-reviewed { background: #E6F9EF; color: #1FA85C; }
+.badge-completed    { background: #EEF1F5; color: #6B7280; }
+.badge-paid         { background: #EAF1FF; color: #2F6BFF; }
+.badge-danger       { background: #FEE9EA; color: #F2474B; }
+.badge-warn         { background: #FFF4E0; color: #C18A14; }
 
 /* ── 출결 상태 배지 ── */
-.badge-attend  { background: #EDF7F5; color: #0F7B6C; }
-.badge-absent  { background: #FDECEA; color: #EB5757; }
-.badge-pending { background: #F1F1EF; color: #787774; }
-.badge-makeup  { background: #FFF8E6; color: #D9A80A; }
+.badge-attend  { background: #E6F9EF; color: #28C76F; }
+.badge-absent  { background: #FEE9EA; color: #F2474B; }
+.badge-pending { background: #EEF1F5; color: #6B7280; }
+.badge-makeup  { background: #FFF4E0; color: #C18A14; }
 
 /* ── 시간표 주차 슬라이드 애니메이션 ── */
 @keyframes slide-from-right {
@@ -116,7 +135,37 @@ body {
   animation: wave-bar 0.9s ease-in-out infinite;
 }
 
+/* ── 그래프 등장 애니메이션 ── */
+@keyframes chart-draw      { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes chart-area-rise { from { opacity: 0; transform: scaleY(0.55); } to { opacity: 1; transform: scaleY(1); } }
+@keyframes chart-dot-pop   { 0% { opacity: 0; transform: scale(0); } 60% { transform: scale(1.35); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes chart-bar-grow  { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes chart-fade-in   { from { opacity: 0; transform: translateY(8px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+/* 라인: pathLength=1 정규화 후 stroke-dashoffset 1→0 으로 "그려지는" 효과 */
+.chart-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: chart-draw 1.15s cubic-bezier(0.45, 0, 0.25, 1) forwards;
+}
+.chart-area {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: chart-area-rise 1.15s cubic-bezier(0.45, 0, 0.25, 1) forwards;
+}
+.chart-dot {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: chart-dot-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.chart-bar {
+  transform-origin: bottom;
+  animation: chart-bar-grow 0.85s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+}
+.chart-fade-in { animation: chart-fade-in 0.6s ease-out forwards; }
+
 /* ── 스크롤바 ── */
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #E9E9E7; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: #D5DAE3; border-radius: 3px; }

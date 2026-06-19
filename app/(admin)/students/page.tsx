@@ -8,6 +8,7 @@ import {
   enrollments as initialEnrollments,
   consultations as initialConsultations,
   getInvoiceByStudent,
+  getUnpaidStudents,
   payments,
   attendanceHistory,
   initialAttendance,
@@ -22,7 +23,9 @@ import {
 } from '@/lib/mock-data';
 
 // 원생관리 목록 = 재원/휴원(활성) + 퇴원자 합본
-const initialStudents: Student[] = [...activeStudents, ...withdrawnStudents];
+// 신규 상담 등록 전환으로 activeStudents에 push된 학생도 페이지 진입 시 반영되도록
+// 모듈 평가 시점이 아닌 마운트 시점(지연 초기화)에 합본한다.
+const buildInitialStudents = (): Student[] => [...activeStudents, ...withdrawnStudents];
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input, Select, Textarea } from '@/components/ui/Input';
@@ -30,7 +33,8 @@ import { Table } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { DeleteButton } from '@/components/ui/DeleteButton';
-import { consultationsOf, nextConsultId, addConsultation, updateConsultation, removeConsultation } from '@/lib/consultations';
+import { consultationsOf } from '@/lib/consultations';
+import { atRiskStudents } from '@/lib/at-risk';
 import { parseStudentRows, rowToStudent, buildStudentTemplate, type ParsedStudentRow } from '@/lib/student-import';
 
 const DIVISIONS = ['전체', '유치부', '초등부', '중등부', '고등부'];
@@ -57,26 +61,23 @@ const SESSION_BY_ID: Record<string, ClassSession> = {};
 sessionHistory.forEach(s => { SESSION_BY_ID[s.id] = s; });
 const ATT_LABEL: Record<AttendanceStatus, string> = { attend: '출석', absent: '결석', pending: '미도착', makeup: '보강' };
 
-const TEACHERS = Array.from(new Set(classes.map(c => c.teacher)));
-const CONSULT_METHODS: ConsultMethod[] = ['전화', '대면', '문자·카톡', '기타'];
-
 function formatMoney(n: number) { return n.toLocaleString('ko-KR') + '원'; }
 
 // 보기/편집 공통 필드 행 — 라벨 위치 고정, 값 칸만 텍스트↔입력으로 교체
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-xs text-[#787774]">{label}</span>
+      <span className="text-xs text-[#6B7280]">{label}</span>
       <div className="min-h-[34px] flex items-center">{children}</div>
     </div>
   );
 }
 function ViewText({ children }: { children: React.ReactNode }) {
-  return <span className="text-sm font-medium text-[#37352F]">{children}</span>;
+  return <span className="text-sm font-medium text-[#1A1D29]">{children}</span>;
 }
 
 export default function StudentsPage() {
-  const [localStudents, setLocalStudents] = useState<Student[]>(initialStudents);
+  const [localStudents, setLocalStudents] = useState<Student[]>(buildInitialStudents);
   const [localEnrollments, setLocalEnrollments] = useState<Enrollment[]>(initialEnrollments);
 
   // 학생의 진행 중 수강 반(복수) 헬퍼
@@ -102,6 +103,19 @@ export default function StudentsPage() {
   const [filterGrade, setFilterGrade] = useState('전체');
   const [filterStatus, setFilterStatus] = useState('재원');
   const [filterClass, setFilterClass] = useState('전체');
+  // 대시보드 '퇴원 위험 자세히 보기'(?risk=1) 진입 시에만 켜지는 위험 학생 한정 모드
+  const [riskOnly, setRiskOnly] = useState(false);
+
+  // 위험 학생 집합 — 대시보드와 동일 산식(미납·출석저조·휴원) 재사용
+  const riskEntries = useMemo(
+    () => atRiskStudents(localStudents, new Set(getUnpaidStudents().map(s => s.id))),
+    [localStudents],
+  );
+  const riskIds = useMemo(() => new Set(riskEntries.map(e => e.student.id)), [riskEntries]);
+  const riskReasonsById = useMemo(
+    () => new Map(riskEntries.map(e => [e.student.id, e.reasons.join(' · ')])),
+    [riskEntries],
+  );
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showRegister, setShowRegister] = useState(false);
@@ -201,46 +215,8 @@ export default function StudentsPage() {
   const [editForm, setEditForm] = useState<Student | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // 상담이력 (탭 내 인라인 CRUD)
-  const [localConsultations, setLocalConsultations] = useState<Consultation[]>(initialConsultations);
-  const emptyConsultForm = { date: today, method: '전화' as ConsultMethod, counselor: '', content: '' };
-  const [consultForm, setConsultForm] = useState(emptyConsultForm);
-  const [editingConsultId, setEditingConsultId] = useState<string | null>(null);
-  const [consultEdit, setConsultEdit] = useState<{ date: string; method: ConsultMethod; counselor: string; content: string }>(emptyConsultForm);
-  const [confirmDeleteConsult, setConfirmDeleteConsult] = useState<string | null>(null);
-
-  function resetConsultState() {
-    setConsultForm({ ...emptyConsultForm });
-    setEditingConsultId(null);
-    setConfirmDeleteConsult(null);
-  }
-  function addConsult() {
-    if (!detailStudent || !consultForm.content.trim()) return;
-    const id = nextConsultId(localConsultations, detailStudent.id);
-    setLocalConsultations(prev => addConsultation(prev, {
-      id, student_id: detailStudent.id,
-      date: consultForm.date, method: consultForm.method,
-      counselor: consultForm.counselor.trim(), content: consultForm.content.trim(),
-    }));
-    setConsultForm({ ...emptyConsultForm });
-  }
-  function startEditConsult(c: Consultation) {
-    setConfirmDeleteConsult(null);
-    setEditingConsultId(c.id);
-    setConsultEdit({ date: c.date, method: c.method, counselor: c.counselor, content: c.content });
-  }
-  function saveEditConsult() {
-    if (!editingConsultId || !consultEdit.content.trim()) return;
-    setLocalConsultations(prev => updateConsultation(prev, editingConsultId, {
-      date: consultEdit.date, method: consultEdit.method,
-      counselor: consultEdit.counselor.trim(), content: consultEdit.content.trim(),
-    }));
-    setEditingConsultId(null);
-  }
-  function deleteConsult(id: string) {
-    setLocalConsultations(prev => removeConsultation(prev, id));
-    setConfirmDeleteConsult(null);
-  }
+  // 상담이력 (조회 전용) — 입력·수정·삭제는 상담 관리 > 재원상담 탭에서 처리
+  const [localConsultations] = useState<Consultation[]>(initialConsultations);
 
   const classOptions = [
     { value: '전체', label: '전체 반' },
@@ -248,14 +224,16 @@ export default function StudentsPage() {
   ];
   const filtered = useMemo(() => {
     return localStudents.filter(s => {
+      if (riskOnly && !riskIds.has(s.id)) return false;
       if (filterName && !s.name.includes(filterName)) return false;
       if (filterGrade !== '전체' && s.grade !== filterGrade) return false;
-      if (filterStatus !== '전체' && s.status !== filterStatus) return false;
+      // 위험 모드에서는 등록구분(재원/휴원 등) 무관하게 위험 학생 전부 노출
+      if (!riskOnly && filterStatus !== '전체' && s.status !== filterStatus) return false;
       const myClassIds = activeClassIds(s.id);
       if (filterClass !== '전체' && !myClassIds.includes(filterClass)) return false;
       return true;
     });
-  }, [localStudents, localEnrollments, filterName, filterGrade, filterStatus, filterClass]);
+  }, [localStudents, localEnrollments, filterName, filterGrade, filterStatus, filterClass, riskOnly, riskIds]);
 
   function resetFilters() {
     setFilterName(''); setFilterGrade('전체'); setFilterStatus('재원'); setFilterClass('전체');
@@ -285,14 +263,16 @@ export default function StudentsPage() {
     setEditMode(false);
     setEditForm({ ...s });
     setConfirmDelete(false);
-    resetConsultState();
   }
-  // 배치표/외부에서 ?detail=<원생ID> 로 진입 시 해당 원생 상세 자동 오픈
+  // 외부 진입 쿼리: ?risk=1 → 퇴원 위험 학생 한정 모드, ?detail=<원생ID> → 상세 자동 오픈
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get('detail');
-    if (!id) return;
-    const target = localStudents.find(s => s.id === id);
-    if (target) openDetail(target);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('risk') === '1') setRiskOnly(true);
+    const id = params.get('detail');
+    if (id) {
+      const target = localStudents.find(s => s.id === id);
+      if (target) openDetail(target);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -300,7 +280,6 @@ export default function StudentsPage() {
     setDetailStudent(null);
     setEditMode(false);
     setConfirmDelete(false);
-    resetConsultState();
   }
   function startEdit() {
     if (!detailStudent) return;
@@ -350,7 +329,7 @@ export default function StudentsPage() {
       key: '_check', header: '',
       render: (row: Student) => (
         <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleSelect(row.id)}
-          className="w-4 h-4 accent-[#FF6C37]" onClick={e => e.stopPropagation()} />
+          className="w-4 h-4 accent-[#2F6BFF]" onClick={e => e.stopPropagation()} />
       ),
       className: 'w-10',
     },
@@ -366,7 +345,19 @@ export default function StudentsPage() {
     { key: 'parent_phone', header: '모 연락처', render: (r: Student) => <span className="tabular-nums text-xs">{r.parent_phone}</span> },
     {
       key: 'status', header: '등록구분',
-      render: (r: Student) => <Badge variant={r.status === '재원' ? 'active' : 'withdrawn'}>{r.status}</Badge>,
+      render: (r: Student) => (
+        <div className="flex items-center gap-1.5 whitespace-nowrap">
+          <Badge variant={r.status === '재원' ? 'active' : 'withdrawn'}>{r.status}</Badge>
+          {riskIds.has(r.id) && (
+            <span
+              title={`퇴원 위험: ${riskReasonsById.get(r.id)}`}
+              className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium bg-[#FEE9EA] text-[#F2474B]"
+            >
+              퇴원위험
+            </span>
+          )}
+        </div>
+      ),
     },
   ];
 
@@ -474,48 +465,48 @@ export default function StudentsPage() {
           </div>
           {/* 재원형제 (편집 가능) */}
           <div>
-            <p className="text-xs text-[#787774] mb-2">재원형제</p>
+            <p className="text-xs text-[#6B7280] mb-2">재원형제</p>
             {editMode && f ? (
               <div className="space-y-2">
                 {(f.sibling_ids ?? []).map(id => {
                   const sib = localStudents.find(st => st.id === id);
                   if (!sib) return null;
                   return (
-                    <div key={id} className="flex items-center justify-between border border-[#E9E9E7] rounded-lg px-4 py-2.5">
+                    <div key={id} className="flex items-center justify-between border border-[#E8EBF1] rounded-lg px-4 py-2.5">
                       <div>
-                        <span className="text-sm font-medium text-[#37352F]">{sib.name}</span>
-                        <span className="text-xs text-[#787774] ml-2">{sib.grade} · {classes.find(c => c.id === sib.class_id)?.schedule ?? '-'}</span>
+                        <span className="text-sm font-medium text-[#1A1D29]">{sib.name}</span>
+                        <span className="text-xs text-[#6B7280] ml-2">{sib.grade} · {classes.find(c => c.id === sib.class_id)?.schedule ?? '-'}</span>
                       </div>
-                      <button onClick={() => removeSibling(id)} className="text-xs text-[#EB5757] hover:underline">제거</button>
+                      <button onClick={() => removeSibling(id)} className="text-xs text-[#F2474B] hover:underline">제거</button>
                     </div>
                   );
                 })}
                 <input value={siblingSearch} onChange={e => setSiblingSearch(e.target.value)} placeholder="형제 이름 검색 후 추가"
-                  className="w-full border border-[#E9E9E7] rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-[#FF6C37]" />
+                  className="w-full border border-[#E8EBF1] rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-[#2F6BFF]" />
                 {siblingSearch.trim() && (() => {
                   const matches = localStudents.filter(st => st.id !== s.id && !(f.sibling_ids ?? []).includes(st.id) && st.name.includes(siblingSearch.trim())).slice(0, 6);
                   return (
-                    <div className="border border-[#E9E9E7] rounded-md divide-y divide-[#E9E9E7] max-h-32 overflow-y-auto">
+                    <div className="border border-[#E8EBF1] rounded-md divide-y divide-[#E8EBF1] max-h-32 overflow-y-auto">
                       {matches.map(st => (
-                        <button key={st.id} onClick={() => addSibling(st.id)} className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-[#F7F7F5]">
-                          <span className="text-sm text-[#37352F]">{st.name} <span className="text-xs text-[#787774]">{st.grade}</span></span>
-                          <span className="text-xs text-[#FF6C37]">추가</span>
+                        <button key={st.id} onClick={() => addSibling(st.id)} className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-[#F4F6FA]">
+                          <span className="text-sm text-[#1A1D29]">{st.name} <span className="text-xs text-[#6B7280]">{st.grade}</span></span>
+                          <span className="text-xs text-[#2F6BFF]">추가</span>
                         </button>
                       ))}
-                      {matches.length === 0 && <p className="px-3 py-2 text-xs text-[#787774]">검색 결과가 없습니다.</p>}
+                      {matches.length === 0 && <p className="px-3 py-2 text-xs text-[#6B7280]">검색 결과가 없습니다.</p>}
                     </div>
                   );
                 })()}
               </div>
             ) : siblings.length === 0 ? (
-              <p className="text-sm text-[#787774]">등록된 재원형제가 없습니다.</p>
+              <p className="text-sm text-[#6B7280]">등록된 재원형제가 없습니다.</p>
             ) : (
               <div className="space-y-2">
                 {siblings.map(sib => (
-                  <div key={sib.id} className="flex items-center justify-between border border-[#E9E9E7] rounded-lg px-4 py-3">
+                  <div key={sib.id} className="flex items-center justify-between border border-[#E8EBF1] rounded-lg px-4 py-3">
                     <div>
-                      <span className="text-sm font-medium text-[#37352F]">{sib.name}</span>
-                      <span className="text-xs text-[#787774] ml-2">{sib.grade} · {classes.find(c => c.id === sib.class_id)?.schedule ?? '-'}</span>
+                      <span className="text-sm font-medium text-[#1A1D29]">{sib.name}</span>
+                      <span className="text-xs text-[#6B7280] ml-2">{sib.grade} · {classes.find(c => c.id === sib.class_id)?.schedule ?? '-'}</span>
                     </div>
                     <Badge variant={sib.status === '재원' ? 'active' : 'withdrawn'}>{sib.status}</Badge>
                   </div>
@@ -525,45 +516,45 @@ export default function StudentsPage() {
           </div>
 
           {/* 수강 반 */}
-          <div className="bg-[#F7F7F5] rounded-lg p-3">
+          <div className="bg-[#F4F6FA] rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-[#787774]">수강 반 {editMode && <span>(복수 선택 가능)</span>}</p>
+              <p className="text-xs text-[#6B7280]">수강 반 {editMode && <span>(복수 선택 가능)</span>}</p>
               {editMode && f && (
                 <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input type="checkbox" checked={includeEndedEdit} onChange={() => setIncludeEndedEdit(v => !v)} className="w-3.5 h-3.5 accent-[#FF6C37]" />
-                  <span className="text-xs text-[#787774]">종강반 포함</span>
+                  <input type="checkbox" checked={includeEndedEdit} onChange={() => setIncludeEndedEdit(v => !v)} className="w-3.5 h-3.5 accent-[#2F6BFF]" />
+                  <span className="text-xs text-[#6B7280]">종강반 포함</span>
                 </label>
               )}
             </div>
             {editMode && f ? (
               <div>
                 <input value={editClassSearch} onChange={e => setEditClassSearch(e.target.value)} placeholder="반 검색 (반명·과정·담임)"
-                  className="w-full border border-[#E9E9E7] rounded-md px-3 py-2 text-sm bg-white mb-2 focus:outline-none focus:border-[#FF6C37]" />
+                  className="w-full border border-[#E8EBF1] rounded-md px-3 py-2 text-sm bg-white mb-2 focus:outline-none focus:border-[#2F6BFF]" />
                 <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
                   {classes.filter(c => matchClass(c, editClassSearch) && (includeEndedEdit || c.end_date >= today || editClasses.has(c.id))).map(c => (
                     <label key={c.id} className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" checked={editClasses.has(c.id)} onChange={() => toggleEditClass(c.id)} className="w-4 h-4 accent-[#FF6C37]" />
-                      <span className="text-sm text-[#37352F]">{c.name}</span>
-                      {c.end_date < today && <span className="text-xs text-[#787774]">(종강)</span>}
+                      <input type="checkbox" checked={editClasses.has(c.id)} onChange={() => toggleEditClass(c.id)} className="w-4 h-4 accent-[#2F6BFF]" />
+                      <span className="text-sm text-[#1A1D29]">{c.name}</span>
+                      {c.end_date < today && <span className="text-xs text-[#6B7280]">(종강)</span>}
                     </label>
                   ))}
                   {classes.filter(c => matchClass(c, editClassSearch) && (includeEndedEdit || c.end_date >= today || editClasses.has(c.id))).length === 0 && (
-                    <p className="text-xs text-[#787774] py-2">검색 결과가 없습니다.</p>
+                    <p className="text-xs text-[#6B7280] py-2">검색 결과가 없습니다.</p>
                   )}
                 </div>
               </div>
             ) : activeClassNames(s.id).length === 0 ? (
-              <p className="text-sm text-[#787774]">미배정</p>
+              <p className="text-sm text-[#6B7280]">미배정</p>
             ) : (
               <div className="space-y-1">
-                {activeClassNames(s.id).map(n => <p key={n} className="text-sm text-[#37352F]">{n}</p>)}
+                {activeClassNames(s.id).map(n => <p key={n} className="text-sm text-[#1A1D29]">{n}</p>)}
               </div>
             )}
           </div>
 
           {/* 현금영수증 발행정보 */}
-          <div className="bg-[#F7F7F5] rounded-lg p-3">
-            <p className="text-xs text-[#787774] mb-2">현금영수증</p>
+          <div className="bg-[#F4F6FA] rounded-lg p-3">
+            <p className="text-xs text-[#6B7280] mb-2">현금영수증</p>
             {editMode && f ? (
               <div className="space-y-2">
                 <div className="w-40">
@@ -593,9 +584,9 @@ export default function StudentsPage() {
                 )}
               </div>
             ) : s.cash_receipt_enabled ? (
-              <p className="text-sm text-[#37352F]">{s.cash_receipt_purpose ?? '소득공제용'}{s.cash_receipt_number ? ` · ${s.cash_receipt_number}` : ''}</p>
+              <p className="text-sm text-[#1A1D29]">{s.cash_receipt_purpose ?? '소득공제용'}{s.cash_receipt_number ? ` · ${s.cash_receipt_number}` : ''}</p>
             ) : (
-              <p className="text-sm text-[#787774]">미발행</p>
+              <p className="text-sm text-[#6B7280]">미발행</p>
             )}
           </div>
 
@@ -606,8 +597,8 @@ export default function StudentsPage() {
           <Field label="메모">
             {editMode && f
               ? <textarea value={f.memo ?? ''} rows={3} placeholder="메모 입력" onChange={e => updateField('memo', e.target.value)}
-                  className="w-full border border-[#E9E9E7] rounded-md px-3 py-2 text-sm text-[#37352F] placeholder:text-[#BEBDBA] focus:outline-none focus:border-[#FF6C37] resize-y" />
-              : <span className="text-sm font-medium text-[#37352F] whitespace-pre-line">{s.memo || '없음'}</span>}
+                  className="w-full border border-[#E8EBF1] rounded-md px-3 py-2 text-sm text-[#1A1D29] placeholder:text-[#AEB4C0] focus:outline-none focus:border-[#2F6BFF] resize-y" />
+              : <span className="text-sm font-medium text-[#1A1D29] whitespace-pre-line">{s.memo || '없음'}</span>}
           </Field>
         </div>
       );
@@ -618,15 +609,15 @@ export default function StudentsPage() {
       const ens = localEnrollments.filter(e => e.student_id === s.id);
       return (
         <div className="space-y-2">
-          {editMode && <p className="text-xs text-[#787774]">수강이력은 편집할 수 없습니다.</p>}
-          {ens.length === 0 && <p className="text-sm text-[#787774]">수강 이력이 없습니다.</p>}
+          {editMode && <p className="text-xs text-[#6B7280]">수강이력은 편집할 수 없습니다.</p>}
+          {ens.length === 0 && <p className="text-sm text-[#6B7280]">수강 이력이 없습니다.</p>}
           {ens.map(e => {
             const cls = classes.find(c => c.id === e.class_id);
             return (
-              <div key={e.id} className="flex items-center justify-between border border-[#E9E9E7] rounded-lg px-4 py-3">
+              <div key={e.id} className="flex items-center justify-between border border-[#E8EBF1] rounded-lg px-4 py-3">
                 <div>
-                  <div className="text-sm font-medium text-[#37352F]">{cls?.name ?? e.class_id}</div>
-                  <div className="text-xs text-[#787774] mt-0.5 tabular-nums">{e.started_at} ~ {e.ended_at ?? '수강 중'}</div>
+                  <div className="text-sm font-medium text-[#1A1D29]">{cls?.name ?? e.class_id}</div>
+                  <div className="text-xs text-[#6B7280] mt-0.5 tabular-nums">{e.started_at} ~ {e.ended_at ?? '수강 중'}</div>
                 </div>
                 <Badge variant={e.ended_at ? 'withdrawn' : 'active'}>{e.ended_at ? (e.end_reason ?? '종료') : '수강 중'}</Badge>
               </div>
@@ -647,32 +638,32 @@ export default function StudentsPage() {
       const denom = attendN + absentN;
       const rate = denom ? Math.round((attendN / denom) * 100) : 0;
       const summary = [
-        { label: '출석률', value: denom ? `${rate}%` : '–', color: '#37352F' },
-        { label: '출석', value: `${attendN}회`, color: '#0F7B6C' },
-        { label: '결석', value: `${absentN}회`, color: absentN > 0 ? '#EB5757' : '#37352F' },
+        { label: '출석률', value: denom ? `${rate}%` : '–', color: '#1A1D29' },
+        { label: '출석', value: `${attendN}회`, color: '#28C76F' },
+        { label: '결석', value: `${absentN}회`, color: absentN > 0 ? '#F2474B' : '#1A1D29' },
       ];
       return (
         <div className="space-y-4">
-          {editMode && <p className="text-xs text-[#787774]">출결 이력은 편집할 수 없습니다.</p>}
+          {editMode && <p className="text-xs text-[#6B7280]">출결 이력은 편집할 수 없습니다.</p>}
           <div className="grid grid-cols-3 gap-3">
             {summary.map(c => (
-              <div key={c.label} className="border border-[#E9E9E7] rounded-lg p-3">
-                <p className="text-xs text-[#787774]">{c.label}</p>
+              <div key={c.label} className="border border-[#E8EBF1] rounded-lg p-3">
+                <p className="text-xs text-[#6B7280]">{c.label}</p>
                 <p className="text-xl font-bold mt-1" style={{ color: c.color }}>{c.value}</p>
               </div>
             ))}
           </div>
           {recs.length === 0 ? (
-            <p className="text-sm text-[#787774]">출결 이력이 없습니다.</p>
+            <p className="text-sm text-[#6B7280]">출결 이력이 없습니다.</p>
           ) : (
             <div className="space-y-2">
               {recs.map(({ rec, sess }) => {
                 const cls = classes.find(c => c.id === sess.class_id);
                 return (
-                  <div key={rec.id} className="flex items-center justify-between border border-[#E9E9E7] rounded-lg px-4 py-2.5">
+                  <div key={rec.id} className="flex items-center justify-between border border-[#E8EBF1] rounded-lg px-4 py-2.5">
                     <div>
-                      <span className="text-sm text-[#37352F] tabular-nums">{sess.session_date}</span>
-                      <span className="text-xs text-[#787774] ml-2">{cls?.name ?? sess.class_id}</span>
+                      <span className="text-sm text-[#1A1D29] tabular-nums">{sess.session_date}</span>
+                      <span className="text-xs text-[#6B7280] ml-2">{cls?.name ?? sess.class_id}</span>
                     </div>
                     <Badge variant={rec.status}>{ATT_LABEL[rec.status]}</Badge>
                   </div>
@@ -684,7 +675,7 @@ export default function StudentsPage() {
       );
     }
 
-    // 상담이력 (탭 자체가 상시 인라인 편집 가능)
+    // 상담이력 (조회 전용) — 입력·수정·삭제는 상담 관리 > 재원상담 탭에서
     if (detailTab === '상담이력') {
       const list = consultationsOf(localConsultations, s.id);
       const methodBadge: Record<ConsultMethod, 'primary' | 'success' | 'warn' | 'default'> = {
@@ -692,80 +683,22 @@ export default function StudentsPage() {
       };
       return (
         <div className="space-y-4">
-          {/* 신규 상담 입력폼 */}
-          <div className="bg-white border border-[#E9E9E7] rounded-lg p-4 space-y-3">
-            <p className="text-xs font-semibold text-[#787774]">상담 기록 추가</p>
-            <div className="grid grid-cols-3 gap-3">
-              <Input label="상담일자" type="date" value={consultForm.date}
-                onChange={e => setConsultForm(f => ({ ...f, date: e.target.value }))} />
-              <Select label="상담유형" value={consultForm.method}
-                onChange={e => setConsultForm(f => ({ ...f, method: e.target.value as ConsultMethod }))}
-                options={CONSULT_METHODS.map(m => ({ value: m, label: m }))} />
-              <div>
-                <Input label="상담자" list="consult-counselor-options" placeholder="이름 입력"
-                  value={consultForm.counselor}
-                  onChange={e => setConsultForm(f => ({ ...f, counselor: e.target.value }))} />
-                <datalist id="consult-counselor-options">
-                  {TEACHERS.map(t => <option key={t} value={t} />)}
-                </datalist>
-              </div>
-            </div>
-            <Textarea label="상담내용" rows={3} value={consultForm.content}
-              placeholder="상담 내용을 입력하세요"
-              onChange={e => setConsultForm(f => ({ ...f, content: e.target.value }))} />
-            <div className="flex justify-end">
-              <Button size="sm" onClick={addConsult} disabled={!consultForm.content.trim()}>추가</Button>
-            </div>
-          </div>
+          <p className="text-xs text-[#9CA3AF]">상담 기록 입력·수정은 상담 관리 &gt; 재원상담 탭에서 할 수 있습니다.</p>
 
-          {/* 기록 목록 (최신순) */}
+          {/* 기록 목록 (최신순, 조회 전용) */}
           {list.length === 0 ? (
-            <p className="text-sm text-[#787774]">등록된 상담 이력이 없습니다.</p>
+            <p className="text-sm text-[#6B7280]">등록된 상담 이력이 없습니다.</p>
           ) : (
             <div className="space-y-2">
-              {list.map(c => editingConsultId === c.id ? (
-                <div key={c.id} className="border border-[#FF6C37]/40 rounded-lg p-4 space-y-3">
-                  <div className="grid grid-cols-3 gap-3">
-                    <Input label="상담일자" type="date" value={consultEdit.date}
-                      onChange={e => setConsultEdit(f => ({ ...f, date: e.target.value }))} />
-                    <Select label="상담유형" value={consultEdit.method}
-                      onChange={e => setConsultEdit(f => ({ ...f, method: e.target.value as ConsultMethod }))}
-                      options={CONSULT_METHODS.map(m => ({ value: m, label: m }))} />
-                    <div>
-                      <Input label="상담자" list="consult-counselor-options"
-                        value={consultEdit.counselor}
-                        onChange={e => setConsultEdit(f => ({ ...f, counselor: e.target.value }))} />
-                    </div>
+              {list.map(c => (
+                <div key={c.id} className="border border-[#E8EBF1] rounded-lg px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-[#1A1D29] tabular-nums">{c.date}</span>
+                    <Badge variant={methodBadge[c.method]}>{c.method}</Badge>
+                    <span className="text-xs text-[#9CA3AF]">{c.target === '학부모' ? '학부모 상담' : '학생 상담'}</span>
+                    {c.counselor && <span className="text-xs text-[#6B7280]">· {c.counselor}</span>}
                   </div>
-                  <Textarea label="상담내용" rows={3} value={consultEdit.content}
-                    onChange={e => setConsultEdit(f => ({ ...f, content: e.target.value }))} />
-                  <div className="flex justify-end gap-2">
-                    <Button variant="secondary" size="sm" onClick={() => setEditingConsultId(null)}>취소</Button>
-                    <Button size="sm" onClick={saveEditConsult} disabled={!consultEdit.content.trim()}>저장</Button>
-                  </div>
-                </div>
-              ) : (
-                <div key={c.id} className="border border-[#E9E9E7] rounded-lg px-4 py-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-[#37352F] tabular-nums">{c.date}</span>
-                      <Badge variant={methodBadge[c.method]}>{c.method}</Badge>
-                      {c.counselor && <span className="text-xs text-[#787774]">{c.counselor}</span>}
-                    </div>
-                    {confirmDeleteConsult === c.id ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-[#787774]">삭제할까요?</span>
-                        <button onClick={() => deleteConsult(c.id)} className="text-xs text-[#EB5757] font-medium hover:underline">삭제</button>
-                        <button onClick={() => setConfirmDeleteConsult(null)} className="text-xs text-[#787774] hover:underline">취소</button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <button onClick={() => startEditConsult(c)} className="text-xs text-[#787774] hover:text-[#37352F] hover:underline">수정</button>
-                        <DeleteButton className="text-xs" onClick={() => setConfirmDeleteConsult(c.id)}>삭제</DeleteButton>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-sm text-[#37352F] mt-2 whitespace-pre-line">{c.content}</p>
+                  <p className="text-sm text-[#1A1D29] mt-2 whitespace-pre-line">{c.content}</p>
                 </div>
               ))}
             </div>
@@ -778,29 +711,29 @@ export default function StudentsPage() {
     const invs = getInvoiceByStudent(s.id);
     return (
       <div className="space-y-2">
-        {editMode && <p className="text-xs text-[#787774]">수납이력은 편집할 수 없습니다.</p>}
-        {invs.length === 0 && <p className="text-sm text-[#787774]">수납 이력이 없습니다.</p>}
+        {editMode && <p className="text-xs text-[#6B7280]">수납이력은 편집할 수 없습니다.</p>}
+        {invs.length === 0 && <p className="text-sm text-[#6B7280]">수납 이력이 없습니다.</p>}
         {invs.map(inv => {
           const total = inv.tuition_amount + inv.material_amount + inv.content_amount - inv.discount_amount;
           const pay = payments.find(p => p.invoice_id === inv.id);
           const badge = inv.status === '완납' ? 'paid' : inv.status === '미납' ? 'unpaid' : inv.status === '부분납' ? 'partial' : 'default';
           return (
-            <div key={inv.id} className="border border-[#E9E9E7] rounded-lg px-4 py-3">
+            <div key={inv.id} className="border border-[#E8EBF1] rounded-lg px-4 py-3">
               <div className="flex items-center justify-between">
-                <div className="text-sm font-medium text-[#37352F]">{inv.billing_month} 수강분</div>
+                <div className="text-sm font-medium text-[#1A1D29]">{inv.billing_month} 수강분</div>
                 <Badge variant={badge}>{inv.status}</Badge>
               </div>
-              <div className="grid grid-cols-3 gap-2 mt-2 text-xs text-[#787774]">
+              <div className="grid grid-cols-3 gap-2 mt-2 text-xs text-[#6B7280]">
                 <span>교육비 {formatMoney(inv.tuition_amount)}</span>
                 <span>교구비 {formatMoney(inv.material_amount)}</span>
                 <span>콘텐츠비 {formatMoney(inv.content_amount)}</span>
               </div>
-              <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#E9E9E7]">
-                <span className="text-xs text-[#787774]">
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#E8EBF1]">
+                <span className="text-xs text-[#6B7280]">
                   {inv.discount_amount > 0 ? `할인 ${formatMoney(inv.discount_amount)} · ` : ''}
                   {pay ? `${pay.method} · ${pay.paid_at.slice(0, 10)}` : '미수납'}
                 </span>
-                <span className="text-sm font-semibold text-[#37352F] tabular-nums">{formatMoney(total)}</span>
+                <span className="text-sm font-semibold text-[#1A1D29] tabular-nums">{formatMoney(total)}</span>
               </div>
             </div>
           );
@@ -813,10 +746,13 @@ export default function StudentsPage() {
     <div>
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-[#37352F]">원생 관리</h1>
-          <p className="text-sm text-[#787774] mt-1">조건별 조회 · 신규 등록/삭제 · 정보 편집 · 문자 발송 · 엑셀 일괄 등록/내보내기</p>
+          <h1 className="text-xl font-bold text-[#1A1D29]">원생 관리</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <input type="checkbox" checked={riskOnly} onChange={e => setRiskOnly(e.target.checked)} className="w-4 h-4 accent-[#F2474B]" />
+            <span className="text-sm text-[#1A1D29]">퇴원위험생만 보기</span>
+          </label>
           <Button variant="secondary" size="sm" onClick={() => setShowImport(true)}>
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -845,10 +781,18 @@ export default function StudentsPage() {
         </div>
       </Card>
 
+      {/* 퇴원 위험 한정 모드 배너 (대시보드 진입 전용) */}
+      {riskOnly && (
+        <div className="mb-3 flex items-center gap-3 px-4 py-2.5 bg-[#FEE9EA] border border-[#F2474B]/20 rounded-lg">
+          <span className="text-sm font-medium text-[#F2474B]">⚠ 퇴원 위험 {riskEntries.length}명</span>
+          <button className="ml-auto text-xs text-[#6B7280] hover:text-[#1A1D29]" onClick={() => setRiskOnly(false)}>전체 보기</button>
+        </div>
+      )}
+
       {/* 액션 바 */}
       {selected.size > 0 && (
-        <div className="mb-3 flex items-center gap-3 px-4 py-2.5 bg-[#FFF1EC] border border-[#FF6C37]/20 rounded-lg">
-          <span className="text-sm text-[#FF6C37] font-medium">{selected.size}명 선택됨</span>
+        <div className="mb-3 flex items-center gap-3 px-4 py-2.5 bg-[#EAF1FF] border border-[#2F6BFF]/20 rounded-lg">
+          <span className="text-sm text-[#2F6BFF] font-medium">{selected.size}명 선택됨</span>
           <Button size="sm" onClick={() => setShowMsgModal(true)}>
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
@@ -856,17 +800,17 @@ export default function StudentsPage() {
             문자 발송
           </Button>
           <Button variant="secondary" size="sm">엑셀 내보내기</Button>
-          <button className="ml-auto text-xs text-[#787774]" onClick={() => setSelected(new Set())}>선택 해제</button>
+          <button className="ml-auto text-xs text-[#6B7280]" onClick={() => setSelected(new Set())}>선택 해제</button>
         </div>
       )}
 
       {/* 테이블 */}
       <Card>
         <div className="-m-6">
-          <div className="px-4 py-3 border-b border-[#E9E9E7] bg-[#F7F7F5] flex items-center gap-3">
-            <input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} className="w-4 h-4 accent-[#FF6C37]" />
-            <span className="text-xs font-semibold text-[#787774]">전체 선택</span>
-            <span className="ml-auto text-xs text-[#787774]">총 {filtered.length}명</span>
+          <div className="px-4 py-3 border-b border-[#E8EBF1] bg-[#F4F6FA] flex items-center gap-3">
+            <input type="checkbox" checked={selected.size === filtered.length && filtered.length > 0} onChange={toggleAll} className="w-4 h-4 accent-[#2F6BFF]" />
+            <span className="text-xs font-semibold text-[#6B7280]">전체 선택</span>
+            <span className="ml-auto text-xs text-[#6B7280]">총 {filtered.length}명</span>
           </div>
           <Table
             columns={columns as unknown as Parameters<typeof Table>[0]['columns']}
@@ -900,13 +844,13 @@ export default function StudentsPage() {
           }
         >
           <div className="space-y-4">
-            <div className="flex gap-2 border-b border-[#E9E9E7] pb-3">
+            <div className="flex gap-2 border-b border-[#E8EBF1] pb-3">
               {DETAIL_TABS.map(tab => (
                 <button
                   key={tab}
                   onClick={() => setDetailTab(tab)}
                   className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${
-                    detailTab === tab ? 'bg-[#FFF1EC] text-[#FF6C37]' : 'text-[#37352F] hover:bg-[#F7F7F5]'
+                    detailTab === tab ? 'bg-[#EAF1FF] text-[#2F6BFF]' : 'text-[#1A1D29] hover:bg-[#F4F6FA]'
                   }`}
                 >
                   {tab}
@@ -932,8 +876,8 @@ export default function StudentsPage() {
             </>
           }
         >
-          <p className="text-sm text-[#37352F]"><span className="font-semibold">{detailStudent.name}</span> 원생을 목록에서 삭제하시겠습니까?</p>
-          <p className="text-xs text-[#787774] mt-2">이 작업은 되돌릴 수 없습니다.</p>
+          <p className="text-sm text-[#1A1D29]"><span className="font-semibold">{detailStudent.name}</span> 원생을 목록에서 삭제하시겠습니까?</p>
+          <p className="text-xs text-[#6B7280] mt-2">이 작업은 되돌릴 수 없습니다.</p>
         </Modal>
       )}
 
@@ -952,7 +896,7 @@ export default function StudentsPage() {
       >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <Input label={<>이름 <span className="text-[#EB5757]">*</span></>} placeholder="홍길동" value={regName} onChange={e => setRegName(e.target.value)} />
+            <Input label={<>이름 <span className="text-[#F2474B]">*</span></>} placeholder="홍길동" value={regName} onChange={e => setRegName(e.target.value)} />
             <Select label="성별" value={regGender} onChange={e => setRegGender(e.target.value)} options={[{ value: '', label: '선택' }, { value: '남', label: '남' }, { value: '여', label: '여' }]} />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -961,7 +905,7 @@ export default function StudentsPage() {
           </div>
           <Input label="학교" placeholder="판교초" />
           <div>
-            <p className="text-sm font-medium text-[#37352F] mb-1">보호자 연락처 <span className="text-xs font-normal text-[#787774]">(모·부·기타 중 1개 이상 필수)</span></p>
+            <p className="text-sm font-medium text-[#1A1D29] mb-1">보호자 연락처 <span className="text-xs font-normal text-[#6B7280]">(모·부·기타 중 1개 이상 필수)</span></p>
             <div className="grid grid-cols-2 gap-3">
               <Input label="모 연락처" placeholder="010-0000-0000" value={regMotherPhone} onChange={e => setRegMotherPhone(e.target.value)} />
               <Input label="부 연락처" placeholder="010-0000-0000" value={regFatherPhone} onChange={e => setRegFatherPhone(e.target.value)} />
@@ -975,7 +919,7 @@ export default function StudentsPage() {
               </div>
             </div>
             {regName.trim() !== '' && !regMotherPhone.trim() && !regFatherPhone.trim() && !regOtherPhone.trim() && (
-              <p className="text-xs text-[#EB5757] mt-1">모·부·기타 보호자 연락처 중 최소 1개는 필수입니다.</p>
+              <p className="text-xs text-[#F2474B] mt-1">모·부·기타 보호자 연락처 중 최소 1개는 필수입니다.</p>
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -993,39 +937,39 @@ export default function StudentsPage() {
           )}
           <div>
             <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-[#37352F]">입반할 반 <span className="text-xs font-normal text-[#787774]">(복수 선택 가능)</span></label>
+              <label className="text-sm font-medium text-[#1A1D29]">입반할 반 <span className="text-xs font-normal text-[#6B7280]">(복수 선택 가능)</span></label>
               <label className="flex items-center gap-1.5 cursor-pointer">
-                <input type="checkbox" checked={includeEndedReg} onChange={() => setIncludeEndedReg(v => !v)} className="w-3.5 h-3.5 accent-[#FF6C37]" />
-                <span className="text-xs text-[#787774]">종강반 포함</span>
+                <input type="checkbox" checked={includeEndedReg} onChange={() => setIncludeEndedReg(v => !v)} className="w-3.5 h-3.5 accent-[#2F6BFF]" />
+                <span className="text-xs text-[#6B7280]">종강반 포함</span>
               </label>
             </div>
             <input value={regClassSearch} onChange={e => setRegClassSearch(e.target.value)} placeholder="반 검색 (반명·과정·담임)"
-              className="w-full border border-[#E9E9E7] rounded-md px-3 py-2 text-sm bg-white mt-1.5 focus:outline-none focus:border-[#FF6C37]" />
-            <div className="mt-1.5 border border-[#E9E9E7] rounded-md divide-y divide-[#E9E9E7] max-h-40 overflow-y-auto">
+              className="w-full border border-[#E8EBF1] rounded-md px-3 py-2 text-sm bg-white mt-1.5 focus:outline-none focus:border-[#2F6BFF]" />
+            <div className="mt-1.5 border border-[#E8EBF1] rounded-md divide-y divide-[#E8EBF1] max-h-40 overflow-y-auto">
               {classes.filter(c => matchClass(c, regClassSearch) && (includeEndedReg || c.end_date >= today || regClasses.has(c.id))).map(c => (
-                <label key={c.id} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[#F7F7F5]">
-                  <input type="checkbox" checked={regClasses.has(c.id)} onChange={() => toggleRegClass(c.id)} className="w-4 h-4 accent-[#FF6C37]" />
-                  <span className="text-sm text-[#37352F]">{c.name}</span>
-                  {c.end_date < today && <span className="text-xs text-[#787774]">(종강)</span>}
+                <label key={c.id} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-[#F4F6FA]">
+                  <input type="checkbox" checked={regClasses.has(c.id)} onChange={() => toggleRegClass(c.id)} className="w-4 h-4 accent-[#2F6BFF]" />
+                  <span className="text-sm text-[#1A1D29]">{c.name}</span>
+                  {c.end_date < today && <span className="text-xs text-[#6B7280]">(종강)</span>}
                 </label>
               ))}
               {classes.filter(c => matchClass(c, regClassSearch) && (includeEndedReg || c.end_date >= today || regClasses.has(c.id))).length === 0 && (
-                <p className="px-3 py-2 text-xs text-[#787774]">검색 결과가 없습니다.</p>
+                <p className="px-3 py-2 text-xs text-[#6B7280]">검색 결과가 없습니다.</p>
               )}
             </div>
-            <p className="text-xs text-[#787774] mt-1">선택하지 않으면 미배정으로 등록됩니다.</p>
+            <p className="text-xs text-[#6B7280] mt-1">선택하지 않으면 미배정으로 등록됩니다.</p>
           </div>
           <Input label="특이사항 (선택)" placeholder="예: 견과류 알레르기" />
           <Textarea label="메모 (선택)" rows={3} placeholder="상담 내용 등 비공개 메모" />
           {regClasses.size === 0 ? (
-            <div className="bg-[#FFF8E6] border border-[#D9A80A]/30 rounded-lg px-5 py-3">
-              <p className="text-sm font-semibold text-[#D9A80A]">반 미배정 안내</p>
-              <p className="text-xs text-[#787774] mt-1">반을 나중에 배정하면 그 시점에 청구 자료가 생성됩니다. 지금은 청구가 생성되지 않습니다.</p>
+            <div className="bg-[#FFF4E0] border border-[#C18A14]/30 rounded-lg px-5 py-3">
+              <p className="text-sm font-semibold text-[#C18A14]">반 미배정 안내</p>
+              <p className="text-xs text-[#6B7280] mt-1">반을 나중에 배정하면 그 시점에 청구 자료가 생성됩니다. 지금은 청구가 생성되지 않습니다.</p>
             </div>
           ) : (
-            <div className="bg-[#EDF7F5] border border-[#0F7B6C]/20 rounded-lg px-5 py-3">
-              <p className="text-sm font-semibold text-[#0F7B6C]">청구 자동 생성 안내</p>
-              <p className="text-xs text-[#787774] mt-1">선택한 {regClasses.size}개 반의 수강료·납입기준일 설정에 따라 2026-06월 청구 자료가 각각 자동 생성됩니다.</p>
+            <div className="bg-[#E6F9EF] border border-[#28C76F]/20 rounded-lg px-5 py-3">
+              <p className="text-sm font-semibold text-[#28C76F]">청구 자동 생성 안내</p>
+              <p className="text-xs text-[#6B7280] mt-1">선택한 {regClasses.size}개 반의 수강료·납입기준일 설정에 따라 2026-06월 청구 자료가 각각 자동 생성됩니다.</p>
             </div>
           )}
         </div>
@@ -1047,35 +991,35 @@ export default function StudentsPage() {
         }
       >
         <div className="space-y-4">
-          <div className="bg-[#F7F7F5] rounded-lg px-5 py-4">
-            <p className="text-sm text-[#37352F] font-medium">통통통 등 기존 시스템 데이터를 한 번에 가져옵니다.</p>
-            <p className="text-xs text-[#787774] mt-1">
+          <div className="bg-[#F4F6FA] rounded-lg px-5 py-4">
+            <p className="text-sm text-[#1A1D29] font-medium">통통통 등 기존 시스템 데이터를 한 번에 가져옵니다.</p>
+            <p className="text-xs text-[#6B7280] mt-1">
               통통통을 쓰지 않는 경우 아래 양식을 내려받아 작성하세요. 엑셀에서 <span className="font-medium">CSV UTF-8</span> 형식으로 저장하면 됩니다.
             </p>
             <Button variant="secondary" size="sm" className="mt-3" onClick={downloadTemplate}>양식(CSV) 다운로드</Button>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#37352F] mb-1.5">CSV 파일 선택</label>
+            <label className="block text-sm font-medium text-[#1A1D29] mb-1.5">CSV 파일 선택</label>
             <input
               type="file"
               accept=".csv,text/csv"
               onChange={handleImportFile}
-              className="block w-full text-sm text-[#37352F] file:mr-3 file:rounded-md file:border-0 file:bg-[#FF6C37] file:px-3 file:py-2 file:text-white file:cursor-pointer hover:file:bg-[#E85A27]"
+              className="block w-full text-sm text-[#1A1D29] file:mr-3 file:rounded-md file:border-0 file:bg-[#2F6BFF] file:px-3 file:py-2 file:text-white file:cursor-pointer hover:file:bg-[#1F57E6]"
             />
-            {importFileName && <p className="text-xs text-[#787774] mt-1.5">{importFileName} · 총 {importRows.length}행</p>}
+            {importFileName && <p className="text-xs text-[#6B7280] mt-1.5">{importFileName} · 총 {importRows.length}행</p>}
           </div>
 
           {importRows.length > 0 && (
             <div>
               <div className="flex items-center gap-3 mb-2 text-sm">
-                <span className="text-[#0F7B6C] font-medium">유효 {importValid.length}명</span>
-                {importInvalid.length > 0 && <span className="text-[#EB5757] font-medium">오류 {importInvalid.length}건</span>}
-                <span className="text-xs text-[#787774]">반 배정은 등록 후 개별 진행</span>
+                <span className="text-[#28C76F] font-medium">유효 {importValid.length}명</span>
+                {importInvalid.length > 0 && <span className="text-[#F2474B] font-medium">오류 {importInvalid.length}건</span>}
+                <span className="text-xs text-[#6B7280]">반 배정은 등록 후 개별 진행</span>
               </div>
-              <div className="border border-[#E9E9E7] rounded-md max-h-60 overflow-auto">
+              <div className="border border-[#E8EBF1] rounded-md max-h-60 overflow-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-[#F7F7F5] text-[#787774] sticky top-0">
+                  <thead className="bg-[#F4F6FA] text-[#6B7280] sticky top-0">
                     <tr>
                       <th className="text-left font-medium px-3 py-2 w-10">#</th>
                       <th className="text-left font-medium px-3 py-2">이름</th>
@@ -1087,16 +1031,16 @@ export default function StudentsPage() {
                   </thead>
                   <tbody>
                     {importRows.map(r => (
-                      <tr key={r.row} className={`border-t border-[#E9E9E7] ${r.errors.length ? 'bg-[#FDECEA]' : ''}`}>
-                        <td className="px-3 py-2 text-[#787774] tabular-nums">{r.row}</td>
-                        <td className="px-3 py-2 text-[#37352F]">{r.name || <span className="text-[#BEBDBA]">-</span>}</td>
-                        <td className="px-3 py-2 text-[#787774]">{r.grade || '-'}</td>
-                        <td className="px-3 py-2 text-[#787774]">{r.school || '-'}</td>
-                        <td className="px-3 py-2 text-[#787774] tabular-nums">{r.parent_phone || r.father_phone || r.student_phone || '-'}</td>
+                      <tr key={r.row} className={`border-t border-[#E8EBF1] ${r.errors.length ? 'bg-[#FEE9EA]' : ''}`}>
+                        <td className="px-3 py-2 text-[#6B7280] tabular-nums">{r.row}</td>
+                        <td className="px-3 py-2 text-[#1A1D29]">{r.name || <span className="text-[#AEB4C0]">-</span>}</td>
+                        <td className="px-3 py-2 text-[#6B7280]">{r.grade || '-'}</td>
+                        <td className="px-3 py-2 text-[#6B7280]">{r.school || '-'}</td>
+                        <td className="px-3 py-2 text-[#6B7280] tabular-nums">{r.parent_phone || r.father_phone || r.student_phone || '-'}</td>
                         <td className="px-3 py-2">
                           {r.errors.length === 0
-                            ? <span className="text-xs text-[#0F7B6C]">정상</span>
-                            : <span className="text-xs text-[#EB5757]">{r.errors.join(', ')}</span>}
+                            ? <span className="text-xs text-[#28C76F]">정상</span>
+                            : <span className="text-xs text-[#F2474B]">{r.errors.join(', ')}</span>}
                         </td>
                       </tr>
                     ))}
@@ -1104,7 +1048,7 @@ export default function StudentsPage() {
                 </table>
               </div>
               {importInvalid.length > 0 && (
-                <p className="text-xs text-[#787774] mt-1.5">오류 행은 등록에서 제외됩니다. 유효한 {importValid.length}명만 등록됩니다.</p>
+                <p className="text-xs text-[#6B7280] mt-1.5">오류 행은 등록에서 제외됩니다. 유효한 {importValid.length}명만 등록됩니다.</p>
               )}
             </div>
           )}
@@ -1137,33 +1081,33 @@ export default function StudentsPage() {
 
               <div>
                 <Textarea label="메시지 내용" rows={8} value={msgBody} onChange={e => setMsgBody(e.target.value)} />
-                <p className="text-xs text-[#787774] mt-1">{'{'}원생명{'}'} 변수는 각 수신자 이름으로 자동 치환됩니다.</p>
+                <p className="text-xs text-[#6B7280] mt-1">{'{'}원생명{'}'} 변수는 각 수신자 이름으로 자동 치환됩니다.</p>
               </div>
 
               {/* 발송 미리보기 */}
               <div>
-                <p className="text-xs font-semibold text-[#787774] mb-1.5">발송 미리보기 · {sampleName} 기준</p>
-                <div className="bg-[#FEF6E0] border border-[#E9E9E7] rounded-xl px-4 py-3 max-w-[320px]">
-                  <p className="text-[11px] text-[#787774] mb-1.5 flex items-center gap-1">
-                    <span className="inline-block w-3.5 h-3.5 rounded bg-[#FAE100] text-[#37352F] text-[8px] font-bold flex items-center justify-center">talk</span>
+                <p className="text-xs font-semibold text-[#6B7280] mb-1.5">발송 미리보기 · {sampleName} 기준</p>
+                <div className="bg-[#FFF4E0] border border-[#E8EBF1] rounded-xl px-4 py-3 max-w-[320px]">
+                  <p className="text-[11px] text-[#6B7280] mb-1.5 flex items-center gap-1">
+                    <span className="inline-block w-3.5 h-3.5 rounded bg-[#F4B000] text-[#1A1D29] text-[8px] font-bold flex items-center justify-center">talk</span>
                     카카오 알림톡
                   </p>
-                  <p className="text-sm text-[#37352F] whitespace-pre-line leading-relaxed">{previewText}</p>
+                  <p className="text-sm text-[#1A1D29] whitespace-pre-line leading-relaxed">{previewText}</p>
                 </div>
               </div>
 
               {/* 수신 번호 */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-xs font-semibold text-[#787774]">수신 번호 · {recipients.length - missing.length}명 발송</p>
-                  {missing.length > 0 && <p className="text-xs text-[#EB5757]">{missing.length}명 번호 없음 (발송 제외)</p>}
+                  <p className="text-xs font-semibold text-[#6B7280]">수신 번호 · {recipients.length - missing.length}명 발송</p>
+                  {missing.length > 0 && <p className="text-xs text-[#F2474B]">{missing.length}명 번호 없음 (발송 제외)</p>}
                 </div>
-                <div className="max-h-36 overflow-y-auto border border-[#E9E9E7] rounded-md divide-y divide-[#E9E9E7]">
-                  {recipients.length === 0 && <p className="px-3 py-3 text-xs text-[#787774] text-center">선택된 원생이 없습니다.</p>}
+                <div className="max-h-36 overflow-y-auto border border-[#E8EBF1] rounded-md divide-y divide-[#E8EBF1]">
+                  {recipients.length === 0 && <p className="px-3 py-3 text-xs text-[#6B7280] text-center">선택된 원생이 없습니다.</p>}
                   {recipients.map(s => (
                     <div key={s.id} className="flex items-center justify-between px-3 py-1.5">
-                      <span className="text-xs text-[#37352F]">{s.name}</span>
-                      <span className={`text-xs tabular-nums ${phoneOf(s) ? 'text-[#37352F]' : 'text-[#EB5757]'}`}>{phoneOf(s) || '번호 없음'}</span>
+                      <span className="text-xs text-[#1A1D29]">{s.name}</span>
+                      <span className={`text-xs tabular-nums ${phoneOf(s) ? 'text-[#1A1D29]' : 'text-[#F2474B]'}`}>{phoneOf(s) || '번호 없음'}</span>
                     </div>
                   ))}
                 </div>

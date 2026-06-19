@@ -104,9 +104,9 @@ export default function AttendancePage() {
   );
 
   const donutSlices = [
-    { label: '출석', amount: kpi.attend, color: '#0F7B6C' },
-    { label: '미도착', amount: kpi.pending, color: '#C7C6C3' },
-    { label: '결석', amount: kpi.absent, color: '#EB5757' },
+    { label: '출석', amount: kpi.attend, color: '#28C76F' },
+    { label: '미도착', amount: kpi.pending, color: '#AEB4C0' },
+    { label: '결석', amount: kpi.absent, color: '#F2474B' },
   ].filter(s => s.amount > 0);
 
   function openClassById(classId: string) {
@@ -170,26 +170,25 @@ export default function AttendancePage() {
   // ── 원장 전용 단순 뷰: 오늘 출결 KPI 4칸 + 반별 표(읽기 전용) ──
   if (role === '원장') {
     const kpiCards = [
-      { label: '오늘 출석률', value: kpi.attend + kpi.absent ? `${kpi.rate}%` : '–', sub: '전체 반 평균', color: '#37352F' },
-      { label: '출석', value: `${kpi.attend}명`, sub: '정상 출석', color: '#0F7B6C' },
-      { label: '미도착', value: `${kpi.pending}명`, sub: '등원 대기', color: '#787774' },
-      { label: '결석', value: `${kpi.absent}명`, sub: '미등원', color: kpi.absent > 0 ? '#EB5757' : '#37352F' },
+      { label: '오늘 출석률', value: kpi.attend + kpi.absent ? `${kpi.rate}%` : '–', sub: '전체 반 평균', color: '#1A1D29' },
+      { label: '출석', value: `${kpi.attend}명`, sub: '정상 출석', color: '#28C76F' },
+      { label: '미도착', value: `${kpi.pending}명`, sub: '등원 대기', color: '#6B7280' },
+      { label: '결석', value: `${kpi.absent}명`, sub: '미등원', color: kpi.absent > 0 ? '#F2474B' : '#1A1D29' },
     ];
 
     return (
       <div>
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-[#37352F]">출결 현황</h1>
-          <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 오늘 ({todayLabel}) 출결 현황</p>
+          <h1 className="text-xl font-bold text-[#1A1D29]">출결 현황</h1>
         </div>
 
         {/* KPI 카드 4칸 */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           {kpiCards.map(c => (
-            <div key={c.label} className="bg-white border border-[#E9E9E7] rounded-lg p-5">
-              <p className="text-sm text-[#787774]">{c.label}</p>
+            <div key={c.label} className="bg-white border border-[#E8EBF1] rounded-lg p-5">
+              <p className="text-sm text-[#6B7280]">{c.label}</p>
               <p className="text-3xl font-bold mt-2" style={{ color: c.color }}>{c.value}</p>
-              <p className="text-xs text-[#787774] mt-2">{c.sub}</p>
+              <p className="text-xs text-[#6B7280] mt-2">{c.sub}</p>
             </div>
           ))}
         </div>
@@ -198,7 +197,7 @@ export default function AttendancePage() {
         <Card title="반별 출석 현황">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-[#787774] border-b border-[#E9E9E7]">
+              <tr className="text-left text-xs text-[#6B7280] border-b border-[#E8EBF1]">
                 <th className="font-medium pb-2 pr-3">반</th>
                 <th className="font-medium pb-2 pr-3">담당</th>
                 <th className="font-medium pb-2 pr-3 text-right">출석</th>
@@ -212,25 +211,25 @@ export default function AttendancePage() {
                 const sess = sessionOf(cls.id, TODAY);
                 const s = summaryForSession(sess?.id ?? null);
                 return (
-                  <tr key={cls.id} className="border-b border-[#F1F0EF] last:border-0">
+                  <tr key={cls.id} className="border-b border-[#EEF1F5] last:border-0">
                     <td className="py-3 pr-3">
-                      <span className="font-semibold text-[#37352F]">{cls.schedule}</span>
-                      <span className="text-[#37352F] ml-2">{cls.course}</span>
+                      <span className="font-semibold text-[#1A1D29]">{cls.schedule}</span>
+                      <span className="text-[#1A1D29] ml-2">{cls.course}</span>
                     </td>
-                    <td className="py-3 pr-3 text-[#787774]">{cls.teacher}</td>
+                    <td className="py-3 pr-3 text-[#6B7280]">{cls.teacher}</td>
                     {s ? (
                       <>
-                        <td className="py-3 pr-3 text-right text-[#0F7B6C]">{s.attendCount}</td>
-                        <td className="py-3 pr-3 text-right text-[#787774]">{s.pendingCount}</td>
-                        <td className="py-3 pr-3 text-right text-[#EB5757]">{s.absentCount}</td>
-                        <td className="py-3 text-right font-semibold text-[#37352F]">{s.denom ? `${s.pct}%` : '미기록'}</td>
+                        <td className="py-3 pr-3 text-right text-[#28C76F]">{s.attendCount}</td>
+                        <td className="py-3 pr-3 text-right text-[#6B7280]">{s.pendingCount}</td>
+                        <td className="py-3 pr-3 text-right text-[#F2474B]">{s.absentCount}</td>
+                        <td className="py-3 text-right font-semibold text-[#1A1D29]">{s.denom ? `${s.pct}%` : '미기록'}</td>
                       </>
                     ) : (
                       <>
-                        <td className="py-3 pr-3 text-right text-[#BEBDBA]">–</td>
-                        <td className="py-3 pr-3 text-right text-[#BEBDBA]">–</td>
-                        <td className="py-3 pr-3 text-right text-[#BEBDBA]">–</td>
-                        <td className="py-3 text-right text-[#BEBDBA]">수업 없음</td>
+                        <td className="py-3 pr-3 text-right text-[#AEB4C0]">–</td>
+                        <td className="py-3 pr-3 text-right text-[#AEB4C0]">–</td>
+                        <td className="py-3 pr-3 text-right text-[#AEB4C0]">–</td>
+                        <td className="py-3 text-right text-[#AEB4C0]">수업 없음</td>
                       </>
                     )}
                   </tr>
@@ -255,26 +254,25 @@ export default function AttendancePage() {
     const tDenom = tAttend + tAbsent;
     const tRate = tDenom ? Math.round((tAttend / tDenom) * 100) : 0;
     const kpiCards = [
-      { label: '오늘 출석률', value: tDenom ? `${tRate}%` : '–', sub: '담당 반 평균', color: '#37352F' },
-      { label: '출석', value: `${tAttend}명`, sub: '정상 출석', color: '#0F7B6C' },
-      { label: '미도착', value: `${tPending}명`, sub: '등원 대기', color: '#787774' },
-      { label: '결석', value: `${tAbsent}명`, sub: '미등원', color: tAbsent > 0 ? '#EB5757' : '#37352F' },
+      { label: '오늘 출석률', value: tDenom ? `${tRate}%` : '–', sub: '담당 반 평균', color: '#1A1D29' },
+      { label: '출석', value: `${tAttend}명`, sub: '정상 출석', color: '#28C76F' },
+      { label: '미도착', value: `${tPending}명`, sub: '등원 대기', color: '#6B7280' },
+      { label: '결석', value: `${tAbsent}명`, sub: '미등원', color: tAbsent > 0 ? '#F2474B' : '#1A1D29' },
     ];
 
     return (
       <div>
         <div className="mb-6">
-          <h1 className="text-xl font-bold text-[#37352F]">출결 현황</h1>
-          <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 오늘 ({todayLabel}) · {DEMO_TEACHER_NAME} 선생님 담당 반</p>
+          <h1 className="text-xl font-bold text-[#1A1D29]">출결 현황</h1>
         </div>
 
         {/* KPI 카드 4칸 */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           {kpiCards.map(c => (
-            <div key={c.label} className="bg-white border border-[#E9E9E7] rounded-lg p-5">
-              <p className="text-sm text-[#787774]">{c.label}</p>
+            <div key={c.label} className="bg-white border border-[#E8EBF1] rounded-lg p-5">
+              <p className="text-sm text-[#6B7280]">{c.label}</p>
               <p className="text-3xl font-bold mt-2" style={{ color: c.color }}>{c.value}</p>
-              <p className="text-xs text-[#787774] mt-2">{c.sub}</p>
+              <p className="text-xs text-[#6B7280] mt-2">{c.sub}</p>
             </div>
           ))}
         </div>
@@ -282,11 +280,11 @@ export default function AttendancePage() {
         {/* 오늘 담당 반별 출석 현황 — 행 클릭 시 기록부에서 출결 편집 */}
         <Card title="반별 출석 현황">
           {myClasses.length === 0 ? (
-            <p className="text-sm text-[#787774] py-8 text-center">담당 반이 없습니다.</p>
+            <p className="text-sm text-[#6B7280] py-8 text-center">담당 반이 없습니다.</p>
           ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-[#787774] border-b border-[#E9E9E7]">
+              <tr className="text-left text-xs text-[#6B7280] border-b border-[#E8EBF1]">
                 <th className="font-medium pb-2 pr-3">반</th>
                 <th className="font-medium pb-2 pr-3 text-right">출석</th>
                 <th className="font-medium pb-2 pr-3 text-right">미도착</th>
@@ -303,28 +301,28 @@ export default function AttendancePage() {
                   <tr
                     key={cls.id}
                     onClick={() => setOpenClass(cls)}
-                    className="border-b border-[#F1F0EF] last:border-0 cursor-pointer hover:bg-[#FFFBFA]"
+                    className="border-b border-[#EEF1F5] last:border-0 cursor-pointer hover:bg-[#EAF1FF]"
                   >
                     <td className="py-3 pr-3">
-                      <span className="font-semibold text-[#37352F]">{cls.schedule}</span>
-                      <span className="text-[#37352F] ml-2">{cls.course}</span>
+                      <span className="font-semibold text-[#1A1D29]">{cls.schedule}</span>
+                      <span className="text-[#1A1D29] ml-2">{cls.course}</span>
                     </td>
                     {s ? (
                       <>
-                        <td className="py-3 pr-3 text-right text-[#0F7B6C]">{s.attendCount}</td>
-                        <td className="py-3 pr-3 text-right text-[#787774]">{s.pendingCount}</td>
-                        <td className="py-3 pr-3 text-right text-[#EB5757]">{s.absentCount}</td>
-                        <td className="py-3 pr-3 text-right font-semibold text-[#37352F]">{s.denom ? `${s.pct}%` : '미기록'}</td>
+                        <td className="py-3 pr-3 text-right text-[#28C76F]">{s.attendCount}</td>
+                        <td className="py-3 pr-3 text-right text-[#6B7280]">{s.pendingCount}</td>
+                        <td className="py-3 pr-3 text-right text-[#F2474B]">{s.absentCount}</td>
+                        <td className="py-3 pr-3 text-right font-semibold text-[#1A1D29]">{s.denom ? `${s.pct}%` : '미기록'}</td>
                       </>
                     ) : (
                       <>
-                        <td className="py-3 pr-3 text-right text-[#BEBDBA]">–</td>
-                        <td className="py-3 pr-3 text-right text-[#BEBDBA]">–</td>
-                        <td className="py-3 pr-3 text-right text-[#BEBDBA]">–</td>
-                        <td className="py-3 pr-3 text-right text-[#BEBDBA]">수업 없음</td>
+                        <td className="py-3 pr-3 text-right text-[#AEB4C0]">–</td>
+                        <td className="py-3 pr-3 text-right text-[#AEB4C0]">–</td>
+                        <td className="py-3 pr-3 text-right text-[#AEB4C0]">–</td>
+                        <td className="py-3 pr-3 text-right text-[#AEB4C0]">수업 없음</td>
                       </>
                     )}
-                    <td className="py-3 text-right text-[#BEBDBA]">›</td>
+                    <td className="py-3 text-right text-[#AEB4C0]">›</td>
                   </tr>
                 );
               })}
@@ -348,16 +346,15 @@ export default function AttendancePage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-[#37352F]">출결 현황</h1>
-        <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 출석/결석/보강 이력{isTeacher && ` · ${DEMO_TEACHER_NAME} 선생님 담당 반`}</p>
+        <h1 className="text-xl font-bold text-[#1A1D29]">출결 현황</h1>
       </div>
 
       {/* 1행: 당일 원그래프 + 미등원 집중 리스트 */}
       <div className="grid grid-cols-2 gap-4 mb-6 items-stretch">
         <Card title="당일 현황" className="h-full">
-          <p className="text-xs text-[#787774] -mt-1 mb-3">오늘 ({todayLabel}) · 미도착 제외 출석률</p>
+          <p className="text-xs text-[#6B7280] -mt-1 mb-3">오늘 ({todayLabel}) · 미도착 제외 출석률</p>
           {donutSlices.length === 0 ? (
-            <p className="text-sm text-[#787774] py-8 text-center">오늘 출결 기록이 없습니다.</p>
+            <p className="text-sm text-[#6B7280] py-8 text-center">오늘 출결 기록이 없습니다.</p>
           ) : (
             <DonutChart
               slices={donutSlices}
@@ -372,11 +369,11 @@ export default function AttendancePage() {
 
       {/* 보강 대기 목록 — 결석 후 통화 거쳐 나중에 확정/완료 추적 */}
       <Card title="보강 대기 목록" className="mb-6">
-        <p className="text-xs text-[#787774] -mt-1 mb-3">결석 후 보강 미정·예정 건 · 통화 후 일정 확정</p>
+        <p className="text-xs text-[#6B7280] -mt-1 mb-3">결석 후 보강 미정·예정 건 · 통화 후 일정 확정</p>
         {waitlist.length === 0 ? (
-          <p className="text-sm text-[#787774] py-6 text-center">보강 대기 건이 없습니다.</p>
+          <p className="text-sm text-[#6B7280] py-6 text-center">보강 대기 건이 없습니다.</p>
         ) : (
-          <div className="divide-y divide-[#F1F0EF]">
+          <div className="divide-y divide-[#EEF1F5]">
             {waitlist.map(r => {
               const stu = students.find(s => s.id === r.student_id);
               const cls = classes.find(c => c.id === r.class_id);
@@ -385,37 +382,37 @@ export default function AttendancePage() {
               return (
                 <div key={r.id} className="flex items-center justify-between gap-3 py-2.5">
                   <div className="min-w-0">
-                    <span className="text-sm text-[#37352F]">{stu.name}</span>
-                    <span className="text-xs text-[#787774] ml-2">{cls.schedule} {cls.course}</span>
-                    <span className="text-xs text-[#BEBDBA] ml-2">결석 {absentMmdd}</span>
+                    <span className="text-sm text-[#1A1D29]">{stu.name}</span>
+                    <span className="text-xs text-[#6B7280] ml-2">{cls.schedule} {cls.course}</span>
+                    <span className="text-xs text-[#AEB4C0] ml-2">결석 {absentMmdd}</span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {r.status === '예정' ? (
                       <>
-                        <span className="text-xs text-[#0F7B6C]">보강 {r.makeup_date} {r.makeup_time}</span>
+                        <span className="text-xs text-[#28C76F]">보강 {r.makeup_date} {r.makeup_time}</span>
                         <button
                           onClick={() => openSms({
                             recipients: [{ studentId: stu.id, name: stu.name, phone: stu.parent_phone }],
                             template: 'makeup',
                             message: buildMakeupMessage(stu.name, cls.course, r.makeup_date!, r.makeup_time!),
                           })}
-                          className="text-xs px-2.5 py-1 rounded-md border border-[#E9E9E7] text-[#787774] hover:text-[#37352F] transition-colors"
+                          className="text-xs px-2.5 py-1 rounded-md border border-[#E8EBF1] text-[#6B7280] hover:text-[#1A1D29] transition-colors"
                         >
                           문자 재발송
                         </button>
                         <button
                           onClick={() => completeMakeup(r.id)}
-                          className="text-xs px-2.5 py-1 rounded-md bg-[#EDF7F5] text-[#0F7B6C] border border-[#0F7B6C]/30 hover:bg-[#0F7B6C]/10 transition-colors"
+                          className="text-xs px-2.5 py-1 rounded-md bg-[#E6F9EF] text-[#28C76F] border border-[#28C76F]/30 hover:bg-[#28C76F]/10 transition-colors"
                         >
                           완료
                         </button>
                       </>
                     ) : (
                       <>
-                        <span className="text-xs font-medium text-[#EB5757] bg-[#FDECEA] px-2 py-0.5 rounded">미정</span>
+                        <span className="text-xs font-medium text-[#F2474B] bg-[#FEE9EA] px-2 py-0.5 rounded">미정</span>
                         <button
                           onClick={() => setMkPick({ student: stu, cls })}
-                          className="text-xs px-2.5 py-1 rounded-md border border-[#FF6C37] text-[#FF6C37] hover:bg-[#FFF1EC] transition-colors"
+                          className="text-xs px-2.5 py-1 rounded-md border border-[#2F6BFF] text-[#2F6BFF] hover:bg-[#EAF1FF] transition-colors"
                         >
                           보강 잡기
                         </button>
@@ -465,22 +462,22 @@ export default function AttendancePage() {
             <button
               key={cls.id}
               onClick={() => setOpenClass(cls)}
-              className="w-full text-left bg-white border border-[#E9E9E7] rounded-lg px-5 py-4 hover:border-[#FF6C37]/50 hover:bg-[#FFFBFA] transition-colors"
+              className="w-full text-left bg-white border border-[#E8EBF1] rounded-lg px-5 py-4 hover:border-[#2F6BFF]/50 hover:bg-[#EAF1FF] transition-colors"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-[#37352F]">{cls.schedule}</span>
-                  <span className="text-sm text-[#37352F]">{cls.course}</span>
-                  <span className="text-xs text-[#787774]">담당: {cls.teacher}</span>
+                  <span className="text-sm font-semibold text-[#1A1D29]">{cls.schedule}</span>
+                  <span className="text-sm text-[#1A1D29]">{cls.course}</span>
+                  <span className="text-xs text-[#6B7280]">담당: {cls.teacher}</span>
                 </div>
                 <div className="flex items-center gap-4 text-xs">
-                  <span className="text-[#0F7B6C]">출석 {attendCount}</span>
-                  {hasToday && <span className="text-[#787774]">미도착 {pendingCount}</span>}
-                  <span className="text-[#EB5757]">결석 {absentCount}</span>
-                  <span className="font-semibold text-[#37352F]">
+                  <span className="text-[#28C76F]">출석 {attendCount}</span>
+                  {hasToday && <span className="text-[#6B7280]">미도착 {pendingCount}</span>}
+                  <span className="text-[#F2474B]">결석 {absentCount}</span>
+                  <span className="font-semibold text-[#1A1D29]">
                     {denom ? `${!hasToday ? '누적 ' : ''}${pct}%` : '미기록'}
                   </span>
-                  <span className="text-[#BEBDBA]">›</span>
+                  <span className="text-[#AEB4C0]">›</span>
                 </div>
               </div>
             </button>
