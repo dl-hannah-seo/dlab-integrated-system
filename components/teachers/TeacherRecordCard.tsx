@@ -7,7 +7,9 @@ import {
   TODAY, type Teacher, type Subject, type Class, type Consultation,
   type TeacherAttendance, type AttendanceWorkStatus,
 } from '@/lib/mock-data';
-import { classesOfTeacher, consultationsByCounselor, attendanceOf, attendanceSummary } from '@/lib/teacher-hr';
+import { classesOfTeacher, consultationsByCounselor, attendanceOf, attendanceSummary, monthlySalary } from '@/lib/teacher-hr';
+
+const won = (n: number) => n.toLocaleString('ko-KR') + '원';
 
 const TABS = ['인적정보', '담당 수업', '상담이력', '근태'] as const;
 type Tab = typeof TABS[number];
@@ -48,6 +50,7 @@ export function TeacherRecordCard({
   const myConsults = consultationsByCounselor(teacher.name, consultations);
   const myAttendance = attendanceOf(teacher.id, attendance);
   const summary = attendanceSummary(myAttendance);
+  const salary = monthlySalary(teacher, classes);
 
   // 근태 추가 폼
   const [aDate, setADate] = useState(TODAY);
@@ -100,6 +103,17 @@ export function TeacherRecordCard({
           <Row label="입사일" value={teacher.hire_date ?? '미등록'} />
           <Row label="상태" value={teacher.status} />
           <Row label="담당 과목" value={teacher.subject_ids.map(subjectName).join(', ') || '-'} />
+          <Row label="시급" value={teacher.hourly_wage ? won(teacher.hourly_wage) : '미설정'} />
+          <Row label="월 인센티브" value={teacher.incentive ? won(teacher.incentive) : '-'} />
+          <Row
+            label="예상 월급여"
+            value={teacher.hourly_wage ? (
+              <span>
+                <span className="font-semibold">{won(salary.total)}</span>
+                <span className="text-xs text-[#9B9A97]"> · 월 {Math.round(salary.hours)}h 기준(추정) + 인센티브</span>
+              </span>
+            ) : '미설정'}
+          />
         </div>
       )}
 

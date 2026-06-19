@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { classesOfTeacher, consultationsByCounselor, attendanceOf, attendanceSummary } from './teacher-hr';
-import { classes, consultations, teacherAttendance } from './mock-data';
+import {
+  classesOfTeacher, consultationsByCounselor, attendanceOf, attendanceSummary,
+  weeklySessions, monthlyTeachingHours, monthlySalary, SESSION_HOURS, WEEKS_PER_MONTH,
+} from './teacher-hr';
+import { classes, consultations, teacherAttendance, teachers } from './mock-data';
 
 describe('classesOfTeacher', () => {
   it('teacher_id가 일치하는 반만', () => {
@@ -30,5 +33,32 @@ describe('attendanceOf / attendanceSummary', () => {
     const s = attendanceSummary(r);
     expect(s['정상'] + s['지각'] + s['연차'] + s['병가'] + s['결근']).toBe(r.length);
     expect(s['지각']).toBe(1); // ron: 정상2 + 지각1
+  });
+});
+
+describe('weeklySessions / monthlyTeachingHours / monthlySalary', () => {
+  it('schedule의 요일 수 = 주간 수업 횟수', () => {
+    expect(weeklySessions({ schedule: '월·수 09:00' } as never)).toBe(2);
+    expect(weeklySessions({ schedule: '화 14:00' } as never)).toBe(1);
+    expect(weeklySessions({ schedule: '' } as never)).toBe(0);
+  });
+
+  it('월 시수 = Σ주간횟수 × 회당시간 × 월평균주수', () => {
+    const weekly = classesOfTeacher('tch-seed', classes).reduce((s, c) => s + weeklySessions(c), 0);
+    expect(monthlyTeachingHours('tch-seed', classes)).toBeCloseTo(weekly * SESSION_HOURS * WEEKS_PER_MONTH);
+  });
+
+  it('월 급여 = 시급×시수 + 인센티브', () => {
+    const t = teachers.find(x => x.id === 'tch-seed')!;
+    const r = monthlySalary(t, classes);
+    expect(r.basePay).toBe(Math.round(r.hours * (t.hourly_wage ?? 0)));
+    expect(r.total).toBe(r.basePay + (t.incentive ?? 0));
+    expect(r.total).toBeGreaterThan(0);
+  });
+
+  it('시급 미설정 강사는 basePay 0', () => {
+    const r = monthlySalary({ id: 'x', hourly_wage: undefined, incentive: 100000 } as never, classes);
+    expect(r.basePay).toBe(0);
+    expect(r.total).toBe(100000);
   });
 });

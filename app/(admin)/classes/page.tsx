@@ -85,6 +85,7 @@ export default function ClassesPage() {
   const [cloneFrom, setCloneFrom]   = useState(localSemesters[0]?.id ?? '');
   const [cloneTo, setCloneTo]       = useState(localSemesters[1]?.id ?? '');
   const [cloneStart, setCloneStart] = useState('');
+  const [cloneStudents, setCloneStudents] = useState(true);
 
   const [localEnrollments, setLocalEnrollments] = useState<Enrollment[]>(enrollments);
   const [showEnrollModal, setShowEnrollModal] = useState(false);
@@ -287,6 +288,70 @@ export default function ClassesPage() {
     setSelectedClass(updated);
     setExpanded(p => ({ ...p, [`${resolvedEdit.year}년 ${resolvedEdit.season}`]: true }));
     setShowEdit(false);
+  }
+
+  // 복제 원본 학기에 속한 반 목록
+  const cloneSourceClasses = localClasses.filter(c => {
+    const fromGroups = classGroups.filter(g => g.semester_id === cloneFrom);
+    return fromGroups.some(g => g.id === c.class_group_id) || c.semester_id === cloneFrom;
+  });
+  const cloneStudentCount = cloneStudents
+    ? cloneSourceClasses.reduce((sum, c) =>
+        sum + localEnrollments.filter(e => e.class_id === c.id && e.ended_at === null).length, 0)
+    : 0;
+
+  function handleCloneSemester() {
+    const target = localSemesters.find(s => s.id === cloneTo);
+    if (!target || cloneFrom === cloneTo || cloneSourceClasses.length === 0) return;
+
+    const stamp = Date.now();
+    const startDate = cloneStart || today;
+    const newClasses: Class[] = [];
+    const newEnrollments: Enrollment[] = [];
+
+    cloneSourceClasses.forEach((src, i) => {
+      const [dayPart, timePart] = src.schedule.split(' ');
+      const days = dayPart?.split('·') ?? [];
+      const time = timePart ?? '';
+      // 원본 반의 기간(주차)을 유지하여 종료일 산출
+      const durationMs = new Date(src.end_date).getTime() - new Date(src.start_date).getTime();
+      const endDate = new Date(new Date(startDate).getTime() + (Number.isFinite(durationMs) ? durationMs : 0))
+        .toISOString().slice(0, 10);
+
+      const newId = `cl-clone-${stamp}-${i}`;
+      const activeEnrolls = cloneStudents
+        ? localEnrollments.filter(e => e.class_id === src.id && e.ended_at === null)
+        : [];
+
+      newClasses.push({
+        ...src,
+        id: newId,
+        class_group_id: `cg-clone-${stamp}-${i}`,
+        semester_id: target.id,
+        name: buildAutoName(target.year, target.season, days, time, src.course, src.teacher) || src.name,
+        start_date: startDate,
+        end_date: endDate,
+        enrolled_count: activeEnrolls.length,
+      });
+
+      activeEnrolls.forEach((e, j) => {
+        newEnrollments.push({
+          id: `enr-clone-${stamp}-${i}-${j}`,
+          student_id: e.student_id,
+          class_id: newId,
+          started_at: startDate,
+          ended_at: null,
+          end_reason: null,
+        });
+      });
+    });
+
+    setLocalClasses(p => [...p, ...newClasses]);
+    if (newEnrollments.length) setLocalEnrollments(p => [...p, ...newEnrollments]);
+    setExpanded(p => ({ ...p, [`${target.year}년 ${target.season}`]: true }));
+    setSelectedClass(newClasses[0] ?? null);
+    setCloneSuccess(true);
+    setTimeout(() => { setShowClone(false); setCloneSuccess(false); }, 1500);
   }
 
   function handleDeleteClass() {
@@ -729,7 +794,7 @@ export default function ClassesPage() {
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowClone(false)}>취소</Button>
-            <Button onClick={() => { setCloneSuccess(true); setTimeout(() => { setShowClone(false); setCloneSuccess(false); }, 1500); }} loading={cloneSuccess}>
+            <Button onClick={handleCloneSemester} loading={cloneSuccess} disabled={cloneFrom === cloneTo || cloneSourceClasses.length === 0}>
               {cloneSuccess ? '복제 완료!' : '전체 복제 실행'}
             </Button>
           </>
@@ -740,7 +805,7 @@ export default function ClassesPage() {
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#FF6C37" strokeWidth={2} className="mt-0.5 flex-shrink-0">
               <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p className="text-xs text-[#787774] mt-0.5">원본 학기의 반 구성(요일·시간·수강료·담임)을 대상 학기로 복사합니다. 학생 배정은 별도로 진행하세요.</p>
+            <p className="text-xs text-[#787774] mt-0.5">원본 학기의 반 구성(요일·시간·수강료·담임)을 대상 학기로 복사합니다. 아래에서 학생 배정까지 함께 복제할 수 있습니다.</p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Select
@@ -757,9 +822,23 @@ export default function ClassesPage() {
             />
           </div>
           <Input label="복제 후 수강 시작일" type="date" value={cloneStart} onChange={e => setCloneStart(e.target.value)} />
+          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={cloneStudents}
+              onChange={e => setCloneStudents(e.target.checked)}
+              className="h-4 w-4 rounded border-[#D3D3D1] accent-[#FF6C37]"
+            />
+            <span className="text-sm text-[#37352F]">재원 학생도 함께 복제 (각 반의 현재 수강생을 새 학기 반으로 이동)</span>
+          </label>
           <div className="bg-[#F7F7F5] rounded-lg px-4 py-3 text-sm text-[#787774]">
-            <span className="font-semibold text-[#37352F]">{semLabel(cloneFrom)}</span>의 반 구성을{' '}
-            <span className="font-semibold text-[#37352F]">{semLabel(cloneTo)}</span>으로 복제합니다.
+            <span className="font-semibold text-[#37352F]">{semLabel(cloneFrom)}</span>의 반{' '}
+            <span className="font-semibold text-[#37352F]">{cloneSourceClasses.length}개</span>를{' '}
+            <span className="font-semibold text-[#37352F]">{semLabel(cloneTo)}</span>(으)로 복제합니다.
+            {cloneStudents && (
+              <> 재원 학생 <span className="font-semibold text-[#37352F]">{cloneStudentCount}명</span>도 함께 이동합니다.</>
+            )}
+            {cloneFrom === cloneTo && <span className="block text-[#E03E3E] mt-1">원본과 대상 학기가 같습니다.</span>}
           </div>
         </div>
       </Modal>

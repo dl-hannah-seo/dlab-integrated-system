@@ -71,7 +71,7 @@ describe('buildInsights', () => {
       lab_id: 'lab-z', week: LAB_CURRENT_WEEK,
       promo_count: 6, promo_sns: 3, promo_blog: 3, inquiry_count: 10,
       new_enroll_count: 4, re_enroll_count: 3, attendance_rate: 91,
-      makeup_count: 2, makeup_done_rate: 90, withdraw_rate: 4, parent_response_rate: 88,
+      makeup_count: 2, makeup_done_rate: 90, withdraw_rate: 4, payment_collection_rate: 88,
     };
     expect(buildInsights(flat, avg).length).toBeGreaterThanOrEqual(1);
   });

@@ -5,8 +5,9 @@ import {
   addConsultation,
   updateConsultation,
   removeConsultation,
+  consultationGapStudents,
 } from './consultations';
-import type { Consultation } from './mock-data';
+import type { Consultation, Student } from './mock-data';
 
 const sample: Consultation[] = [
   { id: 'cons-s-01-1', student_id: 's-01', date: '2026-03-12', method: '대면', counselor: '김', content: 'A' },
@@ -57,5 +58,33 @@ describe('add/update/remove', () => {
   it('removeConsultation은 해당 id를 제거한다', () => {
     const r = removeConsultation(sample, 'cons-s-01-1');
     expect(r.map(c => c.id)).toEqual(['cons-s-01-2', 'cons-s-02-1']);
+  });
+});
+
+describe('consultationGapStudents', () => {
+  const stu = (id: string, name: string, status: Student['status'] = '재원'): Student =>
+    ({
+      id, name, campus_id: 'c', grade: '초5', school: 'X', parent_phone: '', student_phone: '',
+      status, first_enrolled_at: '2025-01-01', source: '', points: 0, class_id: 'cl-01', streak: 5, title: '',
+    } as Student);
+
+  const cons: Consultation[] = [
+    { id: 'cons-recent-1', student_id: 'recent', date: '2026-05-20', method: '전화', counselor: '김', content: '' }, // 25일 전
+    { id: 'cons-old-1', student_id: 'old', date: '2026-01-10', method: '대면', counselor: '김', content: '' },       // 155일 전
+  ];
+  const students = [stu('recent', '리'), stu('old', '올'), stu('never', '네'), stu('left', '엘', '퇴원')];
+  const asOf = '2026-06-14';
+
+  it('공백 90일 이상 + 상담 없음만, 경과일 내림차순(없음이 최상위)', () => {
+    const r = consultationGapStudents(students, cons, asOf, 90);
+    // recent(25일)는 제외, 퇴원생 제외 → never(null=최상위), old(155일)
+    expect(r.map(e => e.student.id)).toEqual(['never', 'old']);
+    expect(r[0].daysSince).toBeNull();
+    expect(r[1].daysSince).toBe(155);
+  });
+
+  it('재원생만 대상(퇴원 제외)', () => {
+    const r = consultationGapStudents(students, cons, asOf, 90);
+    expect(r.some(e => e.student.id === 'left')).toBe(false);
   });
 });

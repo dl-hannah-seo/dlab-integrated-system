@@ -66,9 +66,9 @@ export function PnlDashboard() {
               ) : (
                 <div className="flex items-center gap-1">
                   <input
-                    type="number"
-                    value={l.amount}
-                    onChange={e => setAmount(l.id, parseInt(e.target.value, 10))}
+                    inputMode="numeric"
+                    value={l.amount ? l.amount.toLocaleString('ko-KR') : ''}
+                    onChange={e => setAmount(l.id, Number(e.target.value.replace(/[^0-9]/g, '')) || 0)}
                     className="w-32 text-right text-sm text-[#37352F] tabular-nums bg-white border border-[#E9E9E7] rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#FF6C37]"
                   />
                   <span className="text-xs text-[#9B9A97]">원</span>

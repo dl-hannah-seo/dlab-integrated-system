@@ -7,16 +7,19 @@ import {
   Teacher, Subject, Class, TeacherAttendance, type TeacherRole,
 } from '@/lib/mock-data';
 import { eligibleClasses } from '@/lib/teacher-matching';
+import { monthlySalary, weeklySessions, SESSION_HOURS, WEEKS_PER_MONTH } from '@/lib/teacher-hr';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
-import { Input, Select } from '@/components/ui/Input';
+import { Input, Select, MoneyInput } from '@/components/ui/Input';
 import { DeleteButton } from '@/components/ui/DeleteButton';
 import { TeacherRecordCard } from '@/components/teachers/TeacherRecordCard';
 
 const STATUSES: Teacher['status'][] = ['재직', '휴직', '퇴직'];
 const ROLES: TeacherRole[] = ['강사', '튜터'];
 const ROLE_FILTERS = ['전체', '강사', '튜터'];
+
+const won = (n: number) => n.toLocaleString('ko-KR') + '원';
 
 let subjectSeq = 0;
 
@@ -45,6 +48,8 @@ export default function TeachersPage() {
   const [fRole, setFRole]       = useState<TeacherRole>('강사');
   const [fPhone, setFPhone]     = useState('');
   const [fHire, setFHire]       = useState('');
+  const [fWage, setFWage]       = useState(0);
+  const [fIncentive, setFIncentive] = useState(0);
   const [fStatus, setFStatus]   = useState<Teacher['status']>('재직');
   const [fSubjectIds, setFSubjectIds] = useState<string[]>([]);
   const [fClassIds, setFClassIds]     = useState<Set<string>>(new Set());
@@ -53,12 +58,14 @@ export default function TeachersPage() {
   function openCreate() {
     setEditId(null);
     setFName(''); setFRole('강사'); setFPhone(''); setFHire(''); setFStatus('재직');
+    setFWage(0); setFIncentive(0);
     setFSubjectIds([]); setFClassIds(new Set()); setFNewSubject('');
     setShowForm(true);
   }
   function openEdit(t: Teacher) {
     setEditId(t.id);
     setFName(t.name); setFRole(t.role); setFPhone(t.phone ?? ''); setFHire(t.hire_date ?? ''); setFStatus(t.status);
+    setFWage(t.hourly_wage ?? 0); setFIncentive(t.incentive ?? 0);
     setFSubjectIds([...t.subject_ids]);
     setFClassIds(new Set(localClasses.filter(c => c.teacher_id === t.id).map(c => c.id)));
     setFNewSubject('');
@@ -94,7 +101,9 @@ export default function TeachersPage() {
     const teacher: Teacher = {
       id, campus_id: 'campus-001', name: fName.trim(), role: fRole,
       subject_ids: [...fSubjectIds], phone: fPhone.trim() || undefined,
-      hire_date: fHire || undefined, status: fStatus,
+      hire_date: fHire || undefined,
+      hourly_wage: fWage || undefined, incentive: fIncentive || undefined,
+      status: fStatus,
     };
     setLocalTeachers(p => editId ? p.map(t => t.id === id ? teacher : t) : [...p, teacher]);
     setLocalClasses(p => p.map(c => {
@@ -110,6 +119,11 @@ export default function TeachersPage() {
   }
 
   const formClasses = eligibleClasses(fSubjectIds, localClasses);
+
+  // 폼에서 선택한 반 기준 예상 월급여 미리보기
+  const formWeekly = localClasses.filter(c => fClassIds.has(c.id)).reduce((s, c) => s + weeklySessions(c), 0);
+  const formHours = formWeekly * SESSION_HOURS * WEEKS_PER_MONTH;
+  const formSalary = Math.round(formHours * fWage) + fIncentive;
 
   return (
     <div className="p-8 max-w-5xl">
@@ -142,6 +156,7 @@ export default function TeachersPage() {
               <th className="text-left font-medium px-4 py-3">역할</th>
               <th className="text-left font-medium px-4 py-3">가르칠 수 있는 과목</th>
               <th className="text-left font-medium px-4 py-3">담임 반</th>
+              <th className="text-right font-medium px-4 py-3">예상 월급여</th>
               <th className="text-left font-medium px-4 py-3">입사일</th>
               <th className="text-left font-medium px-4 py-3">상태</th>
               <th className="px-4 py-3"></th>
@@ -158,6 +173,9 @@ export default function TeachersPage() {
                 </td>
                 <td className="px-4 py-3 text-[#37352F]">{t.subject_ids.map(subjectName).join(', ')}</td>
                 <td className="px-4 py-3 text-[#787774]">{assignedCount(t.id)}개</td>
+                <td className="px-4 py-3 text-right text-[#37352F] tabular-nums">
+                  {t.hourly_wage ? won(monthlySalary(t, localClasses).total) : <span className="text-[#9B9A97]">미설정</span>}
+                </td>
                 <td className="px-4 py-3 text-[#787774] tabular-nums">{t.hire_date ?? '-'}</td>
                 <td className="px-4 py-3 text-[#787774]">{t.status}</td>
                 <td className="px-4 py-3 text-right whitespace-nowrap">
@@ -205,6 +223,19 @@ export default function TeachersPage() {
             <Input label="연락처" value={fPhone} onChange={e => setFPhone(e.target.value)} placeholder="010-0000-0000" />
             <Input label="입사일" type="date" value={fHire} onChange={e => setFHire(e.target.value)} />
             <Select label="상태" value={fStatus} onChange={e => setFStatus(e.target.value as Teacher['status'])} options={STATUSES.map(s => ({ value: s, label: s }))} />
+          </div>
+
+          {/* 급여 — 시급·인센티브 + 예상 월급여 자동 산출 */}
+          <div>
+            <div className="grid grid-cols-2 gap-3">
+              <MoneyInput label="시급" value={fWage} onValueChange={setFWage} suffix="원" placeholder="예: 35,000" />
+              <MoneyInput label="월 인센티브" value={fIncentive} onValueChange={setFIncentive} suffix="원" placeholder="예: 200,000" />
+            </div>
+            <div className="mt-2 bg-[#F7F7F5] rounded-md px-3 py-2.5 text-sm text-[#787774]">
+              예상 월급여{' '}
+              <span className="font-semibold text-[#37352F]">{won(formSalary)}</span>
+              <span className="text-xs text-[#9B9A97]"> · 선택 반 주 {formWeekly}회 × {SESSION_HOURS}h ≈ 월 {Math.round(formHours)}h 기준(추정)</span>
+            </div>
           </div>
 
           {/* 가르칠 수 있는 과목 — 칩 선택 + 신규 과목 인라인 추가 */}
