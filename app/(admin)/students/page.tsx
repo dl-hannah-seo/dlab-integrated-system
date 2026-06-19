@@ -9,11 +9,16 @@ import {
   consultations as initialConsultations,
   getInvoiceByStudent,
   payments,
+  attendanceHistory,
+  initialAttendance,
+  sessionHistory,
   WITHDRAW_REASONS,
   Student,
   Enrollment,
   Consultation,
   ConsultMethod,
+  type AttendanceStatus,
+  type ClassSession,
 } from '@/lib/mock-data';
 
 // 원생관리 목록 = 재원/휴원(활성) + 퇴원자 합본
@@ -42,8 +47,14 @@ const MSG_TARGETS = [
   { value: '부', label: '아버지 (부)' },
   { value: '본인', label: '학생 본인' },
 ];
-const DETAIL_TABS = ['기본정보', '수강이력', '수납이력', '상담이력'] as const;
+const DETAIL_TABS = ['기본정보', '수강이력', '출결', '수납이력', '상담이력'] as const;
 type DetailTab = (typeof DETAIL_TABS)[number];
+
+// 학생 출결 이력 조회용 — 전체 출결 레코드 + 회차(날짜) 인덱스
+const ALL_ATTENDANCE = [...attendanceHistory, ...initialAttendance];
+const SESSION_BY_ID: Record<string, ClassSession> = {};
+sessionHistory.forEach(s => { SESSION_BY_ID[s.id] = s; });
+const ATT_LABEL: Record<AttendanceStatus, string> = { attend: '출석', absent: '결석', pending: '미도착', makeup: '보강' };
 
 const TEACHERS = Array.from(new Set(classes.map(c => c.teacher)));
 const CONSULT_METHODS: ConsultMethod[] = ['전화', '대면', '문자·카톡', '기타'];
@@ -611,6 +622,54 @@ export default function StudentsPage() {
               </div>
             );
           })}
+        </div>
+      );
+    }
+
+    if (detailTab === '출결') {
+      const recs = ALL_ATTENDANCE
+        .filter(r => r.student_id === s.id)
+        .map(r => ({ rec: r, sess: SESSION_BY_ID[r.session_id] }))
+        .filter((x): x is { rec: typeof x.rec; sess: ClassSession } => !!x.sess)
+        .sort((a, b) => b.sess.session_date.localeCompare(a.sess.session_date));
+      const attendN = recs.filter(x => x.rec.status === 'attend' || x.rec.status === 'makeup').length;
+      const absentN = recs.filter(x => x.rec.status === 'absent').length;
+      const denom = attendN + absentN;
+      const rate = denom ? Math.round((attendN / denom) * 100) : 0;
+      const summary = [
+        { label: '출석률', value: denom ? `${rate}%` : '–', color: '#37352F' },
+        { label: '출석', value: `${attendN}회`, color: '#0F7B6C' },
+        { label: '결석', value: `${absentN}회`, color: absentN > 0 ? '#EB5757' : '#37352F' },
+      ];
+      return (
+        <div className="space-y-4">
+          {editMode && <p className="text-xs text-[#787774]">출결 이력은 편집할 수 없습니다.</p>}
+          <div className="grid grid-cols-3 gap-3">
+            {summary.map(c => (
+              <div key={c.label} className="border border-[#E9E9E7] rounded-lg p-3">
+                <p className="text-xs text-[#787774]">{c.label}</p>
+                <p className="text-xl font-bold mt-1" style={{ color: c.color }}>{c.value}</p>
+              </div>
+            ))}
+          </div>
+          {recs.length === 0 ? (
+            <p className="text-sm text-[#787774]">출결 이력이 없습니다.</p>
+          ) : (
+            <div className="space-y-2">
+              {recs.map(({ rec, sess }) => {
+                const cls = classes.find(c => c.id === sess.class_id);
+                return (
+                  <div key={rec.id} className="flex items-center justify-between border border-[#E9E9E7] rounded-lg px-4 py-2.5">
+                    <div>
+                      <span className="text-sm text-[#37352F] tabular-nums">{sess.session_date}</span>
+                      <span className="text-xs text-[#787774] ml-2">{cls?.name ?? sess.class_id}</span>
+                    </div>
+                    <Badge variant={rec.status}>{ATT_LABEL[rec.status]}</Badge>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       );
     }

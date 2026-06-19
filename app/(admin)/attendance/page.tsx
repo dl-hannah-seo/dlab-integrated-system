@@ -7,12 +7,14 @@ import {
   students,
   initialAttendance,
   attendanceHistory,
+  sessionHistory,
   getAbsenceFocusList,
   getClassRoster,
   TODAY,
   type Attendance,
   type AttendanceStatus,
   type Class,
+  type ClassSession,
   type Student,
 } from '@/lib/mock-data';
 import { Card } from '@/components/ui/Card';
@@ -149,6 +151,97 @@ export default function AttendancePage() {
   ];
 
   const targetClasses = classFilter === '전체' ? groupClasses : groupClasses.filter(c => c.id === classFilter);
+
+  // 특정 회차(session_id)의 출결 집계 — 원장 날짜별 표·KPI 공용
+  function summaryForSession(sessionId: string | null) {
+    if (!sessionId) return null;
+    const recs = records.filter(r => r.session_id === sessionId);
+    const attendCount = recs.filter(r => r.status === 'attend' || r.status === 'makeup').length;
+    const absentCount = recs.filter(r => r.status === 'absent').length;
+    const pendingCount = recs.filter(r => r.status === 'pending').length;
+    const denom = attendCount + absentCount;
+    const pct = denom ? Math.round((attendCount / denom) * 100) : 0;
+    return { attendCount, absentCount, pendingCount, denom, pct };
+  }
+  function sessionOf(classId: string, date: string): ClassSession | null {
+    return sessionHistory.find(s => s.class_id === classId && s.session_date === date) ?? null;
+  }
+
+  // ── 원장 전용 단순 뷰: 오늘 출결 KPI 4칸 + 반별 표(읽기 전용) ──
+  if (role === '원장') {
+    const kpiCards = [
+      { label: '오늘 출석률', value: kpi.attend + kpi.absent ? `${kpi.rate}%` : '–', sub: '전체 반 평균', color: '#37352F' },
+      { label: '출석', value: `${kpi.attend}명`, sub: '정상 출석', color: '#0F7B6C' },
+      { label: '미도착', value: `${kpi.pending}명`, sub: '등원 대기', color: '#787774' },
+      { label: '결석', value: `${kpi.absent}명`, sub: '미등원', color: kpi.absent > 0 ? '#EB5757' : '#37352F' },
+    ];
+
+    return (
+      <div>
+        <div className="mb-6">
+          <h1 className="text-xl font-bold text-[#37352F]">출결 현황</h1>
+          <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 오늘 ({todayLabel}) 출결 현황</p>
+        </div>
+
+        {/* KPI 카드 4칸 */}
+        <div className="grid grid-cols-4 gap-4 mb-6">
+          {kpiCards.map(c => (
+            <div key={c.label} className="bg-white border border-[#E9E9E7] rounded-lg p-5">
+              <p className="text-sm text-[#787774]">{c.label}</p>
+              <p className="text-3xl font-bold mt-2" style={{ color: c.color }}>{c.value}</p>
+              <p className="text-xs text-[#787774] mt-2">{c.sub}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* 오늘 반별 출석 현황 표 (읽기 전용) */}
+        <Card title="반별 출석 현황">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-[#787774] border-b border-[#E9E9E7]">
+                <th className="font-medium pb-2 pr-3">반</th>
+                <th className="font-medium pb-2 pr-3">담당</th>
+                <th className="font-medium pb-2 pr-3 text-right">출석</th>
+                <th className="font-medium pb-2 pr-3 text-right">미도착</th>
+                <th className="font-medium pb-2 pr-3 text-right">결석</th>
+                <th className="font-medium pb-2 text-right">출석률</th>
+              </tr>
+            </thead>
+            <tbody>
+              {CURRENT_CLASSES.map(cls => {
+                const sess = sessionOf(cls.id, TODAY);
+                const s = summaryForSession(sess?.id ?? null);
+                return (
+                  <tr key={cls.id} className="border-b border-[#F1F0EF] last:border-0">
+                    <td className="py-3 pr-3">
+                      <span className="font-semibold text-[#37352F]">{cls.schedule}</span>
+                      <span className="text-[#37352F] ml-2">{cls.course}</span>
+                    </td>
+                    <td className="py-3 pr-3 text-[#787774]">{cls.teacher}</td>
+                    {s ? (
+                      <>
+                        <td className="py-3 pr-3 text-right text-[#0F7B6C]">{s.attendCount}</td>
+                        <td className="py-3 pr-3 text-right text-[#787774]">{s.pendingCount}</td>
+                        <td className="py-3 pr-3 text-right text-[#EB5757]">{s.absentCount}</td>
+                        <td className="py-3 text-right font-semibold text-[#37352F]">{s.denom ? `${s.pct}%` : '미기록'}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="py-3 pr-3 text-right text-[#BEBDBA]">–</td>
+                        <td className="py-3 pr-3 text-right text-[#BEBDBA]">–</td>
+                        <td className="py-3 pr-3 text-right text-[#BEBDBA]">–</td>
+                        <td className="py-3 text-right text-[#BEBDBA]">수업 없음</td>
+                      </>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div>
