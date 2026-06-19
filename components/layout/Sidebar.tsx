@@ -195,8 +195,8 @@ export function Sidebar() {
           onChange={e => onSwitch(e.target.value)}
           className="w-full mt-1 px-2.5 py-2 text-sm rounded-lg border border-white/10 bg-[#252836] text-white focus:outline-none focus:ring-1 focus:ring-[#2F6BFF] [&>option]:bg-[#252836] [&>option]:text-white"
         >
-          {ROLES.map(r => <option key={r} value={r} className="bg-white text-[#1A1D29]">{ROLE_META[r].label}</option>)}
-          <option value="__kiosk__" className="bg-white text-[#1A1D29]">키오스크(출석 화면)</option>
+          {ROLES.filter(r => r !== '학생').map(r => <option key={r} value={r} className="bg-white text-[#1A1D29]">{ROLE_META[r].label}</option>)}
+          <option value="__kiosk__" className="bg-white text-[#1A1D29]">키오스크(출석/포인트)</option>
         </select>
       </div>
 
