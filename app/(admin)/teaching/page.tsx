@@ -1,99 +1,73 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { classes, getClassRoster, type Class, type Student } from '@/lib/mock-data';
+import {
+  classes, getClassRoster, students, FEEDBACK_PHASES, CURRENT_SEMESTER_ID, TODAY,
+  type Student,
+} from '@/lib/mock-data';
 import { DEMO_TEACHER_ID, DEMO_TEACHER_NAME } from '@/lib/roles';
 import { classesOfTeacher } from '@/lib/teacher-hr';
+import { studentsOfClass, feedbackOf, classPhaseRate } from '@/lib/feedback';
 import { buildMakeupMessage } from '@/lib/makeup-helpers';
+import { useFeedbacks } from '@/components/panels/FeedbackContext';
+import { useMakeup } from '@/components/panels/MakeupContext';
 import { useQuickActions } from '@/components/panels/QuickActionsContext';
+import { FeedbackModal } from '@/components/schedule/FeedbackModal';
 import { MakeupPickerModal } from '@/components/attendance/MakeupPickerModal';
 
 // 출결 상태(데모) — 본인 수업별 학생 출결
-type Stat = '예정' | '출석' | '결석' | '보강';
-const STATS: Stat[] = ['예정', '출석', '결석', '보강'];
+type Stat = '미도착' | '출석' | '결석' | '보강';
+const STATS: Stat[] = ['미도착', '출석', '결석', '보강'];
 const STAT_STYLE: Record<Stat, string> = {
-  '예정': 'bg-[#EEF1F5] text-[#6B7280]',
+  '미도착': 'bg-[#EEF1F5] text-[#6B7280]',
   '출석': 'bg-[#E6F9EF] text-[#1FA85C]',
   '결석': 'bg-[#FEE9EA] text-[#F2474B]',
   '보강': 'bg-[#EAF1FF] text-[#2F6BFF]',
 };
 
-// 콘텐츠(오늘 수업 자료) 테마 — 과목별 표시용
-const CONTENT_BY_SUBJECT: Record<string, string> = {
-  'sub-python': '코딩 사고력',
-  'sub-arduino': '피지컬 컴퓨팅',
-  'sub-custom': '창의 메이커',
-};
+type SubTab = 'att' | 'feedback' | 'makeup';
+const SUB_TABS: { key: SubTab; label: string }[] = [
+  { key: 'att', label: '반별 출석 현황' },
+  { key: 'feedback', label: '재원생 피드백' },
+  { key: 'makeup', label: '보강 관리' },
+];
 
-interface Feedback { homework: boolean; participation: number; }
-interface MakeupRec { date: string; time: string; memo?: string; done: boolean; }
-type View = 'roster' | 'makeup';
-
-const levelOf = (points: number) => Math.max(1, Math.floor(points / 300) + 1);
 const key = (classId: string, studentId: string) => `${classId}:${studentId}`;
+const mmdd = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
 
 export default function TeachingPage() {
   const { openRecording, openSms } = useQuickActions();
+  const { feedbacks } = useFeedbacks();
+  const { requests, requestMakeup, scheduleMakeup, completeMakeup } = useMakeup();
+
   const myClasses = useMemo(() => classesOfTeacher(DEMO_TEACHER_ID, classes), []);
   const [selId, setSelId] = useState(myClasses[0]?.id ?? '');
-
-  // 데모 초기 상태 — 전 담당 반 학생의 출결(예정)·피드백 시드
-  function buildSeed() {
-    const att: Record<string, Stat> = {};
-    const fb: Record<string, Feedback> = {};
-    myClasses.forEach(c => {
-      getClassRoster(c.id).forEach((s, i) => {
-        att[key(c.id, s.id)] = '예정';
-        fb[key(c.id, s.id)] = { homework: i % 3 !== 2, participation: 3 + (i % 3) };
-      });
-    });
-    return { att, fb };
-  }
-  const [seed] = useState(buildSeed);
-  const [attendance, setAttendance] = useState<Record<string, Stat>>(seed.att);
-  const [feedback, setFeedback] = useState<Record<string, Feedback>>(seed.fb);
-  const [makeups, setMakeups] = useState<Record<string, MakeupRec>>({});
-  const [view, setView] = useState<View>('roster');
+  const [subTab, setSubTab] = useState<SubTab>('att');
+  const [attendance, setAttendance] = useState<Record<string, Stat>>({});
   const [mkPick, setMkPick] = useState<Student | null>(null);
-
-  function resetDemo() {
-    const s = buildSeed();
-    setAttendance(s.att);
-    setFeedback(s.fb);
-    setMakeups({});
-    setView('roster');
-  }
-  function setStat(studentId: string, stat: Stat) {
-    setAttendance(prev => ({ ...prev, [key(selId, studentId)]: stat }));
-  }
-  function toggleHomework(studentId: string) {
-    setFeedback(prev => {
-      const k = key(selId, studentId);
-      return { ...prev, [k]: { ...prev[k], homework: !prev[k].homework } };
-    });
-  }
-  function setParticipation(studentId: string, n: number) {
-    setFeedback(prev => {
-      const k = key(selId, studentId);
-      return { ...prev, [k]: { ...prev[k], participation: n } };
-    });
-  }
-  function scheduleMakeup(student: Student, date: string, time: string, memo?: string) {
-    setMakeups(prev => ({ ...prev, [key(selId, student.id)]: { date, time, memo, done: false } }));
-  }
-  function completeMakeup(studentId: string) {
-    setMakeups(prev => {
-      const k = key(selId, studentId);
-      return prev[k] ? { ...prev, [k]: { ...prev[k], done: true } } : prev;
-    });
-  }
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [toast, setToast] = useState('');
+  function showToast(m: string) { setToast(m); setTimeout(() => setToast(''), 1800); }
 
   const selClass = myClasses.find(c => c.id === selId) ?? null;
   const roster = selClass ? getClassRoster(selClass.id) : [];
-  const attended = roster.filter(s => attendance[key(selId, s.id)] === '출석').length;
-  const content = selClass ? (CONTENT_BY_SUBJECT[selClass.subject_id] ?? selClass.course) : '-';
-  // 보강 대상 = 결석 처리됐거나 이미 보강이 잡힌 학생
-  const makeupRoster = roster.filter(s => attendance[key(selId, s.id)] === '결석' || makeups[key(selId, s.id)]);
+  const statOf = (sid: string): Stat => attendance[key(selId, sid)] ?? '미도착';
+
+  function setStat(sid: string, stat: Stat) {
+    setAttendance(prev => ({ ...prev, [key(selId, sid)]: stat }));
+    if (stat === '결석') requestMakeup(sid, selId, TODAY);   // 결석 → 보강 필요(미정) 자동 생성
+  }
+
+  // 출결 집계
+  const att = roster.filter(s => statOf(s.id) === '출석').length;
+  const absent = roster.filter(s => statOf(s.id) === '결석').length;
+  const pending = roster.filter(s => statOf(s.id) === '미도착').length;
+  const denom = att + absent;
+  const rate = denom ? Math.round((att / denom) * 100) : 0;
+
+  // 보강 — 선택 반 건만
+  const classMakeups = requests.filter(r => r.class_id === selId);
+  const pendingMakeups = classMakeups.filter(r => r.status !== '완료').length;
 
   return (
     <div>
@@ -101,20 +75,18 @@ export default function TeachingPage() {
       <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold text-[#1A1D29]">수업관리</h1>
-          <p className="text-sm text-[#6B7280] mt-1">{DEMO_TEACHER_NAME} 선생님 · 담당 반별 출결과 재원생 피드백</p>
+          <p className="text-sm text-[#6B7280] mt-1">{DEMO_TEACHER_NAME} 선생님 · 담당 반별 출석·피드백·보강</p>
         </div>
         <button
-          onClick={resetDemo}
-          className="px-3 py-1.5 text-sm rounded-md border border-[#E8EBF1] text-[#6B7280] hover:text-[#1A1D29] hover:border-[#2F6BFF] transition-colors"
+          onClick={openRecording}
+          className="px-3 py-1.5 text-sm rounded-md bg-[#2F6BFF] text-white hover:bg-[#1F57E6] transition-colors"
         >
-          ↻ 데모 초기화
+          🎙 녹음 시작
         </button>
       </div>
 
       {myClasses.length === 0 ? (
-        <div className="bg-white border border-[#E8EBF1] rounded-lg py-16 text-center text-sm text-[#6B7280]">
-          담당 반이 없습니다.
-        </div>
+        <div className="bg-white border border-[#E8EBF1] rounded-lg py-16 text-center text-sm text-[#6B7280]">담당 반이 없습니다.</div>
       ) : (
         <>
           {/* 반 탭 */}
@@ -122,11 +94,9 @@ export default function TeachingPage() {
             {myClasses.map(c => (
               <button
                 key={c.id}
-                onClick={() => setSelId(c.id)}
+                onClick={() => { setSelId(c.id); setSubTab('att'); }}
                 className={`px-3.5 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                  c.id === selId
-                    ? 'bg-[#2F6BFF] text-white border-[#2F6BFF]'
-                    : 'bg-white text-[#1A1D29] border-[#E8EBF1] hover:border-[#2F6BFF]/50'
+                  c.id === selId ? 'bg-[#2F6BFF] text-white border-[#2F6BFF]' : 'bg-white text-[#1A1D29] border-[#E8EBF1] hover:border-[#2F6BFF]/50'
                 }`}
               >
                 {c.course}
@@ -134,145 +104,172 @@ export default function TeachingPage() {
             ))}
           </div>
 
-          {/* 요약 카드 3개 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <SummaryCard label="수업" value={selClass?.course ?? '-'} caption={`${selClass?.schedule ?? ''}${selClass?.room ? ` · ${selClass.room}` : ''}`} />
-            <SummaryCard label="출석" value={`${attended}/${roster.length}명`} caption="출석 현황" />
-            <SummaryCard label="콘텐츠" value={content} caption="오늘 수업 자료" />
-          </div>
+          {/* 반 컨텍스트 헤더 */}
+          {selClass && (
+            <div className="mb-4 flex items-center gap-3 text-sm">
+              <span className="font-semibold text-[#1A1D29]">{selClass.course}</span>
+              <span className="text-[#6B7280]">{selClass.schedule}{selClass.room ? ` · ${selClass.room}` : ''}</span>
+              <span className="text-[#9CA3AF]">재원 {roster.length}명</span>
+            </div>
+          )}
 
-          {/* 뷰 전환 — 출결·피드백 / 보강 관리 */}
+          {/* 서브 탭 */}
           <div className="inline-flex rounded-lg border border-[#E8EBF1] bg-white p-0.5 mb-4">
-            {(([['roster', '출결·피드백'], ['makeup', '보강 관리']]) as [View, string][]).map(([v, label]) => (
+            {SUB_TABS.map(t => (
               <button
-                key={v}
-                onClick={() => setView(v)}
+                key={t.key}
+                onClick={() => setSubTab(t.key)}
                 className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                  view === v ? 'bg-[#EAF1FF] text-[#2F6BFF] font-medium' : 'text-[#6B7280] hover:text-[#1A1D29]'
+                  subTab === t.key ? 'bg-[#EAF1FF] text-[#2F6BFF] font-medium' : 'text-[#6B7280] hover:text-[#1A1D29]'
                 }`}
               >
-                {label}{v === 'makeup' && makeupRoster.length > 0 ? ` ${makeupRoster.length}` : ''}
+                {t.label}{t.key === 'makeup' && pendingMakeups > 0 ? ` ${pendingMakeups}` : ''}
               </button>
             ))}
           </div>
 
-          {/* 학생 출결 관리 */}
-          {view === 'roster' ? (
-          <div className="bg-white border border-[#E8EBF1] rounded-lg">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8EBF1]">
-              <h2 className="text-sm font-semibold text-[#1A1D29]">학생 출석 관리</h2>
-              <button
-                onClick={openRecording}
-                className="px-3 py-1.5 text-sm rounded-md bg-[#2F6BFF] text-white hover:bg-[#1F57E6] transition-colors"
-              >
-                🎙 녹음 시작
-              </button>
+          {/* ── 반별 출석 현황 ── */}
+          {subTab === 'att' && (
+            <div>
+              <div className="grid grid-cols-4 gap-3 mb-4">
+                {[
+                  { label: '출석률', value: denom ? `${rate}%` : '–', color: '#1A1D29' },
+                  { label: '출석', value: `${att}명`, color: '#1FA85C' },
+                  { label: '미도착', value: `${pending}명`, color: '#6B7280' },
+                  { label: '결석', value: `${absent}명`, color: absent > 0 ? '#F2474B' : '#1A1D29' },
+                ].map(c => (
+                  <div key={c.label} className="bg-white border border-[#E8EBF1] rounded-lg p-4">
+                    <p className="text-xs text-[#6B7280]">{c.label}</p>
+                    <p className="text-2xl font-bold mt-1" style={{ color: c.color }}>{c.value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="bg-white border border-[#E8EBF1] rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-[#F4F6FA] border-b border-[#E8EBF1] text-left text-[#1A1D29]">
+                      <th className="px-5 py-3 font-semibold">학생</th>
+                      <th className="px-3 py-3 font-semibold">학년</th>
+                      <th className="px-3 py-3 font-semibold">상태</th>
+                      <th className="px-5 py-3 font-semibold text-right">출결 변경</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {roster.map(s => {
+                      const stat = statOf(s.id);
+                      return (
+                        <tr key={s.id} className="border-b border-[#EEF1F5] last:border-0">
+                          <td className="px-5 py-2.5 font-medium text-[#1A1D29]">{s.name}</td>
+                          <td className="px-3 py-2.5 text-[#6B7280]">{s.grade}</td>
+                          <td className="px-3 py-2.5"><span className={`text-xs font-medium px-2 py-0.5 rounded ${STAT_STYLE[stat]}`}>{stat}</span></td>
+                          <td className="px-5 py-2.5 text-right">
+                            <select
+                              value={stat}
+                              onChange={e => setStat(s.id, e.target.value as Stat)}
+                              className="text-sm rounded-md border border-[#E8EBF1] bg-white text-[#1A1D29] px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#2F6BFF]"
+                            >
+                              {STATS.map(st => <option key={st} value={st} className="bg-white text-[#1A1D29]">{st}</option>)}
+                            </select>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {roster.length === 0 && <tr><td colSpan={4} className="px-5 py-8 text-center text-[#6B7280]">재원생이 없습니다.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-[#6B7280] border-b border-[#E8EBF1]">
-                    <th className="font-medium px-5 py-3">학생</th>
-                    <th className="font-medium px-3 py-3">레벨</th>
-                    <th className="font-medium px-3 py-3">포인트</th>
-                    <th className="font-medium px-3 py-3">과제</th>
-                    <th className="font-medium px-3 py-3">참여도</th>
-                    <th className="font-medium px-3 py-3">상태</th>
-                    <th className="font-medium px-5 py-3 text-right">액션</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {roster.map(s => {
-                    const k = key(selId, s.id);
-                    const stat = attendance[k] ?? '예정';
-                    const fb = feedback[k] ?? { homework: false, participation: 0 };
-                    return (
+          )}
+
+          {/* ── 재원생 피드백 ── (완료 체크 모달 = 상담관리에 반영) */}
+          {subTab === 'feedback' && selClass && (
+            <div>
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                {FEEDBACK_PHASES.map(phase => {
+                  const r = classPhaseRate(students, feedbacks, selId, CURRENT_SEMESTER_ID, phase);
+                  return (
+                    <div key={phase} className="bg-white border border-[#E8EBF1] rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-[#1A1D29]">{phase}</span>
+                        <span className="text-sm font-bold tabular-nums text-[#2F6BFF]">{r}%</span>
+                      </div>
+                      <div className="mt-2 h-1.5 w-full rounded-full bg-[#EEF1F5]">
+                        <div className="h-full rounded-full bg-[#2F6BFF]" style={{ width: `${r}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="bg-white border border-[#E8EBF1] rounded-lg overflow-hidden">
+                <div className="flex items-center justify-between px-5 py-3 border-b border-[#E8EBF1]">
+                  <p className="text-sm text-[#6B7280]">학생별 단계 완료 현황 · 체크는 ‘피드백 입력’에서</p>
+                  <button onClick={() => setFeedbackOpen(true)} className="px-3 py-1.5 text-sm rounded-md bg-[#2F6BFF] text-white hover:bg-[#1F57E6] transition-colors">피드백 입력 / 수정</button>
+                </div>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-[#F4F6FA] border-b border-[#E8EBF1] text-left text-[#1A1D29]">
+                      <th className="px-5 py-3 font-semibold">학생</th>
+                      {FEEDBACK_PHASES.map(p => <th key={p} className="px-3 py-3 font-semibold text-center">{p}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {studentsOfClass(students, selId).map(s => (
                       <tr key={s.id} className="border-b border-[#EEF1F5] last:border-0">
-                        <td className="px-5 py-3 font-medium text-[#1A1D29]">{s.name}</td>
-                        <td className="px-3 py-3 text-[#6B7280] tabular-nums">Lv.{levelOf(s.points)}</td>
-                        <td className="px-3 py-3 text-[#1A1D29] tabular-nums">{s.points.toLocaleString('ko-KR')}P</td>
-                        <td className="px-3 py-3">
-                          <button
-                            onClick={() => toggleHomework(s.id)}
-                            className={`text-xs font-medium px-2 py-0.5 rounded transition-colors ${
-                              fb.homework ? 'bg-[#E6F9EF] text-[#1FA85C]' : 'bg-[#FEE9EA] text-[#F2474B]'
-                            }`}
-                          >
-                            {fb.homework ? '완료' : '미완료'}
-                          </button>
-                        </td>
-                        <td className="px-3 py-3">
-                          <Stars value={fb.participation} onChange={n => setParticipation(s.id, n)} />
-                        </td>
-                        <td className="px-3 py-3">
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded ${STAT_STYLE[stat]}`}>{stat}</span>
-                        </td>
-                        <td className="px-5 py-3 text-right">
-                          <select
-                            value={stat}
-                            onChange={e => setStat(s.id, e.target.value as Stat)}
-                            className="text-sm rounded-md border border-[#E8EBF1] bg-white text-[#1A1D29] px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#2F6BFF]"
-                          >
-                            {STATS.map(st => <option key={st} value={st} className="bg-white text-[#1A1D29]">{st}</option>)}
-                          </select>
-                        </td>
+                        <td className="px-5 py-2.5 text-[#1A1D29]">{s.name} <span className="text-xs text-[#9CA3AF]">{s.grade}</span></td>
+                        {FEEDBACK_PHASES.map(phase => {
+                          const fb = feedbackOf(feedbacks, s.id, CURRENT_SEMESTER_ID, phase);
+                          const done = fb?.done ?? false;
+                          return (
+                            <td key={phase} className="px-3 py-2.5 text-center" title={done ? fb?.memo : undefined}>
+                              <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs ${done ? 'bg-[#E6F9EF] text-[#1FA85C]' : 'border border-dashed border-[#E8EBF1] text-[#AEB4C0]'}`}>{done ? '✓' : '–'}</span>
+                            </td>
+                          );
+                        })}
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    ))}
+                    {studentsOfClass(students, selId).length === 0 && <tr><td colSpan={4} className="px-5 py-8 text-center text-[#6B7280]">재원생이 없습니다.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-          ) : (
-            /* 보강 관리 — 결석 학생 보강 일정 잡기 */
-            <div className="bg-white border border-[#E8EBF1] rounded-lg">
+          )}
+
+          {/* ── 보강 관리 ── */}
+          {subTab === 'makeup' && selClass && (
+            <div className="bg-white border border-[#E8EBF1] rounded-lg overflow-hidden">
               <div className="px-5 py-4 border-b border-[#E8EBF1]">
                 <h2 className="text-sm font-semibold text-[#1A1D29]">보강 관리</h2>
-                <p className="text-xs text-[#6B7280] mt-0.5">결석 학생의 보강 일정을 잡고 안내 문자를 보냅니다 · {selClass?.course}</p>
+                <p className="text-xs text-[#6B7280] mt-0.5">결석 학생의 보강 일정을 잡고 안내 문자를 보냅니다 · {selClass.course}</p>
               </div>
-              {makeupRoster.length === 0 ? (
-                <p className="px-5 py-12 text-center text-sm text-[#6B7280]">
-                  결석 학생이 없습니다. ‘출결·피드백’에서 결석 처리하면 여기서 보강을 잡을 수 있어요.
-                </p>
+              {classMakeups.length === 0 ? (
+                <p className="px-5 py-12 text-center text-sm text-[#6B7280]">보강 대상이 없습니다. ‘반별 출석 현황’에서 결석 처리하면 여기에 보강 대기로 올라옵니다.</p>
               ) : (
                 <div className="divide-y divide-[#EEF1F5]">
-                  {makeupRoster.map(s => {
-                    const mk = makeups[key(selId, s.id)];
+                  {classMakeups.map(r => {
+                    const stu = students.find(s => s.id === r.student_id);
                     return (
-                      <div key={s.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                      <div key={r.id} className="flex items-center justify-between gap-3 px-5 py-3">
                         <div className="min-w-0">
-                          <span className="text-sm font-medium text-[#1A1D29]">{s.name}</span>
-                          <span className="text-xs font-medium text-[#F2474B] bg-[#FEE9EA] px-1.5 py-0.5 rounded ml-2">결석</span>
+                          <span className="text-sm font-medium text-[#1A1D29]">{stu?.name ?? r.student_id}</span>
+                          <span className="text-xs text-[#9CA3AF] ml-2">결석 {mmdd(r.absent_date)}</span>
+                          {r.memo && <span className="text-xs text-[#9CA3AF] ml-2">· {r.memo}</span>}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          {!mk ? (
-                            <button
-                              onClick={() => setMkPick(s)}
-                              className="text-xs px-2.5 py-1 rounded-md border border-[#2F6BFF] text-[#2F6BFF] hover:bg-[#EAF1FF] transition-colors"
-                            >
-                              보강 잡기
-                            </button>
-                          ) : mk.done ? (
-                            <span className="text-xs font-medium text-[#1FA85C] bg-[#E6F9EF] px-2 py-0.5 rounded">보강 완료 · {mk.date} {mk.time}</span>
+                          {r.status === '완료' ? (
+                            <span className="text-xs font-medium text-[#1FA85C] bg-[#E6F9EF] px-2 py-0.5 rounded">보강 완료 · {r.makeup_date} {r.makeup_time}</span>
+                          ) : r.status === '예정' ? (
+                            <>
+                              <span className="text-xs text-[#1FA85C]">보강 {r.makeup_date} {r.makeup_time}</span>
+                              <button
+                                onClick={() => stu && openSms({ recipients: [{ studentId: stu.id, name: stu.name, phone: stu.parent_phone }], template: 'makeup', message: buildMakeupMessage(stu.name, selClass.course, r.makeup_date!, r.makeup_time!) })}
+                                className="text-xs px-2.5 py-1 rounded-md border border-[#E8EBF1] text-[#6B7280] hover:text-[#1A1D29] transition-colors"
+                              >문자 재발송</button>
+                              <button onClick={() => completeMakeup(r.id)} className="text-xs px-2.5 py-1 rounded-md bg-[#E6F9EF] text-[#1FA85C] border border-[#1FA85C]/30 hover:bg-[#1FA85C]/10 transition-colors">완료</button>
+                            </>
                           ) : (
                             <>
-                              <span className="text-xs text-[#1FA85C]">보강 {mk.date} {mk.time}</span>
-                              <button
-                                onClick={() => openSms({
-                                  recipients: [{ studentId: s.id, name: s.name, phone: s.parent_phone }],
-                                  template: 'makeup',
-                                  message: buildMakeupMessage(s.name, selClass?.course ?? '', mk.date, mk.time),
-                                })}
-                                className="text-xs px-2.5 py-1 rounded-md border border-[#E8EBF1] text-[#6B7280] hover:text-[#1A1D29] transition-colors"
-                              >
-                                문자 재발송
-                              </button>
-                              <button
-                                onClick={() => completeMakeup(s.id)}
-                                className="text-xs px-2.5 py-1 rounded-md bg-[#E6F9EF] text-[#1FA85C] border border-[#1FA85C]/30 hover:bg-[#1FA85C]/10 transition-colors"
-                              >
-                                완료
-                              </button>
+                              <span className="text-xs font-medium text-[#F2474B] bg-[#FEE9EA] px-2 py-0.5 rounded">미정</span>
+                              {stu && <button onClick={() => setMkPick(stu)} className="text-xs px-2.5 py-1 rounded-md border border-[#2F6BFF] text-[#2F6BFF] hover:bg-[#EAF1FF] transition-colors">보강 잡기</button>}
                             </>
                           )}
                         </div>
@@ -283,52 +280,34 @@ export default function TeachingPage() {
               )}
             </div>
           )}
-
-          {mkPick && selClass && (
-            <MakeupPickerModal
-              student={mkPick}
-              cls={selClass}
-              onClose={() => setMkPick(null)}
-              onConfirm={(date, time, memo) => {
-                scheduleMakeup(mkPick, date, time, memo);
-                openSms({
-                  recipients: [{ studentId: mkPick.id, name: mkPick.name, phone: mkPick.parent_phone }],
-                  template: 'makeup',
-                  message: buildMakeupMessage(mkPick.name, selClass.course, date, time),
-                });
-                setMkPick(null);
-              }}
-            />
-          )}
         </>
       )}
-    </div>
-  );
-}
 
-function SummaryCard({ label, value, caption }: { label: string; value: string; caption: string }) {
-  return (
-    <div className="bg-white border border-[#E8EBF1] rounded-lg p-5">
-      <p className="text-sm text-[#6B7280]">{label}</p>
-      <p className="text-2xl font-bold text-[#1A1D29] mt-2 truncate">{value}</p>
-      <p className="text-xs text-[#6B7280] mt-2">{caption}</p>
-    </div>
-  );
-}
+      {/* 피드백 입력 모달 — completeFeedback → 상담관리 재원생 피드백 현황에 반영 */}
+      {feedbackOpen && selClass && <FeedbackModal classId={selClass.id} onClose={() => setFeedbackOpen(false)} />}
 
-function Stars({ value, onChange }: { value: number; onChange: (n: number) => void }) {
-  return (
-    <div className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map(n => (
-        <button
-          key={n}
-          onClick={() => onChange(n)}
-          aria-label={`참여도 ${n}점`}
-          className={`text-base leading-none ${n <= value ? 'text-[#F5A623]' : 'text-[#D1D5DB]'} hover:text-[#F5A623] transition-colors`}
-        >
-          ★
-        </button>
-      ))}
+      {/* 보강 잡기 */}
+      {mkPick && selClass && (
+        <MakeupPickerModal
+          student={mkPick}
+          cls={selClass}
+          onClose={() => setMkPick(null)}
+          onConfirm={(date, time, memo) => {
+            const active = requests.find(r => r.student_id === mkPick.id && r.class_id === selId && r.status !== '완료')
+              ?? requestMakeup(mkPick.id, selId, TODAY);
+            scheduleMakeup(active.id, date, time, memo);
+            openSms({
+              recipients: [{ studentId: mkPick.id, name: mkPick.name, phone: mkPick.parent_phone }],
+              template: 'makeup',
+              message: buildMakeupMessage(mkPick.name, selClass.course, date, time),
+            });
+            showToast(`${mkPick.name} 보강 ${date} ${time} 예약`);
+            setMkPick(null);
+          }}
+        />
+      )}
+
+      {toast && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#1A1D29] text-white text-sm px-4 py-2.5 rounded-lg shadow-lg">{toast}</div>}
     </div>
   );
 }

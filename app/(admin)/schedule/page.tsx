@@ -3,13 +3,11 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { classes, classGroups, sessions, students, CURRENT_SEMESTER_ID, Class, ClassGroup, Session } from '@/lib/mock-data';
-import { koWeekday, addDays, weekDates, mondayOf, resolveWeekSessions, defaultWeekStart } from '@/lib/sessions';
+import { koWeekday, addDays, weekDates, mondayOf, resolveWeekSessions } from '@/lib/sessions';
 import { PlacementBoard } from '@/components/schedule/PlacementBoard';
 import { FeedbackModal } from '@/components/schedule/FeedbackModal';
 import { useFeedbacks } from '@/components/panels/FeedbackContext';
 import { classPhaseRates } from '@/lib/feedback';
-import { useRole } from '@/components/layout/RoleContext';
-import { DEMO_TEACHER_ID, DEMO_TEACHER_NAME } from '@/lib/roles';
 
 // 시간표 블록·팝오버 피드백 단계 표시
 const PHASE_CHAR: Record<string, string> = { '그리팅': '그', '중간': '중', '파이널': '파' };
@@ -90,13 +88,11 @@ export default function SchedulePage() {
   const [popover, setPopover] = useState<Popover | null>(null);
   const [feedbackClassId, setFeedbackClassId] = useState<string | null>(null);
 
-  const { role } = useRole();
-  const isTeacher = role === '교사';
-  const effectiveView = isTeacher ? 'week' : view;   // 교사는 주간 보기만
+  const effectiveView = view;   // 교사도 원장과 동일하게 전체 시간표 표시
 
-  // 전체 학기 통합 (교사는 본인 담당 반만)
+  // 전체 학기 통합
   const semGroups = classGroups;
-  const semClasses = isTeacher ? classes.filter(c => c.teacher_id === DEMO_TEACHER_ID) : classes;
+  const semClasses = classes;
 
   // 담임(선생님) 선택지
   const teacherOptions = [...new Set(semClasses.map(c => c.teacher))].sort();
@@ -114,12 +110,8 @@ export default function SchedulePage() {
     });
   }
 
-  // 활성 주차(미선택 시 오늘 포함 주, 없으면 첫 수업 주)
-  const earliestStart = semClasses.reduce(
-    (min, c) => (c.start_date < min ? c.start_date : min),
-    '9999-12-31',
-  );
-  const activeWeek = weekStart ?? defaultWeekStart(semClasses, semGroups, earliestStart);
+  // 활성 주차(미선택 시 오늘 포함 주)
+  const activeWeek = weekStart ?? currentMonday();
   const weekSessions = resolveWeekSessions(filteredClasses, semGroups, sessions, activeWeek);
 
   function handleBlockClick(
@@ -137,10 +129,7 @@ export default function SchedulePage() {
 
   return (
     <div onClick={() => setPopover(null)}>
-      {/* 뷰 토글 — 교사는 주간 보기만 */}
-      {isTeacher ? (
-        <p className="mb-4 text-sm text-[#6B7280]">{DEMO_TEACHER_NAME} 선생님 담당 수업 · 주간 보기</p>
-      ) : (
+      {/* 뷰 토글 */}
       <div className="mb-4 inline-flex rounded-lg border border-[#E8EBF1] bg-white p-0.5">
         <button
           onClick={() => setView('board')}
@@ -159,7 +148,6 @@ export default function SchedulePage() {
           주간 보기
         </button>
       </div>
-      )}
 
       {effectiveView === 'board' ? (
         <PlacementBoard />

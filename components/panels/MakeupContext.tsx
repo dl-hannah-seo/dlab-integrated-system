@@ -19,6 +19,9 @@ export interface MakeupRequest {
 const SEED: MakeupRequest[] = [
   { id: 'mk-seed-1', student_id: 's-44', class_id: 'cl-04', absent_date: '2026-06-11', status: '미정', makeup_date: null, makeup_time: null, memo: '학부모 통화 예정' },
   { id: 'mk-seed-2', student_id: 's-67', class_id: 'cl-05', absent_date: '2026-06-09', status: '예정', makeup_date: '2026-06-19', makeup_time: '16:00', memo: null },
+  // 씨드 선생님 담당 반(cl-02) 보강 데이터 — 수업관리 보강 탭 시연용
+  { id: 'mk-seed-3', student_id: 's-19', class_id: 'cl-02', absent_date: '2026-06-13', status: '미정', makeup_date: null, makeup_time: null, memo: '학부모 통화 예정' },
+  { id: 'mk-seed-4', student_id: 's-16', class_id: 'cl-02', absent_date: '2026-06-11', status: '예정', makeup_date: '2026-06-21', makeup_time: '15:00', memo: null },
 ];
 
 interface MakeupCtx {
