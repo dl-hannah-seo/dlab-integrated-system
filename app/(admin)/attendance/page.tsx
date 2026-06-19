@@ -243,6 +243,108 @@ export default function AttendancePage() {
     );
   }
 
+  // ── 교사 전용 단순 뷰: 오늘 담당 반 KPI 4칸 + 반별 표(행 클릭 → 기록부에서 출결 편집) ──
+  if (isTeacher) {
+    const myClasses = CURRENT_CLASSES.filter(c => myClassIds!.has(c.id));
+    const myToday = myClasses
+      .map(c => summaryForSession(sessionOf(c.id, TODAY)?.id ?? null))
+      .filter((s): s is NonNullable<typeof s> => s !== null);
+    const tAttend = myToday.reduce((a, s) => a + s.attendCount, 0);
+    const tAbsent = myToday.reduce((a, s) => a + s.absentCount, 0);
+    const tPending = myToday.reduce((a, s) => a + s.pendingCount, 0);
+    const tDenom = tAttend + tAbsent;
+    const tRate = tDenom ? Math.round((tAttend / tDenom) * 100) : 0;
+    const kpiCards = [
+      { label: '오늘 출석률', value: tDenom ? `${tRate}%` : '–', sub: '담당 반 평균', color: '#37352F' },
+      { label: '출석', value: `${tAttend}명`, sub: '정상 출석', color: '#0F7B6C' },
+      { label: '미도착', value: `${tPending}명`, sub: '등원 대기', color: '#787774' },
+      { label: '결석', value: `${tAbsent}명`, sub: '미등원', color: tAbsent > 0 ? '#EB5757' : '#37352F' },
+    ];
+
+    return (
+      <div>
+        <div className="mb-6">
+          <h1 className="text-xl font-bold text-[#37352F]">출결 현황</h1>
+          <p className="text-sm text-[#787774] mt-1">판교 캠퍼스 · 오늘 ({todayLabel}) · {DEMO_TEACHER_NAME} 선생님 담당 반</p>
+        </div>
+
+        {/* KPI 카드 4칸 */}
+        <div className="grid grid-cols-4 gap-4 mb-6">
+          {kpiCards.map(c => (
+            <div key={c.label} className="bg-white border border-[#E9E9E7] rounded-lg p-5">
+              <p className="text-sm text-[#787774]">{c.label}</p>
+              <p className="text-3xl font-bold mt-2" style={{ color: c.color }}>{c.value}</p>
+              <p className="text-xs text-[#787774] mt-2">{c.sub}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* 오늘 담당 반별 출석 현황 — 행 클릭 시 기록부에서 출결 편집 */}
+        <Card title="반별 출석 현황">
+          {myClasses.length === 0 ? (
+            <p className="text-sm text-[#787774] py-8 text-center">담당 반이 없습니다.</p>
+          ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-[#787774] border-b border-[#E9E9E7]">
+                <th className="font-medium pb-2 pr-3">반</th>
+                <th className="font-medium pb-2 pr-3 text-right">출석</th>
+                <th className="font-medium pb-2 pr-3 text-right">미도착</th>
+                <th className="font-medium pb-2 pr-3 text-right">결석</th>
+                <th className="font-medium pb-2 pr-3 text-right">출석률</th>
+                <th className="font-medium pb-2 text-right" aria-hidden></th>
+              </tr>
+            </thead>
+            <tbody>
+              {myClasses.map(cls => {
+                const sess = sessionOf(cls.id, TODAY);
+                const s = summaryForSession(sess?.id ?? null);
+                return (
+                  <tr
+                    key={cls.id}
+                    onClick={() => setOpenClass(cls)}
+                    className="border-b border-[#F1F0EF] last:border-0 cursor-pointer hover:bg-[#FFFBFA]"
+                  >
+                    <td className="py-3 pr-3">
+                      <span className="font-semibold text-[#37352F]">{cls.schedule}</span>
+                      <span className="text-[#37352F] ml-2">{cls.course}</span>
+                    </td>
+                    {s ? (
+                      <>
+                        <td className="py-3 pr-3 text-right text-[#0F7B6C]">{s.attendCount}</td>
+                        <td className="py-3 pr-3 text-right text-[#787774]">{s.pendingCount}</td>
+                        <td className="py-3 pr-3 text-right text-[#EB5757]">{s.absentCount}</td>
+                        <td className="py-3 pr-3 text-right font-semibold text-[#37352F]">{s.denom ? `${s.pct}%` : '미기록'}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="py-3 pr-3 text-right text-[#BEBDBA]">–</td>
+                        <td className="py-3 pr-3 text-right text-[#BEBDBA]">–</td>
+                        <td className="py-3 pr-3 text-right text-[#BEBDBA]">–</td>
+                        <td className="py-3 pr-3 text-right text-[#BEBDBA]">수업 없음</td>
+                      </>
+                    )}
+                    <td className="py-3 text-right text-[#BEBDBA]">›</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          )}
+        </Card>
+
+        {openClass && (
+          <ClassRecordModal
+            cls={openClass}
+            records={records}
+            onClose={() => setOpenClass(null)}
+            onEdit={updateStatus}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-6">
