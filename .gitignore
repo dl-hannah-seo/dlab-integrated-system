@@ -43,3 +43,6 @@ next-env.d.ts
 # oh-my-claudecode
 .omc/
 .superpowers/
+
+# claude code local (hooks, settings, worktrees)
+.claude/

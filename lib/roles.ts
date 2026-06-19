@@ -19,7 +19,8 @@ export const ROLE_META: Record<Role, { label: string; sub: string }> = {
 
 // 역할별 노출 메뉴 (Sidebar href 기준). 학생은 admin 메뉴 없음(→ 포털).
 const MENU_ALLOWLIST: Record<Role, string[]> = {
-  '원장': ['/dashboard', '/schedule', '/attendance', '/classes', '/teachers', '/students', '/leads', '/payments', '/revenue', '/ai', '/points', '/settings'],
+  // AI 인사이트(/ai)는 메뉴에서 제거 — 대시보드 AI 인사이트 히어로로 통합됨
+  '원장': ['/dashboard', '/schedule', '/attendance', '/classes', '/teachers', '/students', '/leads', '/payments', '/revenue', '/points', '/settings'],
   '교사': ['/dashboard', '/schedule', '/attendance', '/students', '/leads', '/points'],
   'SO': ['/dashboard', '/schedule', '/attendance', '/classes', '/students', '/leads', '/payments', '/points'],
   '학생': [],
@@ -39,6 +40,28 @@ export function menusForRole(role: Role): string[] {
 
 export function canSeeMenu(role: Role, href: string): boolean {
   return MENU_ALLOWLIST[role].includes(href);
+}
+
+// 사이드바 표시 레이아웃 — 메뉴를 접이식 그룹으로 묶을 역할만 정의.
+// 미정의 역할(SO·교사)은 평면 노출(allowlist 순서) 유지.
+// 권한이 아니라 '표시 위치'일 뿐 — 그룹 안 메뉴도 접근 권한은 allowlist로 판정.
+export type MenuLayoutEntry =
+  | { type: 'item'; href: string }
+  | { type: 'section'; id: string; label: string; hrefs: string[] };
+
+const MENU_LAYOUT: Partial<Record<Role, MenuLayoutEntry[]>> = {
+  // 원장: 디지털 친숙도 고려해 자주 쓰는 건 위로, 나머지는 두 그룹(접힘)으로 정돈
+  '원장': [
+    { type: 'item', href: '/dashboard' },
+    { type: 'item', href: '/schedule' },
+    { type: 'section', id: 'status', label: '현황 조회', hrefs: ['/attendance', '/revenue'] },
+    { type: 'section', id: 'manage', label: '상세 관리', hrefs: ['/classes', '/teachers', '/students', '/leads', '/payments', '/points'] },
+    { type: 'item', href: '/settings' },
+  ],
+};
+
+export function menuLayoutForRole(role: Role): MenuLayoutEntry[] | null {
+  return MENU_LAYOUT[role] ?? null;
 }
 
 // 사이드바 부가 항목(외부 링크·매뉴얼·빠른 실행) 노출

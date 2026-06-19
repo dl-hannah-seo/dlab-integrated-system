@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQuickActions } from '@/components/panels/QuickActionsContext';
 import { useRole } from '@/components/layout/RoleContext';
-import { ROLES, ROLE_META, menusForRole, canSeeExtra, type Role } from '@/lib/roles';
+import { ROLES, ROLE_META, menusForRole, menuLayoutForRole, canSeeExtra, type Role, type MenuLayoutEntry } from '@/lib/roles';
 
 interface NavItem {
   href: string;
@@ -60,11 +60,6 @@ const adminNav: NavItem[] = [
     icon: <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18M7 14l4-4 3 3 5-6" /></svg>,
   },
   {
-    href: '/ai',
-    label: 'AI 인사이트',
-    icon: <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>,
-  },
-  {
     href: '/points',
     label: '포인트 관리',
     icon: <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
@@ -75,6 +70,15 @@ const adminNav: NavItem[] = [
     icon: <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
   },
 ];
+
+// href → 메뉴 메타 빠른 조회 (그룹 레이아웃 렌더용)
+const navByHref: Record<string, NavItem> = Object.fromEntries(adminNav.map(i => [i.href, i]));
+
+// 그룹 헤더 아이콘 (lib/roles.ts MENU_LAYOUT의 section.id 기준)
+const SECTION_ICON: Record<string, React.ReactNode> = {
+  status: <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>,
+  manage: <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
+};
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -89,6 +93,7 @@ export function Sidebar() {
 
   const allowed = menusForRole(role);
   const visibleNav = adminNav.filter(item => allowed.includes(item.href));
+  const layout = menuLayoutForRole(role);
 
   function onSwitch(value: string) {
     if (value === '__kiosk__') { router.push('/kiosk'); return; }   // 데모: 키오스크 출석 화면
@@ -96,6 +101,71 @@ export function Sidebar() {
     setRole(r);
     if (r === '학생') router.push('/me');
   }
+
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+
+  // 사용자가 직접 토글한 그룹만 기억(override). 미토글 그룹은 기본 접힘 + 활성 페이지가 속한 그룹은 자동 펼침.
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  let activeSectionId: string | null = null;
+  if (layout) {
+    for (const e of layout) {
+      if (e.type === 'section' && e.hrefs.some(isActive)) activeSectionId = e.id;
+    }
+  }
+  const sectionOpen = (id: string) => openSections[id] ?? (id === activeSectionId);
+
+  const renderLink = (item: NavItem) => {
+    const active = isActive(item.href);
+    return (
+      <li key={item.href}>
+        <Link
+          href={item.href}
+          className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
+            active ? 'bg-[#FFF1EC] text-[#FF6C37] font-medium' : 'text-[#37352F] hover:bg-[#EFEFEE]'
+          }`}
+        >
+          <span className={active ? 'text-[#FF6C37]' : 'text-[#787774]'}>{item.icon}</span>
+          {item.label}
+        </Link>
+      </li>
+    );
+  };
+
+  const renderSection = (entry: Extract<MenuLayoutEntry, { type: 'section' }>) => {
+    const items = entry.hrefs.filter(h => allowed.includes(h)).map(h => navByHref[h]).filter(Boolean) as NavItem[];
+    if (items.length === 0) return null;
+    if (items.length === 1) return renderLink(items[0]);   // 단일 항목 그룹은 묶지 않고 평면 노출
+    const open = sectionOpen(entry.id);
+    const hasActive = items.some(i => isActive(i.href));
+    return (
+      <li key={entry.id}>
+        <button
+          type="button"
+          onClick={() => setOpenSections(s => ({ ...s, [entry.id]: !open }))}
+          aria-expanded={open}
+          className={`w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-md text-sm transition-colors hover:bg-[#EFEFEE] ${
+            !open && hasActive ? 'text-[#FF6C37]' : 'text-[#37352F]'
+          }`}
+        >
+          <span className="flex items-center gap-2.5">
+            <span className={!open && hasActive ? 'text-[#FF6C37]' : 'text-[#787774]'}>{SECTION_ICON[entry.id]}</span>
+            {entry.label}
+          </span>
+          <svg
+            width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+            className={`text-[#9B9A97] transition-transform ${open ? 'rotate-90' : ''}`}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+        {open && (
+          <ul className="mt-0.5 ml-[18px] pl-3 border-l border-[#E9E9E7] space-y-0.5">
+            {items.map(renderLink)}
+          </ul>
+        )}
+      </li>
+    );
+  };
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-60 bg-[#F7F7F5] border-r border-[#E9E9E7] flex flex-col z-10">
@@ -121,26 +191,12 @@ export function Sidebar() {
       {/* 네비게이션 */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto flex flex-col">
         <ul className="space-y-0.5">
-          {visibleNav.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors ${
-                    isActive
-                      ? 'bg-[#FFF1EC] text-[#FF6C37] font-medium'
-                      : 'text-[#37352F] hover:bg-[#EFEFEE]'
-                  }`}
-                >
-                  <span className={isActive ? 'text-[#FF6C37]' : 'text-[#787774]'}>
-                    {item.icon}
-                  </span>
-                  {item.label}
-                </Link>
-              </li>
-            );
-          })}
+          {layout
+            ? layout.map(entry =>
+                entry.type === 'item'
+                  ? (allowed.includes(entry.href) && navByHref[entry.href] ? renderLink(navByHref[entry.href]) : null)
+                  : renderSection(entry))
+            : visibleNav.map(renderLink)}
         </ul>
 
         {/* 외부 화면 링크 (새 탭) — 교안 마켓플레이스 (원장·교사) */}

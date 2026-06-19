@@ -22,6 +22,42 @@ export function Input({ label, error, suffix, className = '', ...props }: InputP
   );
 }
 
+interface MoneyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'defaultValue' | 'onChange' | 'type'> {
+  label?: React.ReactNode;
+  error?: string;
+  suffix?: string;
+  value?: number;                       // 제어형: 외부 상태 사용
+  defaultValue?: number;                // 비제어형: 내부 상태 사용
+  onValueChange?: (n: number) => void;  // 변경 시 숫자값 전달
+}
+
+/** 천 단위 쉼표를 표시하는 숫자(금액) 입력. 자릿수가 한눈에 보이도록 함. */
+export function MoneyInput({ label, error, suffix, value, defaultValue, onValueChange, ...props }: MoneyInputProps) {
+  const isControlled = value !== undefined;
+  const [inner, setInner] = React.useState<number>(defaultValue ?? 0);
+  const current = isControlled ? (value as number) : inner;
+  const display = current ? current.toLocaleString('ko-KR') : '';
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const n = Number(e.target.value.replace(/[^0-9]/g, '')) || 0;
+    if (!isControlled) setInner(n);
+    onValueChange?.(n);
+  }
+
+  return (
+    <Input
+      {...props}
+      label={label}
+      error={error}
+      suffix={suffix}
+      type="text"
+      inputMode="numeric"
+      value={display}
+      onChange={handleChange}
+    />
+  );
+}
+
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: React.ReactNode;
   error?: string;

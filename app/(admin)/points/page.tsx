@@ -9,7 +9,7 @@ import { useRole } from '@/components/layout/RoleContext';
 import { DEMO_TEACHER_ID, DEMO_TEACHER_NAME, canGivePoints, canManageShop } from '@/lib/roles';
 import { classesOfTeacher } from '@/lib/teacher-hr';
 import { Card } from '@/components/ui/Card';
-import { Select, Input } from '@/components/ui/Input';
+import { Select, Input, MoneyInput } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { DeleteButton } from '@/components/ui/DeleteButton';
 
@@ -147,7 +147,7 @@ export default function PointsPage() {
                     <tr key={it.id} className="border-b border-[#F1F0EF]">
                       <td className="px-3 py-2"><input value={it.icon} onChange={e => updateItem(it.id, { icon: e.target.value })} className="w-12 text-center text-lg bg-white border border-[#E9E9E7] rounded px-1 py-1 focus:outline-none focus:ring-1 focus:ring-[#FF6C37]" /></td>
                       <td className="px-3 py-2"><input value={it.name} onChange={e => updateItem(it.id, { name: e.target.value })} className="w-full text-sm text-[#37352F] bg-white border border-[#E9E9E7] rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#FF6C37]" /></td>
-                      <td className="px-3 py-2 text-right"><input type="number" value={it.cost} onChange={e => updateItem(it.id, { cost: Math.max(0, parseInt(e.target.value, 10) || 0) })} className="w-28 text-right text-sm tabular-nums bg-white border border-[#E9E9E7] rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#FF6C37]" /></td>
+                      <td className="px-3 py-2 text-right"><input inputMode="numeric" value={it.cost ? it.cost.toLocaleString('ko-KR') : ''} onChange={e => updateItem(it.id, { cost: Math.max(0, Number(e.target.value.replace(/[^0-9]/g, '')) || 0) })} className="w-28 text-right text-sm tabular-nums bg-white border border-[#E9E9E7] rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#FF6C37]" /></td>
                       <td className="px-3 py-2 text-right"><DeleteButton onClick={() => removeItem(it.id)}>삭제</DeleteButton></td>
                     </tr>
                   ))}
@@ -159,7 +159,7 @@ export default function PointsPage() {
             <div className="grid gap-2 sm:grid-cols-[80px_1fr_160px_auto] items-end">
               <Input label="아이콘" value={form.icon} onChange={e => setForm({ ...form, icon: e.target.value })} />
               <Input label="상품명" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="예: 문화상품권" />
-              <Input label="가격(P)" type="number" value={form.cost} onChange={e => setForm({ ...form, cost: e.target.value })} placeholder="500" />
+              <MoneyInput label="가격(P)" value={form.cost ? Number(form.cost) : 0} onValueChange={n => setForm({ ...form, cost: n ? String(n) : '' })} placeholder="500" />
               <Button onClick={addItem} disabled={!form.name.trim() || !form.cost}>추가</Button>
             </div>
             <p className="text-xs text-[#9B9A97] mt-3">데모: 변경은 이 화면 세션에 저장됩니다.</p>

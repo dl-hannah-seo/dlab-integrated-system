@@ -31,6 +31,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { DeleteButton } from '@/components/ui/DeleteButton';
 import { consultationsOf, nextConsultId, addConsultation, updateConsultation, removeConsultation } from '@/lib/consultations';
+import { parseStudentRows, rowToStudent, buildStudentTemplate, type ParsedStudentRow } from '@/lib/student-import';
 
 const DIVISIONS = ['전체', '유치부', '초등부', '중등부', '고등부'];
 const GRADES = ['전체', '5세', '6세', '7세', '초1', '초2', '초3', '초4', '초5', '초6', '중1', '중2', '중3', '고1', '고2', '고3'];
@@ -98,19 +99,50 @@ export default function StudentsPage() {
 
   // 필터
   const [filterName, setFilterName] = useState('');
-  const [filterDivision, setFilterDivision] = useState('전체');
-  const [filterSchool, setFilterSchool] = useState('');
   const [filterGrade, setFilterGrade] = useState('전체');
   const [filterStatus, setFilterStatus] = useState('재원');
   const [filterClass, setFilterClass] = useState('전체');
-  const [filterTeacher, setFilterTeacher] = useState('전체');
-  const [filterSource, setFilterSource] = useState('전체');
-  const [firstFrom, setFirstFrom] = useState('');
-  const [firstTo, setFirstTo] = useState('');
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showRegister, setShowRegister] = useState(false);
   const [showMsgModal, setShowMsgModal] = useState(false);
+
+  // 엑셀(CSV) 일괄 등록
+  const [showImport, setShowImport] = useState(false);
+  const [importRows, setImportRows] = useState<ParsedStudentRow[]>([]);
+  const [importFileName, setImportFileName] = useState('');
+  const importValid = importRows.filter(r => r.errors.length === 0);
+  const importInvalid = importRows.filter(r => r.errors.length > 0);
+
+  function downloadTemplate() {
+    const blob = new Blob(['﻿' + buildStudentTemplate()], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '원생_일괄등록_양식.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => setImportRows(parseStudentRows(String(reader.result ?? '')));
+    reader.readAsText(file, 'utf-8');
+  }
+  function closeImport() {
+    setShowImport(false);
+    setImportRows([]);
+    setImportFileName('');
+  }
+  function confirmImport() {
+    if (importValid.length === 0) return;
+    const base = Date.now();
+    const newStudents = importValid.map((r, i) => rowToStudent(r, base + i, today));
+    setLocalStudents(prev => [...newStudents, ...prev]);
+    closeImport();
+  }
 
   // 신규 등록 폼 — 조건부 UI용 상태
   const [regSourceSel, setRegSourceSel] = useState(SOURCES[0]);
@@ -214,35 +246,19 @@ export default function StudentsPage() {
     { value: '전체', label: '전체 반' },
     ...classes.map(c => ({ value: c.id, label: c.name })),
   ];
-  const schoolOptions = Array.from(new Set(localStudents.map(s => s.school).filter(Boolean))).sort();
-
   const filtered = useMemo(() => {
     return localStudents.filter(s => {
       if (filterName && !s.name.includes(filterName)) return false;
-      if (filterDivision !== '전체' && (s.division ?? '') !== filterDivision) return false;
-      if (filterSchool.trim() && !s.school.includes(filterSchool.trim())) return false;
       if (filterGrade !== '전체' && s.grade !== filterGrade) return false;
       if (filterStatus !== '전체' && s.status !== filterStatus) return false;
       const myClassIds = activeClassIds(s.id);
       if (filterClass !== '전체' && !myClassIds.includes(filterClass)) return false;
-      if (filterTeacher !== '전체') {
-        const myTeachers = myClassIds.map(id => classes.find(c => c.id === id)?.teacher);
-        if (!myTeachers.includes(filterTeacher)) return false;
-      }
-      if (filterSource !== '전체') {
-        if (filterSource === '기타') { if (SOURCES.includes(s.source)) return false; }
-        else if (s.source !== filterSource) return false;
-      }
-      if (firstFrom && s.first_enrolled_at < firstFrom) return false;
-      if (firstTo && s.first_enrolled_at > firstTo) return false;
       return true;
     });
-  }, [localStudents, localEnrollments, filterName, filterDivision, filterSchool, filterGrade, filterStatus, filterClass, filterTeacher, filterSource, firstFrom, firstTo]);
+  }, [localStudents, localEnrollments, filterName, filterGrade, filterStatus, filterClass]);
 
   function resetFilters() {
-    setFilterName(''); setFilterDivision('전체'); setFilterSchool(''); setFilterGrade('전체');
-    setFilterStatus('재원'); setFilterClass('전체'); setFilterTeacher('전체'); setFilterSource('전체');
-    setFirstFrom(''); setFirstTo('');
+    setFilterName(''); setFilterGrade('전체'); setFilterStatus('재원'); setFilterClass('전체');
   }
 
   // 문자 발송 대상: 선택이 있으면 선택분, 없으면 현재 조회된 전체
@@ -339,12 +355,6 @@ export default function StudentsPage() {
       className: 'w-10',
     },
     { key: 'name', header: '성명', render: (r: Student) => <span className="font-medium whitespace-nowrap">{r.name}</span> },
-    { key: 'student_phone', header: '원생 연락처', render: (r: Student) => <span className="tabular-nums text-xs">{r.student_phone || '-'}</span> },
-    { key: 'parent_phone', header: '모 연락처', render: (r: Student) => <span className="tabular-nums text-xs">{r.parent_phone}</span> },
-    { key: 'father_phone', header: '부 연락처', render: (r: Student) => <span className="tabular-nums text-xs">{r.father_phone || '-'}</span> },
-    { key: 'division', header: '학부', render: (r: Student) => <span className="text-xs whitespace-nowrap">{r.division ?? '-'}</span> },
-    { key: 'school', header: '학교', render: (r: Student) => <span className="text-xs whitespace-nowrap">{r.school}</span> },
-    { key: 'grade', header: '학년', render: (r: Student) => <span className="text-xs whitespace-nowrap">{r.grade}</span> },
     {
       key: 'class_id', header: '반명',
       render: (r: Student) => {
@@ -352,12 +362,12 @@ export default function StudentsPage() {
         return <span className="text-xs whitespace-nowrap" title={names.join('\n')}>{classLabel(r.id)}</span>;
       },
     },
-    { key: 'first_enrolled_at', header: '최초 등원일', render: (r: Student) => <span className="tabular-nums text-xs whitespace-nowrap">{r.first_enrolled_at}</span> },
+    { key: 'grade', header: '학년', render: (r: Student) => <span className="text-xs whitespace-nowrap">{r.grade}</span> },
+    { key: 'parent_phone', header: '모 연락처', render: (r: Student) => <span className="tabular-nums text-xs">{r.parent_phone}</span> },
     {
       key: 'status', header: '등록구분',
       render: (r: Student) => <Badge variant={r.status === '재원' ? 'active' : 'withdrawn'}>{r.status}</Badge>,
     },
-    { key: 'source', header: '유입경로', render: (r: Student) => <span className="text-xs text-[#787774] whitespace-nowrap">{r.source}</span> },
   ];
 
   // ── 상세 모달 본문 ─────────────────────────────────────────
@@ -804,42 +814,31 @@ export default function StudentsPage() {
       <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold text-[#37352F]">원생 관리</h1>
-          <p className="text-sm text-[#787774] mt-1">조건별 조회 · 신규 등록/삭제 · 정보 편집 · 문자 발송 · 엑셀 내보내기</p>
+          <p className="text-sm text-[#787774] mt-1">조건별 조회 · 신규 등록/삭제 · 정보 편집 · 문자 발송 · 엑셀 일괄 등록/내보내기</p>
         </div>
-        <Button size="sm" onClick={() => setShowRegister(true)}>
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          신규 원생 등록
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setShowImport(true)}>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            엑셀 일괄 등록
+          </Button>
+          <Button size="sm" onClick={() => setShowRegister(true)}>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            신규 원생 등록
+          </Button>
+        </div>
       </div>
 
       {/* 필터 */}
       <Card className="mb-5">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <Input label="원생명" placeholder="이름 검색" value={filterName} onChange={e => setFilterName(e.target.value)} />
-          <Select label="학부" value={filterDivision} onChange={e => setFilterDivision(e.target.value)} options={DIVISIONS.map(d => ({ value: d, label: d }))} />
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-[#37352F]">학교</span>
-            <input list="filter-school-options" value={filterSchool} onChange={e => setFilterSchool(e.target.value)} placeholder="전체 (검색)"
-              className="w-full border border-[#E9E9E7] rounded-md px-3 py-2 text-sm text-[#37352F] placeholder:text-[#BEBDBA] focus:outline-none focus:border-[#FF6C37] bg-white" />
-            <datalist id="filter-school-options">
-              {schoolOptions.map(sc => <option key={sc} value={sc} />)}
-            </datalist>
-          </div>
-          <Select label="학년" value={filterGrade} onChange={e => setFilterGrade(e.target.value)} options={GRADES.map(g => ({ value: g, label: g }))} />
           <Select label="등록구분" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} options={STATUSES.map(v => ({ value: v, label: v }))} />
           <Select label="반" value={filterClass} onChange={e => setFilterClass(e.target.value)} options={classOptions} />
-          <Select label="담임" value={filterTeacher} onChange={e => setFilterTeacher(e.target.value)} options={[{ value: '전체', label: '전체 담임' }, ...TEACHERS.map(t => ({ value: t, label: t }))]} />
-          <Select label="유입경로" value={filterSource} onChange={e => setFilterSource(e.target.value)} options={[{ value: '전체', label: '전체' }, ...SOURCES.map(s => ({ value: s, label: s })), { value: '기타', label: '기타' }]} />
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-[#37352F]">최초등원일</span>
-            <div className="flex items-center gap-1">
-              <input type="date" value={firstFrom} onChange={e => setFirstFrom(e.target.value)} className="w-full border border-[#E9E9E7] rounded-md px-2 py-2 text-sm text-[#37352F] focus:outline-none focus:border-[#FF6C37]" />
-              <span className="text-[#787774]">~</span>
-              <input type="date" value={firstTo} onChange={e => setFirstTo(e.target.value)} className="w-full border border-[#E9E9E7] rounded-md px-2 py-2 text-sm text-[#37352F] focus:outline-none focus:border-[#FF6C37]" />
-            </div>
-          </div>
+          <Select label="학년" value={filterGrade} onChange={e => setFilterGrade(e.target.value)} options={GRADES.map(g => ({ value: g, label: g }))} />
         </div>
         <div className="flex justify-end mt-3">
           <Button variant="secondary" onClick={resetFilters}>초기화</Button>
@@ -1027,6 +1026,86 @@ export default function StudentsPage() {
             <div className="bg-[#EDF7F5] border border-[#0F7B6C]/20 rounded-lg px-5 py-3">
               <p className="text-sm font-semibold text-[#0F7B6C]">청구 자동 생성 안내</p>
               <p className="text-xs text-[#787774] mt-1">선택한 {regClasses.size}개 반의 수강료·납입기준일 설정에 따라 2026-06월 청구 자료가 각각 자동 생성됩니다.</p>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* 엑셀(CSV) 일괄 등록 모달 */}
+      <Modal
+        open={showImport}
+        onClose={closeImport}
+        title="원생 엑셀 일괄 등록"
+        size="lg"
+        footer={
+          <>
+            <Button variant="secondary" onClick={closeImport}>취소</Button>
+            <Button onClick={confirmImport} disabled={importValid.length === 0}>
+              {importValid.length > 0 ? `${importValid.length}명 등록` : '등록'}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="bg-[#F7F7F5] rounded-lg px-5 py-4">
+            <p className="text-sm text-[#37352F] font-medium">통통통 등 기존 시스템 데이터를 한 번에 가져옵니다.</p>
+            <p className="text-xs text-[#787774] mt-1">
+              통통통을 쓰지 않는 경우 아래 양식을 내려받아 작성하세요. 엑셀에서 <span className="font-medium">CSV UTF-8</span> 형식으로 저장하면 됩니다.
+            </p>
+            <Button variant="secondary" size="sm" className="mt-3" onClick={downloadTemplate}>양식(CSV) 다운로드</Button>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#37352F] mb-1.5">CSV 파일 선택</label>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={handleImportFile}
+              className="block w-full text-sm text-[#37352F] file:mr-3 file:rounded-md file:border-0 file:bg-[#FF6C37] file:px-3 file:py-2 file:text-white file:cursor-pointer hover:file:bg-[#E85A27]"
+            />
+            {importFileName && <p className="text-xs text-[#787774] mt-1.5">{importFileName} · 총 {importRows.length}행</p>}
+          </div>
+
+          {importRows.length > 0 && (
+            <div>
+              <div className="flex items-center gap-3 mb-2 text-sm">
+                <span className="text-[#0F7B6C] font-medium">유효 {importValid.length}명</span>
+                {importInvalid.length > 0 && <span className="text-[#EB5757] font-medium">오류 {importInvalid.length}건</span>}
+                <span className="text-xs text-[#787774]">반 배정은 등록 후 개별 진행</span>
+              </div>
+              <div className="border border-[#E9E9E7] rounded-md max-h-60 overflow-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-[#F7F7F5] text-[#787774] sticky top-0">
+                    <tr>
+                      <th className="text-left font-medium px-3 py-2 w-10">#</th>
+                      <th className="text-left font-medium px-3 py-2">이름</th>
+                      <th className="text-left font-medium px-3 py-2">학년</th>
+                      <th className="text-left font-medium px-3 py-2">학교</th>
+                      <th className="text-left font-medium px-3 py-2">모 연락처</th>
+                      <th className="text-left font-medium px-3 py-2">상태</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importRows.map(r => (
+                      <tr key={r.row} className={`border-t border-[#E9E9E7] ${r.errors.length ? 'bg-[#FDECEA]' : ''}`}>
+                        <td className="px-3 py-2 text-[#787774] tabular-nums">{r.row}</td>
+                        <td className="px-3 py-2 text-[#37352F]">{r.name || <span className="text-[#BEBDBA]">-</span>}</td>
+                        <td className="px-3 py-2 text-[#787774]">{r.grade || '-'}</td>
+                        <td className="px-3 py-2 text-[#787774]">{r.school || '-'}</td>
+                        <td className="px-3 py-2 text-[#787774] tabular-nums">{r.parent_phone || r.father_phone || r.student_phone || '-'}</td>
+                        <td className="px-3 py-2">
+                          {r.errors.length === 0
+                            ? <span className="text-xs text-[#0F7B6C]">정상</span>
+                            : <span className="text-xs text-[#EB5757]">{r.errors.join(', ')}</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {importInvalid.length > 0 && (
+                <p className="text-xs text-[#787774] mt-1.5">오류 행은 등록에서 제외됩니다. 유효한 {importValid.length}명만 등록됩니다.</p>
+              )}
             </div>
           )}
         </div>

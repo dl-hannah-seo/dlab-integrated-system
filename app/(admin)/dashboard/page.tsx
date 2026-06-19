@@ -6,6 +6,7 @@ import {
   dashboardData,
   classes,
   consultations,
+  students,
   getUnpaidStudents,
   getClassById,
 } from '@/lib/mock-data';
@@ -13,13 +14,20 @@ import { useQuickActions } from '@/components/panels/QuickActionsContext';
 import { useRole } from '@/components/layout/RoleContext';
 import { DEMO_TEACHER_ID, DEMO_TEACHER_NAME, canSeeExtra } from '@/lib/roles';
 import { classesOfTeacher, consultationsByCounselor } from '@/lib/teacher-hr';
+import { atRiskStudents } from '@/lib/at-risk';
+import { consultationGapStudents } from '@/lib/consultations';
 import { Card } from '@/components/ui/Card';
+import { PnlSummaryStrip } from '@/components/dashboard/PnlSummaryStrip';
+import { AiBenchmarkHero } from '@/components/dashboard/AiBenchmarkHero';
+import { AtRiskList } from '@/components/dashboard/AtRiskList';
+import { ConsultGapList } from '@/components/dashboard/ConsultGapList';
 
 // ── 데모 기준 ──────────────────────────────────────────────────
 // 실제 today/주간 집계 연동 전까지 사용하는 목업 상수.
 // 연동 시: TODAY_DOW → 실제 요일, weeklyAttendance → attendance 집계로 교체.
 const TODAY_DOW = '토';
 const TODAY_LABEL = '2026년 6월 14일 토요일';
+const TODAY_ISO = '2026-06-14';   // 상담 공백 계산 기준일(데모)
 
 // 주간 출결 추이 (데모 집계값) — 미래 요일은 rate=null → 흐리게
 const weeklyAttendance: { day: string; rate: number | null; today?: boolean }[] = [
@@ -36,10 +44,6 @@ const weeklyAttendance: { day: string; rate: number | null; today?: boolean }[] 
 const todayAttendRate = 93;
 const todayAttended = 37;
 const todayTotalAttending = 40;
-
-function fmtMoney(n: number) {
-  return n.toLocaleString('ko-KR') + '원';
-}
 
 export default function DashboardPage() {
   const { openAttendance, openSms, openRecording } = useQuickActions();
@@ -73,6 +77,82 @@ export default function DashboardPage() {
       })),
       template: 'unpaid',
     });
+  }
+
+  // ── 원장 전용 대시보드 (재구성) ──────────────────────────────
+  if (role === '원장') {
+    const unpaidIds = new Set(unpaidStudents.map((s) => s.id));
+    const atRisk = atRiskStudents(students, unpaidIds);
+    const consultGap = consultationGapStudents(students, consultations, TODAY_ISO, 90);
+
+    return (
+      <div className="space-y-6">
+        {/* ① 인사 배너 */}
+        <div className="flex items-center justify-between rounded-xl bg-[#37352F] px-8 py-7">
+          <div>
+            <p className="text-xs text-[#9B9B97]">{campus.name} · {TODAY_LABEL}</p>
+            <h1 className="mt-1.5 text-2xl font-bold text-white">좋은 아침이에요, {who} 👋</h1>
+            <p className="mt-2 text-sm text-[#9B9B97]">오늘 수업 {todayClasses.length}개 · 재원생 {enrolledTotal}명</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-[#9B9B97]">오늘 출석률</p>
+            <p className="mt-0.5 text-4xl font-bold text-[#5FD0BE]">{todayAttendRate}%</p>
+            <p className="mt-1 text-xs text-[#9B9B97]">출석 {todayAttended} / {todayTotalAttending}명</p>
+          </div>
+        </div>
+
+        {/* ② 손익 KPI 스트립 → /revenue */}
+        <PnlSummaryStrip />
+
+        {/* ③ AI 인사이트 히어로 */}
+        <AiBenchmarkHero />
+
+        {/* ④ 워치리스트 — 퇴원 위험 · 상담 미정 */}
+        <div className="grid gap-6 md:grid-cols-2">
+          <AtRiskList entries={atRisk} />
+          <ConsultGapList entries={consultGap} />
+        </div>
+
+        {/* ⑤ 납부 현황 도넛 + 미납 원생 */}
+        <div className="grid gap-6" style={{ gridTemplateColumns: '1fr 1.4fr' }}>
+          <Card title="납부 현황">
+            <div className="flex flex-col items-center">
+              <div className="relative flex h-36 w-36 items-center justify-center rounded-full"
+                style={{ background: `conic-gradient(#FF6C37 0% ${paidPct}%, #EB5757 ${paidPct}% 100%)` }}>
+                <div className="flex h-24 w-24 flex-col items-center justify-center rounded-full bg-white">
+                  <span className="text-2xl font-bold text-[#37352F]">{paidPct}%</span>
+                  <span className="text-[11px] text-[#787774]">완납률</span>
+                </div>
+              </div>
+              <div className="mt-4 flex gap-4 text-xs">
+                <span className="flex items-center gap-1.5 text-[#37352F]">
+                  <span className="h-2.5 w-2.5 rounded-full bg-[#FF6C37]" />완납 {paid}
+                </span>
+                <span className="flex items-center gap-1.5 text-[#37352F]">
+                  <span className="h-2.5 w-2.5 rounded-full bg-[#EB5757]" />미납 {unpaid}
+                </span>
+              </div>
+            </div>
+          </Card>
+          <Card
+            title={`미납 원생 ${unpaidStudents.length}명`}
+            action={<button onClick={handleUnpaidSms} className="text-xs font-medium text-[#FF6C37] hover:underline">문자 발송</button>}
+          >
+            <ul className="-my-1 max-h-44 space-y-1 overflow-y-auto">
+              {unpaidStudents.map((s) => {
+                const cls = getClassById(s.class_id);
+                return (
+                  <li key={s.id} className="flex items-center justify-between py-1.5">
+                    <span className="text-sm text-[#37352F]">{s.name}</span>
+                    <span className="text-xs text-[#787774]">{cls?.schedule ?? '-'}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   return (

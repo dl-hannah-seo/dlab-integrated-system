@@ -20,7 +20,7 @@ interface Props {
 const EMPTY_TEXT: Record<TabKey, string> = {
   미납: '조건에 맞는 미납 원생이 없습니다.',
   완납: '조건에 맞는 완납 내역이 없습니다.',
-  예정: '조건에 맞는 청구·예정 건이 없습니다.',
+  예정: '조건에 맞는 납부·예정 건이 없습니다.',
 };
 
 export function PaymentList({ rows, tab, today, selectedIds, onToggle, onToggleAll, onRowClick, onSendMessage }: Props) {

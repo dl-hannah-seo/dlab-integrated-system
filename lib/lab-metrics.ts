@@ -2,7 +2,7 @@ import { labWeeklyMetrics, type LabWeeklyMetric } from './mock-data';
 
 export type MetricKey =
   | 'promo_count' | 'inquiry_count' | 'new_enroll_count' | 're_enroll_count'
-  | 'attendance_rate' | 'makeup_done_rate' | 'withdraw_rate' | 'parent_response_rate';
+  | 'attendance_rate' | 'makeup_done_rate' | 'withdraw_rate' | 'payment_collection_rate';
 
 export const METRIC_LABELS: Record<MetricKey, string> = {
   promo_count: '주간 홍보 건수',
@@ -12,19 +12,19 @@ export const METRIC_LABELS: Record<MetricKey, string> = {
   attendance_rate: '출석률(%)',
   makeup_done_rate: '보강 완료율(%)',
   withdraw_rate: '퇴원율(%)',
-  parent_response_rate: '학부모 반응(%)',
+  payment_collection_rate: '수강료 수납률(%)',
 };
 
 /** 퇴원율만 낮을수록 좋음, 나머지는 높을수록 좋음 */
 export const LOWER_IS_BETTER: Record<MetricKey, boolean> = {
   promo_count: false, inquiry_count: false, new_enroll_count: false, re_enroll_count: false,
-  attendance_rate: false, makeup_done_rate: false, withdraw_rate: true, parent_response_rate: false,
+  attendance_rate: false, makeup_done_rate: false, withdraw_rate: true, payment_collection_rate: false,
 };
 
 /** 비교 표시 순서 */
 export const METRIC_ORDER: MetricKey[] = [
   'promo_count', 'inquiry_count', 'new_enroll_count', 're_enroll_count',
-  'attendance_rate', 'makeup_done_rate', 'withdraw_rate', 'parent_response_rate',
+  'attendance_rate', 'makeup_done_rate', 'withdraw_rate', 'payment_collection_rate',
 ];
 
 export function metricsForWeek(week: string): LabWeeklyMetric[] {
