@@ -5,7 +5,7 @@ import {
   classes, getClassRoster, students, FEEDBACK_PHASES, CURRENT_SEMESTER_ID, TODAY,
   type Student,
 } from '@/lib/mock-data';
-import { DEMO_TEACHER_ID, DEMO_TEACHER_NAME } from '@/lib/roles';
+import { DEMO_TEACHER_ID } from '@/lib/roles';
 import { classesOfTeacher } from '@/lib/teacher-hr';
 import { studentsOfClass, feedbackOf, classPhaseRate } from '@/lib/feedback';
 import { buildMakeupMessage } from '@/lib/makeup-helpers';
@@ -73,10 +73,7 @@ export default function TeachingPage() {
     <div>
       {/* 헤더 */}
       <div className="mb-6 flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-[#1A1D29]">수업관리</h1>
-          <p className="text-sm text-[#6B7280] mt-1">{DEMO_TEACHER_NAME} 선생님 · 담당 반별 출석·피드백·보강</p>
-        </div>
+        <h1 className="text-xl font-bold text-[#1A1D29]">수업관리</h1>
         <button
           onClick={openRecording}
           className="px-3 py-1.5 text-sm rounded-md bg-[#2F6BFF] text-white hover:bg-[#1F57E6] transition-colors"
