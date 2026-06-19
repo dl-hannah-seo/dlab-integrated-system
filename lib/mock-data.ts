@@ -33,7 +33,7 @@ export interface Semester {
 
 export const semesters: Semester[] = [
   { id: 'sem-01', campus_id: 'campus-001', year: 2026, season: '여름학기', courses: ['파이썬 기초', '맞춤수업', '아두이노'] },
-  { id: 'sem-02', campus_id: 'campus-001', year: 2025, season: '봄학기', courses: ['파이썬 기초', '맞춤수업'] },
+  { id: 'sem-02', campus_id: 'campus-001', year: 2026, season: '봄학기', courses: ['파이썬 기초', '맞춤수업'] },
 ];
 
 // ── 반 그룹 (학기>시간>반 3단 계층) ─────────────────────────
@@ -56,8 +56,8 @@ export const classGroups: ClassGroup[] = [
   { id: 'cg-06', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름학기', day_group: '화목', time_slot: '1800' },
   // 토 10:00 동시간대 2개 반 (한 칸 누적 표시 예시)
   { id: 'cg-09', campus_id: 'campus-001', semester_id: 'sem-01', year: 2026, season: '여름학기', day_group: '토', time_slot: '1000' },
-  { id: 'cg-07', campus_id: 'campus-001', semester_id: 'sem-02', year: 2025, season: '봄학기', day_group: '토', time_slot: '0900' },
-  { id: 'cg-08', campus_id: 'campus-001', semester_id: 'sem-02', year: 2025, season: '봄학기', day_group: '토', time_slot: '1000' },
+  { id: 'cg-07', campus_id: 'campus-001', semester_id: 'sem-02', year: 2026, season: '봄학기', day_group: '토', time_slot: '0900' },
+  { id: 'cg-08', campus_id: 'campus-001', semester_id: 'sem-02', year: 2026, season: '봄학기', day_group: '토', time_slot: '1000' },
 ];
 
 // ── 과목 마스터 ───────────────────────────────────────────────
@@ -85,15 +85,17 @@ export interface Teacher {
   subject_ids: string[];         // 가르칠 수 있는 과목 = "강사 수준"
   phone?: string;
   hire_date?: string;            // 입사일 YYYY-MM-DD
+  hourly_wage?: number;          // 시급(원) — 월 급여 자동 산출 기준
+  incentive?: number;            // 월 인센티브(원)
   status: '재직' | '휴직' | '퇴직';
 }
 
 export const teachers: Teacher[] = [
-  { id: 'tch-ron',   campus_id: 'campus-001', name: '론',   role: '강사', subject_ids: ['sub-python'],                phone: '010-1234-5678', hire_date: '2023-03-02', status: '재직' },
-  { id: 'tch-seed',  campus_id: 'campus-001', name: '씨드', role: '강사', subject_ids: ['sub-python', 'sub-arduino'], phone: '010-1234-5678', hire_date: '2022-09-01', status: '재직' },
-  { id: 'tch-ruth',  campus_id: 'campus-001', name: '루스', role: '강사', subject_ids: ['sub-custom'],                phone: '010-1234-5678', hire_date: '2024-01-08', status: '재직' },
-  { id: 'tch-liam',  campus_id: 'campus-001', name: '리암', role: '튜터', subject_ids: ['sub-python'],                phone: '010-1234-5678', hire_date: '2025-03-03', status: '재직' },
-  { id: 'tch-hobin', campus_id: 'campus-001', name: '허빈', role: '튜터', subject_ids: ['sub-custom', 'sub-arduino'], phone: '010-1234-5678', hire_date: '2024-07-15', status: '재직' },
+  { id: 'tch-ron',   campus_id: 'campus-001', name: '론',   role: '강사', subject_ids: ['sub-python'],                phone: '010-1234-5678', hire_date: '2023-03-02', hourly_wage: 35000, incentive: 200000, status: '재직' },
+  { id: 'tch-seed',  campus_id: 'campus-001', name: '씨드', role: '강사', subject_ids: ['sub-python', 'sub-arduino'], phone: '010-1234-5678', hire_date: '2022-09-01', hourly_wage: 38000, incentive: 250000, status: '재직' },
+  { id: 'tch-ruth',  campus_id: 'campus-001', name: '루스', role: '강사', subject_ids: ['sub-custom'],                phone: '010-1234-5678', hire_date: '2024-01-08', hourly_wage: 33000, incentive: 150000, status: '재직' },
+  { id: 'tch-liam',  campus_id: 'campus-001', name: '리암', role: '튜터', subject_ids: ['sub-python'],                phone: '010-1234-5678', hire_date: '2025-03-03', hourly_wage: 15000, incentive: 50000, status: '재직' },
+  { id: 'tch-hobin', campus_id: 'campus-001', name: '허빈', role: '튜터', subject_ids: ['sub-custom', 'sub-arduino'], phone: '010-1234-5678', hire_date: '2024-07-15', hourly_wage: 14000, incentive: 40000, status: '재직' },
 ];
 
 // ── 강사 근태 ─────────────────────────────────────────────────
@@ -222,20 +224,20 @@ export const classes: Class[] = [
     schedule: '토 10:00', payment_method: '일시', payment_due_day: 1,
     tuition_fee: 200000, material_fee: 50000, content_fee: 30000, enrolled_count: 4, room: '3강의실',
   },
-  // ── 2025 봄 (종강) — 과거 수강 이력용 ──
+  // ── 2026 봄 (종강) — 과거 수강 이력용 ──
   {
     id: 'cl-07', campus_id: 'campus-001', class_group_id: 'cg-07', semester_id: 'sem-02',
-    course: '파이썬 기초', subject_id: 'sub-python', name: '2025봄학기토0900/파이썬기초/씨드',
+    course: '파이썬 기초', subject_id: 'sub-python', name: '2026봄학기토0900/파이썬기초/씨드',
     teacher: '씨드', teacher_id: 'tch-seed', team_lead: '케이', capacity: 15,
-    start_date: '2025-03-08', end_date: '2025-06-28', weeks: 16,
+    start_date: '2026-02-14', end_date: '2026-05-30', weeks: 16,
     schedule: '토 09:00', payment_method: '매월', payment_due_day: 1,
     tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 0,
   },
   {
     id: 'cl-08', campus_id: 'campus-001', class_group_id: 'cg-08', semester_id: 'sem-02',
-    course: '맞춤수업', subject_id: 'sub-custom', name: '2025봄학기토1000/맞춤수업/루스',
+    course: '맞춤수업', subject_id: 'sub-custom', name: '2026봄학기토1000/맞춤수업/루스',
     teacher: '루스', teacher_id: 'tch-ruth', team_lead: '케이', capacity: 15,
-    start_date: '2025-03-08', end_date: '2025-06-28', weeks: 16,
+    start_date: '2026-02-14', end_date: '2026-05-30', weeks: 16,
     schedule: '토 10:00', payment_method: '매월', payment_due_day: 1,
     tuition_fee: 180000, material_fee: 20000, content_fee: 10000, enrolled_count: 0,
   },
@@ -530,9 +532,9 @@ students.forEach(s => {
     enrollments.push({
       id: `enr-${s.id}-prev`,
       student_id: s.id,
-      class_id: 'cl-07',   // 2025 봄 (종강) — 과거 수강 이력
+      class_id: 'cl-07',   // 2026 봄 (종강) — 과거 수강 이력
       started_at: s.first_enrolled_at,
-      ended_at: '2025-06-28',
+      ended_at: '2026-05-30',
       end_reason: '학기 종료',
     });
   }
@@ -549,12 +551,12 @@ students.forEach(s => {
   if (!overCap) activeByClass[s.class_id] = used + 1;
 });
 
-// 종강반(2025 봄 맞춤수업 cl-08) 과거 수강 이력 — 재배정 학생 일부 (cl-07과 분산 배정)
+// 종강반(2026 봄 맞춤수업 cl-08) 과거 수강 이력 — 재배정 학생 일부 (cl-07과 분산 배정)
 students.forEach(s => {
   if (Number(s.first_enrolled_at.slice(0, 4)) < 2025 && hashString(s.id) % 2 === 0) {
     enrollments.push({
       id: `enr-${s.id}-prev2`, student_id: s.id, class_id: 'cl-08',
-      started_at: s.first_enrolled_at, ended_at: '2025-06-28', end_reason: '학기 종료',
+      started_at: s.first_enrolled_at, ended_at: '2026-05-30', end_reason: '학기 종료',
     });
   }
 });
@@ -1073,10 +1075,10 @@ function buildAttendanceHistory(): { sessionHistory: ClassSession[]; attendanceH
   });
 
   // ── 종강반·추가 수강반 회차·출결 (상세 조회용, 오늘 회차 없음) ──
-  // cl-07·cl-08: 2025 봄학기(종강) 16주. cl-09: 2026 여름 추가 수강반(최근 흐름).
+  // cl-07·cl-08: 2026 봄학기(종강) 16주. cl-09: 2026 여름 추가 수강반(최근 흐름).
   const EXTRA: { classId: string; dates: string[] }[] = [
-    { classId: 'cl-07', dates: Array.from({ length: 16 }, (_, i) => shiftDate('2025-03-08', 7 * i)) },
-    { classId: 'cl-08', dates: Array.from({ length: 16 }, (_, i) => shiftDate('2025-03-08', 7 * i)) },
+    { classId: 'cl-07', dates: Array.from({ length: 16 }, (_, i) => shiftDate('2026-02-14', 7 * i)) },
+    { classId: 'cl-08', dates: Array.from({ length: 16 }, (_, i) => shiftDate('2026-02-14', 7 * i)) },
     { classId: 'cl-09', dates: Array.from({ length: HISTORY_WEEKS }, (_, i) => shiftDate(TODAY, -7 * (HISTORY_WEEKS - i))) },
   ];
   EXTRA.forEach(({ classId, dates }) => {

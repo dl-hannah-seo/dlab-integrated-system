@@ -31,6 +31,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { DeleteButton } from '@/components/ui/DeleteButton';
 import { consultationsOf, nextConsultId, addConsultation, updateConsultation, removeConsultation } from '@/lib/consultations';
+import { parseStudentRows, rowToStudent, buildStudentTemplate, type ParsedStudentRow } from '@/lib/student-import';
 
 const DIVISIONS = ['전체', '유치부', '초등부', '중등부', '고등부'];
 const GRADES = ['전체', '5세', '6세', '7세', '초1', '초2', '초3', '초4', '초5', '초6', '중1', '중2', '중3', '고1', '고2', '고3'];
@@ -111,6 +112,43 @@ export default function StudentsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showRegister, setShowRegister] = useState(false);
   const [showMsgModal, setShowMsgModal] = useState(false);
+
+  // 엑셀(CSV) 일괄 등록
+  const [showImport, setShowImport] = useState(false);
+  const [importRows, setImportRows] = useState<ParsedStudentRow[]>([]);
+  const [importFileName, setImportFileName] = useState('');
+  const importValid = importRows.filter(r => r.errors.length === 0);
+  const importInvalid = importRows.filter(r => r.errors.length > 0);
+
+  function downloadTemplate() {
+    const blob = new Blob(['﻿' + buildStudentTemplate()], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '원생_일괄등록_양식.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => setImportRows(parseStudentRows(String(reader.result ?? '')));
+    reader.readAsText(file, 'utf-8');
+  }
+  function closeImport() {
+    setShowImport(false);
+    setImportRows([]);
+    setImportFileName('');
+  }
+  function confirmImport() {
+    if (importValid.length === 0) return;
+    const base = Date.now();
+    const newStudents = importValid.map((r, i) => rowToStudent(r, base + i, today));
+    setLocalStudents(prev => [...newStudents, ...prev]);
+    closeImport();
+  }
 
   // 신규 등록 폼 — 조건부 UI용 상태
   const [regSourceSel, setRegSourceSel] = useState(SOURCES[0]);
@@ -804,14 +842,22 @@ export default function StudentsPage() {
       <div className="mb-6 flex items-start justify-between">
         <div>
           <h1 className="text-xl font-bold text-[#37352F]">원생 관리</h1>
-          <p className="text-sm text-[#787774] mt-1">조건별 조회 · 신규 등록/삭제 · 정보 편집 · 문자 발송 · 엑셀 내보내기</p>
+          <p className="text-sm text-[#787774] mt-1">조건별 조회 · 신규 등록/삭제 · 정보 편집 · 문자 발송 · 엑셀 일괄 등록/내보내기</p>
         </div>
-        <Button size="sm" onClick={() => setShowRegister(true)}>
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          신규 원생 등록
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setShowImport(true)}>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            엑셀 일괄 등록
+          </Button>
+          <Button size="sm" onClick={() => setShowRegister(true)}>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            신규 원생 등록
+          </Button>
+        </div>
       </div>
 
       {/* 필터 */}
@@ -1027,6 +1073,86 @@ export default function StudentsPage() {
             <div className="bg-[#EDF7F5] border border-[#0F7B6C]/20 rounded-lg px-5 py-3">
               <p className="text-sm font-semibold text-[#0F7B6C]">청구 자동 생성 안내</p>
               <p className="text-xs text-[#787774] mt-1">선택한 {regClasses.size}개 반의 수강료·납입기준일 설정에 따라 2026-06월 청구 자료가 각각 자동 생성됩니다.</p>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* 엑셀(CSV) 일괄 등록 모달 */}
+      <Modal
+        open={showImport}
+        onClose={closeImport}
+        title="원생 엑셀 일괄 등록"
+        size="lg"
+        footer={
+          <>
+            <Button variant="secondary" onClick={closeImport}>취소</Button>
+            <Button onClick={confirmImport} disabled={importValid.length === 0}>
+              {importValid.length > 0 ? `${importValid.length}명 등록` : '등록'}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="bg-[#F7F7F5] rounded-lg px-5 py-4">
+            <p className="text-sm text-[#37352F] font-medium">통통통 등 기존 시스템 데이터를 한 번에 가져옵니다.</p>
+            <p className="text-xs text-[#787774] mt-1">
+              통통통을 쓰지 않는 경우 아래 양식을 내려받아 작성하세요. 엑셀에서 <span className="font-medium">CSV UTF-8</span> 형식으로 저장하면 됩니다.
+            </p>
+            <Button variant="secondary" size="sm" className="mt-3" onClick={downloadTemplate}>양식(CSV) 다운로드</Button>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#37352F] mb-1.5">CSV 파일 선택</label>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={handleImportFile}
+              className="block w-full text-sm text-[#37352F] file:mr-3 file:rounded-md file:border-0 file:bg-[#FF6C37] file:px-3 file:py-2 file:text-white file:cursor-pointer hover:file:bg-[#E85A27]"
+            />
+            {importFileName && <p className="text-xs text-[#787774] mt-1.5">{importFileName} · 총 {importRows.length}행</p>}
+          </div>
+
+          {importRows.length > 0 && (
+            <div>
+              <div className="flex items-center gap-3 mb-2 text-sm">
+                <span className="text-[#0F7B6C] font-medium">유효 {importValid.length}명</span>
+                {importInvalid.length > 0 && <span className="text-[#EB5757] font-medium">오류 {importInvalid.length}건</span>}
+                <span className="text-xs text-[#787774]">반 배정은 등록 후 개별 진행</span>
+              </div>
+              <div className="border border-[#E9E9E7] rounded-md max-h-60 overflow-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-[#F7F7F5] text-[#787774] sticky top-0">
+                    <tr>
+                      <th className="text-left font-medium px-3 py-2 w-10">#</th>
+                      <th className="text-left font-medium px-3 py-2">이름</th>
+                      <th className="text-left font-medium px-3 py-2">학년</th>
+                      <th className="text-left font-medium px-3 py-2">학교</th>
+                      <th className="text-left font-medium px-3 py-2">모 연락처</th>
+                      <th className="text-left font-medium px-3 py-2">상태</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importRows.map(r => (
+                      <tr key={r.row} className={`border-t border-[#E9E9E7] ${r.errors.length ? 'bg-[#FDECEA]' : ''}`}>
+                        <td className="px-3 py-2 text-[#787774] tabular-nums">{r.row}</td>
+                        <td className="px-3 py-2 text-[#37352F]">{r.name || <span className="text-[#BEBDBA]">-</span>}</td>
+                        <td className="px-3 py-2 text-[#787774]">{r.grade || '-'}</td>
+                        <td className="px-3 py-2 text-[#787774]">{r.school || '-'}</td>
+                        <td className="px-3 py-2 text-[#787774] tabular-nums">{r.parent_phone || r.father_phone || r.student_phone || '-'}</td>
+                        <td className="px-3 py-2">
+                          {r.errors.length === 0
+                            ? <span className="text-xs text-[#0F7B6C]">정상</span>
+                            : <span className="text-xs text-[#EB5757]">{r.errors.join(', ')}</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {importInvalid.length > 0 && (
+                <p className="text-xs text-[#787774] mt-1.5">오류 행은 등록에서 제외됩니다. 유효한 {importValid.length}명만 등록됩니다.</p>
+              )}
             </div>
           )}
         </div>

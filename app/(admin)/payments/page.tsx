@@ -9,7 +9,7 @@ import {
 import { PaymentList } from '@/components/payments/PaymentList';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Input, Select } from '@/components/ui/Input';
+import { Input, Select, MoneyInput } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { Table } from '@/components/ui/Table';
@@ -20,7 +20,7 @@ const TODAY = '2026-06-16';
 const TAB_DEFS: { key: TabKey; label: string }[] = [
   { key: '미납', label: '미납 현황' },
   { key: '완납', label: '완납 현황' },
-  { key: '예정', label: '청구·예정' },
+  { key: '예정', label: '납부·예정' },
 ];
 
 export default function PaymentsPage() {
@@ -399,8 +399,8 @@ export default function PaymentsPage() {
             ]} />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input label="대상금액" type="number" defaultValue={String(totalAmount)} suffix="원" />
-            <Input label="할인금액" type="number" defaultValue="0" suffix="원" />
+            <MoneyInput label="대상금액" defaultValue={totalAmount} suffix="원" />
+            <MoneyInput label="할인금액" defaultValue={0} suffix="원" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-[#FFF8F5] border border-[#FFD4C2] rounded-lg px-3 py-2">
@@ -415,8 +415,8 @@ export default function PaymentsPage() {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input label="카드수납" type="number" defaultValue={String(totalAmount)} suffix="원" />
-            <Input label="현금수납" type="number" defaultValue="0" suffix="원" />
+            <MoneyInput label="카드수납" defaultValue={totalAmount} suffix="원" />
+            <MoneyInput label="현금수납" defaultValue={0} suffix="원" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Select label="카드사" options={['국민', '신한', '삼성', '현대', '하나', '우리'].map(s => ({ value: s, label: s + '카드' }))} />
