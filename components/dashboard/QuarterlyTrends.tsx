@@ -1,104 +1,97 @@
 'use client';
 
-import {
-  myPnlSeries, QUARTERS, quarterShort, fmtMan,
-} from '@/lib/quarterly';
+import { myPnlSeries, QUARTERS, quarterShort, fmtMan } from '@/lib/quarterly';
 
-const LINE = '#0F7B6C';
-const NOW = '#FF6C37';
+const STUDENT = '#0F7B6C'; // 학생수
+const REVENUE = '#FF6C37'; // 총매출
 
-// SVG 좌표계
-const W = 320;
-const H = 120;
-const PAD_X = 12;
-const PAD_TOP = 18;
+// SVG 좌표계 (preserveAspectRatio none — 가로로 늘어남)
+const W = 600;
+const H = 150;
+const PAD_X = 16;
+const PAD_TOP = 16;
 const PAD_BOTTOM = 14;
 
-interface LineChartProps {
-  title: string;
-  caption: string;
-  values: number[];                 // QUARTERS 순서
-  labelOf: (v: number) => string;   // 점 위 표기
-  currentIdx: number;
+interface Built {
+  pts: { x: number; y: number }[];
+  d: string;
 }
 
-function LineChart({ title, caption, values, labelOf, currentIdx }: LineChartProps) {
+/** 값 배열을 자체 min/max로 스케일한 라인 경로 + 점 좌표 */
+function buildLine(values: number[]): Built {
   const max = Math.max(...values);
   const min = Math.min(...values);
   const span = max - min || 1;
   const innerW = W - PAD_X * 2;
   const innerH = H - PAD_TOP - PAD_BOTTOM;
-
   const pts = values.map((v, i) => ({
     x: PAD_X + (values.length === 1 ? innerW / 2 : (i / (values.length - 1)) * innerW),
     y: PAD_TOP + innerH - ((v - min) / span) * innerH,
   }));
-  const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+  const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+  return { pts, d };
+}
+
+function Dots({ built, color, currentIdx }: { built: Built; color: string; currentIdx: number }) {
+  return (
+    <>
+      {built.pts.map((p, i) => (
+        <circle
+          key={i}
+          cx={p.x}
+          cy={p.y}
+          r={i === currentIdx ? 4 : 3}
+          fill={color}
+          stroke="#fff"
+          strokeWidth={1.5}
+        />
+      ))}
+    </>
+  );
+}
+
+/** 성장 추이 — 학생수·총매출을 하나의 그래프에 겹쳐 표시(각자 스케일). 표와 동일한 분기 데이터. */
+export function QuarterlyTrends() {
+  const series = myPnlSeries;
+  const currentIdx = series.findIndex(p => p.inProgress);
+  const cur = series[currentIdx];
+
+  const S = buildLine(series.map(p => p.students));
+  const R = buildLine(series.map(p => p.revenue));
 
   return (
     <div>
-      <p className="text-xs text-[#787774]">{title}</p>
-      <p className="mt-1 text-sm font-medium text-[#37352F]">{caption}</p>
-      <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 w-full" style={{ height: 120 }} preserveAspectRatio="none">
-        <path d={path} fill="none" stroke={LINE} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-        {pts.map((p, i) => {
-          const isNow = i === currentIdx;
-          return (
-            <g key={QUARTERS[i]}>
-              <circle cx={p.x} cy={p.y} r={isNow ? 4 : 3} fill={isNow ? NOW : LINE} stroke="#fff" strokeWidth={1.5} />
-              <text
-                x={p.x}
-                y={p.y - 8}
-                textAnchor="middle"
-                fontSize={9}
-                fill={isNow ? NOW : '#9B9A97'}
-                style={{ fontVariantNumeric: 'tabular-nums' }}
-              >
-                {labelOf(values[i])}
-              </text>
-            </g>
-          );
-        })}
+      {/* 범례 */}
+      <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+        <span className="flex items-center gap-1.5 text-[#37352F]">
+          <span className="h-2 w-2 rounded-full" style={{ background: STUDENT }} />
+          학생수 <span className="font-semibold tabular-nums">{cur.students}명</span>
+        </span>
+        <span className="flex items-center gap-1.5 text-[#37352F]">
+          <span className="h-2 w-2 rounded-full" style={{ background: REVENUE }} />
+          총매출 <span className="font-semibold tabular-nums">{fmtMan(cur.revenue)}원</span>
+        </span>
+      </div>
+
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 150 }} preserveAspectRatio="none">
+        <path d={S.d} fill="none" stroke={STUDENT} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+        <path d={R.d} fill="none" stroke={REVENUE} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+        <Dots built={S} color={STUDENT} currentIdx={currentIdx} />
+        <Dots built={R} color={REVENUE} currentIdx={currentIdx} />
       </svg>
+
+      {/* x축 — 표와 동일한 분기 라벨 */}
       <div className="flex justify-between gap-2">
         {QUARTERS.map((q, i) => (
           <span
             key={q}
             className="flex-1 text-center text-[10px] tabular-nums"
-            style={{ color: i === currentIdx ? NOW : '#9B9A97' }}
+            style={{ color: i === currentIdx ? '#37352F' : '#9B9A97', fontWeight: i === currentIdx ? 600 : 400 }}
           >
             {quarterShort(q)}
           </span>
         ))}
       </div>
-    </div>
-  );
-}
-
-/** 성장 추이 — 학생 수·총매출 5개 분기 라인 그래프. 잔액은 제외(은행 API 불가). */
-export function QuarterlyTrends() {
-  const series = myPnlSeries;
-  const currentIdx = series.findIndex(p => p.inProgress);
-  const cur = series[currentIdx];
-  const first = series[0]; // 전년 동기
-  const studentGrowth = Math.round(((cur.students - first.students) / first.students) * 100);
-
-  return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <LineChart
-        title="학생 수 추이"
-        caption={`${cur.students}명 · 전년 동기 대비 ▲${studentGrowth}%`}
-        values={series.map(p => p.students)}
-        labelOf={v => String(v)}
-        currentIdx={currentIdx}
-      />
-      <LineChart
-        title="총매출 추이"
-        caption={`이번 분기 ${fmtMan(cur.revenue)}원 · 진행 중`}
-        values={series.map(p => p.revenue)}
-        labelOf={v => fmtMan(v)}
-        currentIdx={currentIdx}
-      />
     </div>
   );
 }
