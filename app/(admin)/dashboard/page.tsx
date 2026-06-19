@@ -17,7 +17,6 @@ import { classesOfTeacher, consultationsByCounselor } from '@/lib/teacher-hr';
 import { atRiskStudents } from '@/lib/at-risk';
 import { Card } from '@/components/ui/Card';
 import { QuarterlyPnlTable } from '@/components/dashboard/QuarterlyPnlTable';
-import { QuarterlyTrends } from '@/components/dashboard/QuarterlyTrends';
 import { ConsultFunnelCard } from '@/components/dashboard/ConsultFunnelCard';
 import { AtRiskList } from '@/components/dashboard/AtRiskList';
 import { MissedConsultList } from '@/components/dashboard/MissedConsultList';
@@ -85,10 +84,7 @@ export default function DashboardPage() {
 
     return (
       <div className="space-y-6">
-        {/* ① 성장 추이 — 학생 수 · 매출 (5개 분기) */}
-        <QuarterlyTrends />
-
-        {/* ② 분기 손익 표 — 행: 학생수·총매출·지출·영업이익 / 열: 분기 */}
+        {/* ① 분기 손익 — 성장 추이(학생수·총매출) + 손익 표 */}
         <QuarterlyPnlTable />
 
         {/* ③ 홍보 → 상담 → 입관 · 퇴원 전환 흐름 */}

@@ -36,7 +36,7 @@ function LineChart({ title, caption, values, labelOf, currentIdx }: LineChartPro
   const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
 
   return (
-    <div className="rounded-lg border border-[#E9E9E7] bg-white p-5">
+    <div>
       <p className="text-xs text-[#787774]">{title}</p>
       <p className="mt-1 text-sm font-medium text-[#37352F]">{caption}</p>
       <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 w-full" style={{ height: 120 }} preserveAspectRatio="none">

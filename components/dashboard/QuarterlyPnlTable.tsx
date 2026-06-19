@@ -5,6 +5,7 @@ import {
   myPnlSeries, QUARTERS, quarterShort, quarterElapsedPct, fmtMan,
   CURRENT_QUARTER, type QuarterPnl,
 } from '@/lib/quarterly';
+import { QuarterlyTrends } from '@/components/dashboard/QuarterlyTrends';
 
 interface Row {
   label: string;
@@ -34,6 +35,11 @@ export function QuarterlyPnlTable() {
         <h2 className="text-sm font-semibold text-[#37352F]">분기 손익</h2>
         <Link href="/revenue" className="text-xs font-medium text-[#FF6C37] hover:underline">매출 현황 →</Link>
       </div>
+
+      {/* 성장 추이 — 표 바로 위에 흡수 */}
+      <QuarterlyTrends />
+
+      <div className="my-4 border-t border-[#E9E9E7]" />
 
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
