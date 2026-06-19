@@ -42,7 +42,7 @@ export function AuthEntry({
       </div>
 
       <div className="rounded-2xl py-6 mb-4 text-center text-3xl font-extrabold tracking-[0.3em]"
-        style={{ background: 'var(--kiosk-card)', color: digits ? 'var(--kiosk-text)' : 'var(--kiosk-muted)' }}>
+        style={{ background: 'var(--kiosk-card)', color: digits ? 'var(--kiosk-orange)' : 'var(--kiosk-muted)' }}>
         {display}
       </div>
 
@@ -50,10 +50,10 @@ export function AuthEntry({
         {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(n => (
           <button key={n} onClick={() => press(n)}
             className="h-14 rounded-xl text-2xl font-bold transition-all active:scale-95"
-            style={{ background: 'var(--kiosk-card)', color: 'var(--kiosk-text)' }}>{n}</button>
+            style={{ background: 'var(--kiosk-card)', color: 'var(--kiosk-orange)' }}>{n}</button>
         ))}
         <button onClick={() => press('clear')} className="h-14 rounded-xl text-xl font-bold text-white transition-all active:scale-95" style={{ background: 'var(--kiosk-orange)' }}>C</button>
-        <button onClick={() => press('0')} className="h-14 rounded-xl text-2xl font-bold transition-all active:scale-95" style={{ background: 'var(--kiosk-card)', color: 'var(--kiosk-text)' }}>0</button>
+        <button onClick={() => press('0')} className="h-14 rounded-xl text-2xl font-bold transition-all active:scale-95" style={{ background: 'var(--kiosk-card)', color: 'var(--kiosk-orange)' }}>0</button>
         <button onClick={() => press('back')} className="h-14 rounded-xl text-xl font-bold text-white transition-all active:scale-95" style={{ background: 'var(--kiosk-orange)' }}>←</button>
       </div>
 
