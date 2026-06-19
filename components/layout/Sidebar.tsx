@@ -36,6 +36,11 @@ const adminNav: NavItem[] = [
     icon: <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 6h18M3 14h18M3 18h18" /></svg>,
   },
   {
+    href: '/teaching',
+    label: '수업관리',
+    icon: <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>,
+  },
+  {
     href: '/attendance',
     label: '출결 현황',
     icon: <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
@@ -190,8 +195,8 @@ export function Sidebar() {
           onChange={e => onSwitch(e.target.value)}
           className="w-full mt-1 px-2.5 py-2 text-sm rounded-lg border border-white/10 bg-[#252836] text-white focus:outline-none focus:ring-1 focus:ring-[#2F6BFF] [&>option]:bg-[#252836] [&>option]:text-white"
         >
-          {ROLES.map(r => <option key={r} value={r}>{ROLE_META[r].label}</option>)}
-          <option value="__kiosk__">키오스크(출석 화면)</option>
+          {ROLES.map(r => <option key={r} value={r} className="bg-white text-[#1A1D29]">{ROLE_META[r].label}</option>)}
+          <option value="__kiosk__" className="bg-white text-[#1A1D29]">키오스크(출석 화면)</option>
         </select>
       </div>
 

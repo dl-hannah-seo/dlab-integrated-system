@@ -48,10 +48,10 @@ describe('weeklySessions / monthlyTeachingHours / monthlySalary', () => {
     expect(monthlyTeachingHours('tch-seed', classes)).toBeCloseTo(weekly * SESSION_HOURS * WEEKS_PER_MONTH);
   });
 
-  it('월 급여 = 시급×시수 + 인센티브', () => {
-    const t = teachers.find(x => x.id === 'tch-seed')!;
+  it('월 급여(연구원) = 연봉÷12 + 학기 인센티브', () => {
+    const t = teachers.find(x => x.id === 'tch-seed')!; // 연구원
     const r = monthlySalary(t, classes);
-    expect(r.basePay).toBe(Math.round(r.hours * (t.hourly_wage ?? 0)));
+    expect(r.basePay).toBe(Math.round((t.annual_salary ?? 0) / 12));
     expect(r.total).toBe(r.basePay + (t.incentive ?? 0));
     expect(r.total).toBeGreaterThan(0);
   });

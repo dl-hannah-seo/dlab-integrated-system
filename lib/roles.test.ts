@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { menusForRole, canSeeMenu, canSeeExtra, canGivePoints, canManageShop, menuLayoutForRole, ROLES } from './roles';
+import { menusForRole, canSeeMenu, canSeeExtra, canGivePoints, canManageShop, menuLayoutForRole, canSeeFinance, ROLES } from './roles';
 
 describe('menusForRole', () => {
   it('원장은 전체 메뉴', () => {
@@ -7,21 +7,21 @@ describe('menusForRole', () => {
     expect(menusForRole('원장')).toContain('/classes');
     expect(menusForRole('원장')).toContain('/settings');
   });
-  it('교사는 제한된 메뉴(손익·AI·강사·설정 제외, 포인트관리 포함)', () => {
+  it('교사는 4개 메뉴만 — 대시보드·시간표·수업관리·포인트 (출결·원생·상담은 수업관리로 통합)', () => {
     const m = menusForRole('교사');
-    expect(m).toContain('/attendance');
-    expect(m).toContain('/students');
-    expect(m).toContain('/points');
-    expect(m).not.toContain('/revenue');
-    expect(m).not.toContain('/ai');
+    expect(m).toEqual(['/dashboard', '/schedule', '/teaching', '/points']);
+    expect(m).not.toContain('/attendance');
+    expect(m).not.toContain('/students');
+    expect(m).not.toContain('/leads');
     expect(m).not.toContain('/teachers');
     expect(m).not.toContain('/settings');
   });
-  it('SO는 데스크 운영 메뉴(손익·AI·강사 제외, 상담·수납·포인트관리 포함)', () => {
+  it('SO는 데스크 운영 메뉴(재무·금액 제외 — 수납·손익·강사 없음, 홍보·상담·포인트 포함)', () => {
     const m = menusForRole('SO');
     expect(m).toContain('/leads');
-    expect(m).toContain('/payments');
+    expect(m).toContain('/promotion');
     expect(m).toContain('/points');
+    expect(m).not.toContain('/payments');  // 금액 화면 제외
     expect(m).not.toContain('/revenue');
     expect(m).not.toContain('/ai');
   });
@@ -55,10 +55,28 @@ describe('canSeeExtra', () => {
     expect(canSeeExtra('SO', 'manual')).toBe(false);
     expect(canSeeExtra('교사', 'manual')).toBe(false);
   });
-  it('교안 마켓플레이스는 원장·교사', () => {
-    expect(canSeeExtra('원장', 'marketplace')).toBe(true);
-    expect(canSeeExtra('교사', 'marketplace')).toBe(true);
+  it('교안 마켓플레이스는 전 역할 숨김(요청 — 추후 복구)', () => {
+    expect(canSeeExtra('원장', 'marketplace')).toBe(false);
+    expect(canSeeExtra('교사', 'marketplace')).toBe(false);
     expect(canSeeExtra('SO', 'marketplace')).toBe(false);
+  });
+});
+
+describe('canSeeFinance — SO 금액 마스킹', () => {
+  it('원장만 재무·금액 열람', () => {
+    expect(canSeeFinance('원장')).toBe(true);
+    expect(canSeeFinance('SO')).toBe(false);
+    expect(canSeeFinance('교사')).toBe(false);
+    expect(canSeeFinance('학생')).toBe(false);
+  });
+});
+
+describe('교사 수업관리(/teaching)', () => {
+  it('교사 전용 메뉴로만 노출', () => {
+    expect(canSeeMenu('교사', '/teaching')).toBe(true);
+    expect(canSeeMenu('원장', '/teaching')).toBe(false);
+    expect(canSeeMenu('SO', '/teaching')).toBe(false);
+    expect(canSeeMenu('학생', '/teaching')).toBe(false);
   });
 });
 
@@ -73,11 +91,11 @@ describe('canSeeMenu', () => {
 });
 
 describe('menuLayoutForRole', () => {
-  it('원장은 그룹 레이아웃(현황 조회·상세 관리) 정의', () => {
+  it('원장은 그룹 레이아웃(교육/운영·관리) 정의', () => {
     const layout = menuLayoutForRole('원장');
     expect(layout).not.toBeNull();
     const sectionIds = layout!.filter(e => e.type === 'section').map(e => (e as { id: string }).id);
-    expect(sectionIds).toEqual(['status', 'manage']);
+    expect(sectionIds).toEqual(['education', 'manage']);
   });
   it('레이아웃의 모든 href는 원장 allowlist 안에 있음(권한과 표시 일치)', () => {
     const layout = menuLayoutForRole('원장')!;
@@ -85,8 +103,8 @@ describe('menuLayoutForRole', () => {
     const hrefs = layout.flatMap(e => e.type === 'item' ? [e.href] : e.hrefs);
     expect(hrefs.every(h => allowed.includes(h))).toBe(true);
   });
-  it('SO·교사는 레이아웃 미정의 → 평면 노출', () => {
-    expect(menuLayoutForRole('SO')).toBeNull();
+  it('SO는 원장과 공통 레이아웃, 교사는 미정의 → 평면 노출', () => {
+    expect(menuLayoutForRole('SO')).not.toBeNull();
     expect(menuLayoutForRole('교사')).toBeNull();
   });
 });

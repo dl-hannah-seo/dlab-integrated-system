@@ -36,6 +36,8 @@ import { DeleteButton } from '@/components/ui/DeleteButton';
 import { consultationsOf } from '@/lib/consultations';
 import { atRiskStudents } from '@/lib/at-risk';
 import { parseStudentRows, rowToStudent, buildStudentTemplate, type ParsedStudentRow } from '@/lib/student-import';
+import { useRole } from '@/components/layout/RoleContext';
+import { canSeeFinance } from '@/lib/roles';
 
 const DIVISIONS = ['전체', '유치부', '초등부', '중등부', '고등부'];
 const GRADES = ['전체', '5세', '6세', '7세', '초1', '초2', '초3', '초4', '초5', '초6', '중1', '중2', '중3', '고1', '고2', '고3'];
@@ -207,6 +209,10 @@ export default function StudentsPage() {
     const t = MSG_TEMPLATES.find(x => x.value === v);
     if (t) setMsgBody(t.body);
   }
+
+  // 역할 — SO 등 비원장은 금액(수납이력) 탭 제외
+  const { role } = useRole();
+  const visibleDetailTabs = DETAIL_TABS.filter(t => t !== '수납이력' || canSeeFinance(role));
 
   // 상세 모달
   const [detailStudent, setDetailStudent] = useState<Student | null>(null);
@@ -845,7 +851,7 @@ export default function StudentsPage() {
         >
           <div className="space-y-4">
             <div className="flex gap-2 border-b border-[#E8EBF1] pb-3">
-              {DETAIL_TABS.map(tab => (
+              {visibleDetailTabs.map(tab => (
                 <button
                   key={tab}
                   onClick={() => setDetailTab(tab)}

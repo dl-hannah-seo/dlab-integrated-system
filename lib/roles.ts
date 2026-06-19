@@ -29,10 +29,17 @@ export const ROLE_META: Record<Role, { label: string; sub: string }> = {
 const MENU_ALLOWLIST: Record<Role, string[]> = {
   // AI 인사이트(/ai)는 메뉴에서 제거 — 대시보드 AI 인사이트 히어로로 통합됨
   '원장': ['/dashboard', '/promotion', '/leads', '/schedule', '/attendance', '/classes', '/students', '/teachers', '/payments', '/revenue', '/points', '/settings'],
-  '교사': ['/dashboard', '/schedule', '/attendance', '/students', '/leads', '/points'],
-  'SO': ['/dashboard', '/promotion', '/leads', '/schedule', '/attendance', '/classes', '/students', '/payments', '/points'],
+  // 교사: 4개 메뉴만 — 대시보드·시간표·수업관리·포인트. 출결·피드백·보강은 수업관리(/teaching)로 통합
+  '교사': ['/dashboard', '/schedule', '/teaching', '/points'],
+  // SO: 홍보·상담은 유지, 재무·금액 화면(수납) 제외 — canSeeFinance 참조
+  'SO': ['/dashboard', '/promotion', '/leads', '/schedule', '/attendance', '/classes', '/students', '/points'],
   '학생': [],
 };
+
+/** 재무·금액(수납액·손익·급여 등) 열람 권한 — 원장만. SO·교사는 금액 화면/항목 제외 */
+export function canSeeFinance(role: Role): boolean {
+  return role === '원장';
+}
 
 // 포인트 관리 화면 탭 권한 — 지급(원장·교사) / 상점 상품(원장·SO)
 export function canGivePoints(role: Role): boolean {
@@ -80,7 +87,7 @@ export function menuLayoutForRole(role: Role): MenuLayoutEntry[] | null {
 // 사이드바 부가 항목(외부 링크·매뉴얼·빠른 실행) 노출
 export type ExtraKey = 'marketplace' | 'manual' | 'quickActions';
 const EXTRA_ALLOWLIST: Record<ExtraKey, Role[]> = {
-  marketplace: ['원장', '교사'],
+  marketplace: [],                // 교안 마켓플레이스: 전 역할 숨김(요청). 되살릴 때 ['원장','교사']로 복구
   manual: ['원장'],
   quickActions: ['교사', 'SO'],   // 원장 제외
 };
