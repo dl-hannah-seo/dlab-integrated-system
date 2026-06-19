@@ -141,6 +141,32 @@ export default function DashboardPage() {
             )}
           </Card>
 
+          {/* 보강 대기 */}
+          <Card title={`보강 대기 ${myMakeups.length}건`} action={<Link href="/teaching" className="text-xs text-[#6B7280] hover:text-[#1A1D29]">보강 관리 →</Link>}>
+            {myMakeups.length === 0 ? (
+              <p className="py-6 text-center text-sm text-[#6B7280]">보강 대기 건이 없습니다</p>
+            ) : (
+              <ul className="-my-1 max-h-56 space-y-1 overflow-y-auto">
+                {myMakeups.map((r) => {
+                  const stu = students.find((s) => s.id === r.student_id);
+                  const cls = getClassById(r.class_id);
+                  return (
+                    <li key={r.id} className="flex items-center justify-between gap-3 py-2 border-b border-[#EEF1F5] last:border-0">
+                      <div className="min-w-0">
+                        <span className="text-sm text-[#1A1D29]">{stu?.name ?? r.student_id}</span>
+                        <span className="ml-2 text-xs text-[#6B7280]">{cls?.course}</span>
+                      </div>
+                      {r.status === '예정' ? (
+                        <span className="shrink-0 text-xs text-[#1FA85C]">보강 {r.makeup_date} {r.makeup_time}</span>
+                      ) : (
+                        <span className="shrink-0 text-xs font-medium text-[#F2474B] bg-[#FEE9EA] px-2 py-0.5 rounded">미정</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Card>
         </div>
 
         {/* 오른쪽 컬럼 */}
@@ -179,32 +205,6 @@ export default function DashboardPage() {
             )}
           </Card>
 
-          {/* 보강 대기 */}
-          <Card title={`보강 대기 ${myMakeups.length}건`} action={<Link href="/teaching" className="text-xs text-[#6B7280] hover:text-[#1A1D29]">보강 관리 →</Link>}>
-            {myMakeups.length === 0 ? (
-              <p className="py-6 text-center text-sm text-[#6B7280]">보강 대기 건이 없습니다</p>
-            ) : (
-              <ul className="-my-1 max-h-56 space-y-1 overflow-y-auto">
-                {myMakeups.map((r) => {
-                  const stu = students.find((s) => s.id === r.student_id);
-                  const cls = getClassById(r.class_id);
-                  return (
-                    <li key={r.id} className="flex items-center justify-between gap-3 py-2 border-b border-[#EEF1F5] last:border-0">
-                      <div className="min-w-0">
-                        <span className="text-sm text-[#1A1D29]">{stu?.name ?? r.student_id}</span>
-                        <span className="ml-2 text-xs text-[#6B7280]">{cls?.course}</span>
-                      </div>
-                      {r.status === '예정' ? (
-                        <span className="shrink-0 text-xs text-[#1FA85C]">보강 {r.makeup_date} {r.makeup_time}</span>
-                      ) : (
-                        <span className="shrink-0 text-xs font-medium text-[#F2474B] bg-[#FEE9EA] px-2 py-0.5 rounded">미정</span>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </Card>
         </div>
       </div>
     </div>
