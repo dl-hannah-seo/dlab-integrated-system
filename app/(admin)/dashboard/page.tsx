@@ -15,20 +15,19 @@ import { useRole } from '@/components/layout/RoleContext';
 import { DEMO_TEACHER_ID, DEMO_TEACHER_NAME, canSeeExtra } from '@/lib/roles';
 import { classesOfTeacher, consultationsByCounselor } from '@/lib/teacher-hr';
 import { atRiskStudents } from '@/lib/at-risk';
-import { consultationGapStudents } from '@/lib/consultations';
 import { Card } from '@/components/ui/Card';
 import { PnlSummaryStrip } from '@/components/dashboard/PnlSummaryStrip';
-import { AiBenchmarkHero } from '@/components/dashboard/AiBenchmarkHero';
+import { QuarterlyTrends } from '@/components/dashboard/QuarterlyTrends';
+import { QuarterlyInsights } from '@/components/dashboard/QuarterlyInsights';
 import { ConsultFunnelCard } from '@/components/dashboard/ConsultFunnelCard';
 import { AtRiskList } from '@/components/dashboard/AtRiskList';
-import { ConsultGapList } from '@/components/dashboard/ConsultGapList';
+import { MissedConsultList } from '@/components/dashboard/MissedConsultList';
 
 // ── 데모 기준 ──────────────────────────────────────────────────
 // 실제 today/주간 집계 연동 전까지 사용하는 목업 상수.
 // 연동 시: TODAY_DOW → 실제 요일, weeklyAttendance → attendance 집계로 교체.
 const TODAY_DOW = '토';
 const TODAY_LABEL = '2026년 6월 14일 토요일';
-const TODAY_ISO = '2026-06-14';   // 상담 공백 계산 기준일(데모)
 
 // 주간 출결 추이 (데모 집계값) — 미래 요일은 rate=null → 흐리게
 const weeklyAttendance: { day: string; rate: number | null; today?: boolean }[] = [
@@ -84,7 +83,6 @@ export default function DashboardPage() {
   if (role === '원장') {
     const unpaidIds = new Set(unpaidStudents.map((s) => s.id));
     const atRisk = atRiskStudents(students, unpaidIds);
-    const consultGap = consultationGapStudents(students, consultations, TODAY_ISO, 90);
 
     return (
       <div className="space-y-6">
@@ -93,7 +91,7 @@ export default function DashboardPage() {
           <div>
             <p className="text-xs text-[#9B9B97]">{campus.name} · {TODAY_LABEL}</p>
             <h1 className="mt-1.5 text-2xl font-bold text-white">좋은 아침이에요, {who} 👋</h1>
-            <p className="mt-2 text-sm text-[#9B9B97]">오늘 수업 {todayClasses.length}개 · 재원생 {enrolledTotal}명</p>
+            <p className="mt-2 text-sm text-[#9B9B97]">재원생 {enrolledTotal}명</p>
           </div>
           <div className="text-right">
             <p className="text-xs text-[#9B9B97]">오늘 출석률</p>
@@ -102,22 +100,25 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ② 손익 KPI 스트립 → /revenue */}
+        {/* ② 성장 추이 — 학생 수 · 매출 (5개 분기) */}
+        <QuarterlyTrends />
+
+        {/* ③ 분기 손익 요약 → /revenue */}
         <PnlSummaryStrip />
 
-        {/* ③ AI 인사이트 히어로 */}
-        <AiBenchmarkHero />
+        {/* ④ 운영 인사이트 — 선행지표 4종 */}
+        <QuarterlyInsights />
 
-        {/* ③-2 홍보 → 상담 → 입관 퍼널 (최근 90일 롤링) */}
+        {/* ④-2 홍보 → 상담 → 등록 전환율 흐름 */}
         <ConsultFunnelCard />
 
-        {/* ④ 워치리스트 — 퇴원 위험 · 상담 미정 */}
+        {/* ⑤ 관리 항목 — 퇴원 가능성 · 상담 미결 */}
         <div className="grid gap-6 md:grid-cols-2">
           <AtRiskList entries={atRisk} />
-          <ConsultGapList entries={consultGap} />
+          <MissedConsultList />
         </div>
 
-        {/* ⑤ 납부 현황 도넛 + 미납 원생 */}
+        {/* ⑤-2 납부 현황 도넛 + 미납 원생 */}
         <div className="grid gap-6" style={{ gridTemplateColumns: '1fr 1.4fr' }}>
           <Card title="납부 현황">
             <div className="flex flex-col items-center">

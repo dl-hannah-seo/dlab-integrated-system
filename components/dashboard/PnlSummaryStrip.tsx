@@ -1,29 +1,39 @@
 'use client';
 
 import Link from 'next/link';
-import { buildPnlLines, summarize, fmt } from '@/lib/pnl';
+import { fmt } from '@/lib/pnl';
+import {
+  pnlForQuarter, quarterLabel, quarterElapsedPct, CURRENT_QUARTER,
+} from '@/lib/quarterly';
 
-/** 이번 달 손익 KPI 3카드 — 클릭 시 /revenue 상세로. 숫자는 매출 페이지와 동일 소스(summarize). */
+/** 분기 손익 KPI 3카드 — 총매출·지출·영업이익. 클릭 시 /revenue 상세로. */
 export function PnlSummaryStrip() {
-  const s = summarize(buildPnlLines());
+  const p = pnlForQuarter(CURRENT_QUARTER);
+  if (!p) return null;
+
+  const margin = p.revenue === 0 ? 0 : Math.round((p.profit / p.revenue) * 1000) / 10;
+  const elapsed = quarterElapsedPct(CURRENT_QUARTER);
 
   const items: { label: string; value: string; sub?: string; tone: string }[] = [
-    { label: '총매출', value: fmt(s.totalRevenue), tone: 'text-[#37352F]' },
-    { label: '총지출', value: fmt(s.totalExpense), tone: 'text-[#37352F]' },
+    { label: '총매출', value: fmt(p.revenue), tone: 'text-[#37352F]' },
+    { label: '지출', value: fmt(p.expense), tone: 'text-[#37352F]' },
     {
       label: '영업이익',
-      value: fmt(s.operatingProfit),
-      sub: `영업이익률 ${s.opMargin}%`,
-      tone: s.operatingProfit >= 0 ? 'text-[#0F7B6C]' : 'text-[#EB5757]',
+      value: fmt(p.profit),
+      sub: `이익률 ${margin}%`,
+      tone: p.profit >= 0 ? 'text-[#0F7B6C]' : 'text-[#EB5757]',
     },
   ];
 
   return (
     <section>
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-[#37352F]">이번 달 손익</h2>
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-sm font-semibold text-[#37352F]">{quarterLabel(CURRENT_QUARTER)} 손익</h2>
+          <span className="text-xs text-[#9B9A97]">{elapsed}% 경과</span>
+        </div>
         <Link href="/revenue" className="text-xs font-medium text-[#FF6C37] hover:underline">
-          상세 매출 현황 →
+          매출 현황 →
         </Link>
       </div>
       <Link href="/revenue" className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -38,12 +48,6 @@ export function PnlSummaryStrip() {
           </div>
         ))}
       </Link>
-      {/* 면세/과세 매출 구분 */}
-      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#787774]">
-        <span>면세 매출 <span className="font-medium tabular-nums text-[#0F7B6C]">{fmt(s.taxExemptRevenue)}</span></span>
-        <span className="text-[#E9E9E7]">·</span>
-        <span>과세 매출 <span className="font-medium tabular-nums text-[#FF6C37]">{fmt(s.taxableRevenue)}</span></span>
-      </div>
     </section>
   );
 }

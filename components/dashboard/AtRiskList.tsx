@@ -19,6 +19,7 @@ export function AtRiskList({ entries, limit = 5 }: { entries: AtRiskEntry[]; lim
       title={`퇴원 가능성 높은 원생 ${entries.length}명`}
       action={<Link href="/students" className="text-xs text-[#787774] hover:text-[#37352F]">원생 →</Link>}
     >
+      <p className="-mt-1 mb-2 text-[11px] text-[#9B9A97]">출석 저조 · 미납 · 휴원을 종합해 자동 선별</p>
       {shown.length === 0 ? (
         <p className="py-6 text-center text-sm text-[#787774]">위험 신호가 있는 원생이 없습니다</p>
       ) : (
