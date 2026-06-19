@@ -2,42 +2,65 @@
 
 import {
   myPnlSeries, QUARTERS, quarterShort, fmtMan,
-  type QuarterPnl,
 } from '@/lib/quarterly';
 
-// 막대 색: 지난 분기 = 청록, 진행 중 = 주황(강조)
-const PAST = '#0F7B6C';
+const LINE = '#0F7B6C';
 const NOW = '#FF6C37';
 
-interface TrendChartProps {
+// SVG 좌표계
+const W = 320;
+const H = 120;
+const PAD_X = 12;
+const PAD_TOP = 18;
+const PAD_BOTTOM = 14;
+
+interface LineChartProps {
   title: string;
   caption: string;
   values: number[];                 // QUARTERS 순서
-  labelOf: (v: number) => string;   // 막대 위 표기
-  currentIdx: number;               // 진행 중 분기 인덱스
+  labelOf: (v: number) => string;   // 점 위 표기
+  currentIdx: number;
 }
 
-function TrendChart({ title, caption, values, labelOf, currentIdx }: TrendChartProps) {
-  const max = Math.max(1, ...values);
+function LineChart({ title, caption, values, labelOf, currentIdx }: LineChartProps) {
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const span = max - min || 1;
+  const innerW = W - PAD_X * 2;
+  const innerH = H - PAD_TOP - PAD_BOTTOM;
+
+  const pts = values.map((v, i) => ({
+    x: PAD_X + (values.length === 1 ? innerW / 2 : (i / (values.length - 1)) * innerW),
+    y: PAD_TOP + innerH - ((v - min) / span) * innerH,
+  }));
+  const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+
   return (
     <div className="rounded-lg border border-[#E9E9E7] bg-white p-5">
       <p className="text-xs text-[#787774]">{title}</p>
       <p className="mt-1 text-sm font-medium text-[#37352F]">{caption}</p>
-      <div className="mt-4 flex items-end justify-between gap-2" style={{ height: 96 }}>
-        {values.map((v, i) => {
+      <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 w-full" style={{ height: 120 }} preserveAspectRatio="none">
+        <path d={path} fill="none" stroke={LINE} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+        {pts.map((p, i) => {
           const isNow = i === currentIdx;
           return (
-            <div key={QUARTERS[i]} className="flex flex-1 flex-col items-center justify-end" style={{ height: '100%' }}>
-              <span className="mb-1 text-[10px] tabular-nums text-[#9B9A97]">{labelOf(v)}</span>
-              <div
-                className="w-full rounded-t"
-                style={{ height: `${Math.max(6, (v / max) * 100)}%`, background: isNow ? NOW : PAST }}
-              />
-            </div>
+            <g key={QUARTERS[i]}>
+              <circle cx={p.x} cy={p.y} r={isNow ? 4 : 3} fill={isNow ? NOW : LINE} stroke="#fff" strokeWidth={1.5} />
+              <text
+                x={p.x}
+                y={p.y - 8}
+                textAnchor="middle"
+                fontSize={9}
+                fill={isNow ? NOW : '#9B9A97'}
+                style={{ fontVariantNumeric: 'tabular-nums' }}
+              >
+                {labelOf(values[i])}
+              </text>
+            </g>
           );
         })}
-      </div>
-      <div className="mt-2 flex justify-between gap-2">
+      </svg>
+      <div className="flex justify-between gap-2">
         {QUARTERS.map((q, i) => (
           <span
             key={q}
@@ -52,26 +75,25 @@ function TrendChart({ title, caption, values, labelOf, currentIdx }: TrendChartP
   );
 }
 
-/** 성장 추이 — 학생 수·매출 5개 분기. 잔액은 제외(은행 API 불가). */
+/** 성장 추이 — 학생 수·총매출 5개 분기 라인 그래프. 잔액은 제외(은행 API 불가). */
 export function QuarterlyTrends() {
-  const series: QuarterPnl[] = myPnlSeries;
+  const series = myPnlSeries;
   const currentIdx = series.findIndex(p => p.inProgress);
   const cur = series[currentIdx];
   const first = series[0]; // 전년 동기
-
   const studentGrowth = Math.round(((cur.students - first.students) / first.students) * 100);
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <TrendChart
-        title="학생 수"
-        caption={`${cur.students}명 · 전년 동기 ${first.students}명 (▲${studentGrowth}%)`}
+      <LineChart
+        title="학생 수 추이"
+        caption={`${cur.students}명 · 전년 동기 대비 ▲${studentGrowth}%`}
         values={series.map(p => p.students)}
         labelOf={v => String(v)}
         currentIdx={currentIdx}
       />
-      <TrendChart
-        title="매출"
+      <LineChart
+        title="총매출 추이"
         caption={`이번 분기 ${fmtMan(cur.revenue)}원 · 진행 중`}
         values={series.map(p => p.revenue)}
         labelOf={v => fmtMan(v)}

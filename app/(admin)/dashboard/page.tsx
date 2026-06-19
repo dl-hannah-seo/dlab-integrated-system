@@ -18,7 +18,6 @@ import { atRiskStudents } from '@/lib/at-risk';
 import { Card } from '@/components/ui/Card';
 import { QuarterlyPnlTable } from '@/components/dashboard/QuarterlyPnlTable';
 import { QuarterlyTrends } from '@/components/dashboard/QuarterlyTrends';
-import { QuarterlyInsights } from '@/components/dashboard/QuarterlyInsights';
 import { ConsultFunnelCard } from '@/components/dashboard/ConsultFunnelCard';
 import { AtRiskList } from '@/components/dashboard/AtRiskList';
 import { MissedConsultList } from '@/components/dashboard/MissedConsultList';
@@ -92,10 +91,7 @@ export default function DashboardPage() {
         {/* ② 분기 손익 표 — 행: 학생수·총매출·지출·영업이익 / 열: 분기 */}
         <QuarterlyPnlTable />
 
-        {/* ④ 운영 인사이트 — 선행지표 4종 */}
-        <QuarterlyInsights />
-
-        {/* ④-2 홍보 → 상담 → 등록 전환율 흐름 */}
+        {/* ③ 홍보 → 상담 → 입관 · 퇴원 전환 흐름 */}
         <ConsultFunnelCard />
 
         {/* ⑤ 관리 항목 — 퇴원 가능성 · 상담 미결 */}
