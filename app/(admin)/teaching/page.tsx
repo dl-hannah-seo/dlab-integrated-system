@@ -104,7 +104,6 @@ export default function TeachingPage() {
           {/* 반 컨텍스트 헤더 */}
           {selClass && (
             <div className="mb-4 flex items-center gap-3 text-sm">
-              <span className="font-semibold text-[#1A1D29]">{selClass.course}</span>
               <span className="text-[#6B7280]">{selClass.schedule}{selClass.room ? ` · ${selClass.room}` : ''}</span>
               <span className="text-[#9CA3AF]">재원 {roster.length}명</span>
             </div>
@@ -198,8 +197,7 @@ export default function TeachingPage() {
                 })}
               </div>
               <div className="bg-white border border-[#E8EBF1] rounded-lg overflow-hidden">
-                <div className="flex items-center justify-between px-5 py-3 border-b border-[#E8EBF1]">
-                  <p className="text-sm text-[#6B7280]">학생별 단계 완료 현황 · 체크는 ‘피드백 입력’에서</p>
+                <div className="flex items-center justify-end px-5 py-3 border-b border-[#E8EBF1]">
                   <button onClick={() => setFeedbackOpen(true)} className="px-3 py-1.5 text-sm rounded-md bg-[#2F6BFF] text-white hover:bg-[#1F57E6] transition-colors">피드백 입력 / 수정</button>
                 </div>
                 <table className="w-full text-sm">
@@ -234,10 +232,6 @@ export default function TeachingPage() {
           {/* ── 보강 관리 ── */}
           {subTab === 'makeup' && selClass && (
             <div className="bg-white border border-[#E8EBF1] rounded-lg overflow-hidden">
-              <div className="px-5 py-4 border-b border-[#E8EBF1]">
-                <h2 className="text-sm font-semibold text-[#1A1D29]">보강 관리</h2>
-                <p className="text-xs text-[#6B7280] mt-0.5">결석 학생의 보강 일정을 잡고 안내 문자를 보냅니다 · {selClass.course}</p>
-              </div>
               {classMakeups.length === 0 ? (
                 <p className="px-5 py-12 text-center text-sm text-[#6B7280]">보강 대상이 없습니다. ‘반별 출석 현황’에서 결석 처리하면 여기에 보강 대기로 올라옵니다.</p>
               ) : (
