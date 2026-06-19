@@ -37,6 +37,9 @@ export function isWithinDays(dateStr: string, today: string, days: number): bool
   return diff >= 0 && diff <= days;
 }
 
+// 홍보 건수는 시스템 미기록 → 수동 입력. 대시보드/상담 페이지 공유 기본값(최근 90일).
+export const DEFAULT_PROMO_90D = 150;
+
 // 상담이 실제 진행된 단계 (상담완료 이상)
 const CONSULTED_STAGES: LeadStage[] = ['상담완료', '등록', '미등록'];
 

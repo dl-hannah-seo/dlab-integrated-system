@@ -5,7 +5,7 @@ import {
   LEAD_STAGES, LEAD_SOURCES, LEAD_SUBJECTS, TODAY,
   type LeadStage,
 } from '@/lib/mock-data';
-import { leadStageCounts, conversionRate, activeLeads, rollingFunnel, rate } from '@/lib/leads';
+import { leadStageCounts, conversionRate, activeLeads, rollingFunnel, rate, DEFAULT_PROMO_90D } from '@/lib/leads';
 import { useLeads } from '@/components/panels/LeadsContext';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -27,7 +27,7 @@ export default function LeadsPage() {
 
   const [form, setForm] = useState({ name: '', subject: LEAD_SUBJECTS[0], source: LEAD_SOURCES[0], grade: '', memo: '' });
   // 홍보 건수는 시스템에 기록되지 않아 수동 입력 (최근 90일 도달/홍보 활동)
-  const [promoCount, setPromoCount] = useState(150);
+  const [promoCount, setPromoCount] = useState(DEFAULT_PROMO_90D);
 
   function showToast(m: string) { setToast(m); setTimeout(() => setToast(null), 2000); }
 

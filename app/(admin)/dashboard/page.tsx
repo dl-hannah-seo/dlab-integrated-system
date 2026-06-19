@@ -19,6 +19,7 @@ import { consultationGapStudents } from '@/lib/consultations';
 import { Card } from '@/components/ui/Card';
 import { PnlSummaryStrip } from '@/components/dashboard/PnlSummaryStrip';
 import { AiBenchmarkHero } from '@/components/dashboard/AiBenchmarkHero';
+import { ConsultFunnelCard } from '@/components/dashboard/ConsultFunnelCard';
 import { AtRiskList } from '@/components/dashboard/AtRiskList';
 import { ConsultGapList } from '@/components/dashboard/ConsultGapList';
 
@@ -106,6 +107,9 @@ export default function DashboardPage() {
 
         {/* ③ AI 인사이트 히어로 */}
         <AiBenchmarkHero />
+
+        {/* ③-2 홍보 → 상담 → 입관 퍼널 (최근 90일 롤링) */}
+        <ConsultFunnelCard />
 
         {/* ④ 워치리스트 — 퇴원 위험 · 상담 미정 */}
         <div className="grid gap-6 md:grid-cols-2">

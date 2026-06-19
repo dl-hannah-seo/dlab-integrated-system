@@ -38,6 +38,12 @@ export function PnlSummaryStrip() {
           </div>
         ))}
       </Link>
+      {/* 면세/과세 매출 구분 */}
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#787774]">
+        <span>면세 매출 <span className="font-medium tabular-nums text-[#0F7B6C]">{fmt(s.taxExemptRevenue)}</span></span>
+        <span className="text-[#E9E9E7]">·</span>
+        <span>과세 매출 <span className="font-medium tabular-nums text-[#FF6C37]">{fmt(s.taxableRevenue)}</span></span>
+      </div>
     </section>
   );
 }
