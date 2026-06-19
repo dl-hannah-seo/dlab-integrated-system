@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { leadStageCounts, conversionRate, activeLeads, newThisWeek } from './leads';
-import { leads, LEAD_WEEK_START } from './mock-data';
+import { leadStageCounts, conversionRate, activeLeads, newThisWeek, isWithinDays, rollingFunnel, rate } from './leads';
+import { leads, LEAD_WEEK_START, TODAY } from './mock-data';
 
 describe('leadStageCounts', () => {
   it('모든 단계 키를 포함하고 합이 전체와 같다', () => {
@@ -32,5 +32,36 @@ describe('newThisWeek', () => {
     const n = newThisWeek(leads, LEAD_WEEK_START);
     expect(n).toBe(leads.filter(l => l.inquiry_date >= LEAD_WEEK_START).length);
     expect(n).toBeGreaterThan(0);
+  });
+});
+
+describe('isWithinDays', () => {
+  it('윈도우 경계·미래·범위 밖', () => {
+    expect(isWithinDays('2026-06-14', '2026-06-14', 90)).toBe(true);   // 당일
+    expect(isWithinDays('2026-03-16', '2026-06-14', 90)).toBe(true);   // 90일 경계 내
+    expect(isWithinDays('2026-03-01', '2026-06-14', 90)).toBe(false);  // 90일 밖
+    expect(isWithinDays('2026-06-20', '2026-06-14', 90)).toBe(false);  // 미래
+  });
+});
+
+describe('rollingFunnel', () => {
+  it('최근 90일 문의/상담/입관 집계 (입관=등록, consult≥enroll)', () => {
+    const f = rollingFunnel(leads, TODAY, 90);
+    expect(f.windowDays).toBe(90);
+    expect(f.enroll).toBe(3);                 // 등록 3
+    expect(f.consult).toBeGreaterThanOrEqual(f.enroll);
+    expect(f.inquiries).toBeGreaterThanOrEqual(f.consult);
+  });
+  it('윈도우 0일이면 미래·과거 모두 제외되어 당일만', () => {
+    const f = rollingFunnel(leads, '2020-01-01', 90);
+    expect(f.inquiries).toBe(0);
+  });
+});
+
+describe('rate', () => {
+  it('전환율 계산, 분모 0이면 0', () => {
+    expect(rate(3, 12)).toBe(25);
+    expect(rate(1, 3)).toBe(33.3);
+    expect(rate(5, 0)).toBe(0);
   });
 });

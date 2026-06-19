@@ -2,14 +2,16 @@
 
 import { useState } from 'react';
 import {
-  LEAD_STAGES, LEAD_SOURCES, LEAD_SUBJECTS, LEAD_WEEK_START,
+  LEAD_STAGES, LEAD_SOURCES, LEAD_SUBJECTS, TODAY,
   type LeadStage,
 } from '@/lib/mock-data';
-import { leadStageCounts, conversionRate, activeLeads, newThisWeek } from '@/lib/leads';
+import { leadStageCounts, conversionRate, activeLeads, rollingFunnel, rate } from '@/lib/leads';
 import { useLeads } from '@/components/panels/LeadsContext';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input, Select } from '@/components/ui/Input';
+import { Input, Select, MoneyInput } from '@/components/ui/Input';
+
+const FUNNEL_DAYS = 90;
 
 const STAGE_STYLE: Record<LeadStage, string> = {
   '신규문의': 'bg-[#F1F1EF] text-[#787774]',
@@ -24,12 +26,15 @@ export default function LeadsPage() {
   const [toast, setToast] = useState<string | null>(null);
 
   const [form, setForm] = useState({ name: '', subject: LEAD_SUBJECTS[0], source: LEAD_SOURCES[0], grade: '', memo: '' });
+  // 홍보 건수는 시스템에 기록되지 않아 수동 입력 (최근 90일 도달/홍보 활동)
+  const [promoCount, setPromoCount] = useState(150);
 
   function showToast(m: string) { setToast(m); setTimeout(() => setToast(null), 2000); }
 
   const counts = leadStageCounts(leads);
+  const funnel = rollingFunnel(leads, TODAY, FUNNEL_DAYS);
   const kpis = [
-    { label: '이번 주 신규 문의', value: `${newThisWeek(leads, LEAD_WEEK_START)}건` },
+    { label: '최근 90일 문의', value: `${funnel.inquiries}건` },
     { label: '상담 진행중', value: `${activeLeads(leads).length}명` },
     { label: '등록 전환율', value: `${conversionRate(leads)}%`, tone: 'good' as const },
     { label: '미등록', value: `${counts['미등록']}명`, tone: 'danger' as const },
@@ -81,6 +86,37 @@ export default function LeadsPage() {
             </span>
           ))}
         </div>
+      </Card>
+
+      {/* 홍보 → 상담 → 입관 퍼널 (최근 90일 롤링) */}
+      <Card title="홍보 → 상담 → 입관 퍼널" className="mb-6" action={<span className="text-xs text-[#9B9A97]">최근 {FUNNEL_DAYS}일 롤링</span>}>
+        <div className="grid gap-4 lg:grid-cols-[220px_1fr] lg:items-center">
+          <div>
+            <MoneyInput label="홍보 건수 (수동 입력)" value={promoCount} onValueChange={setPromoCount} suffix="건" />
+            <p className="text-[11px] text-[#9B9A97] mt-1">도달·홍보 활동 수 — 시스템 미기록이라 직접 입력</p>
+          </div>
+          <div className="flex items-stretch gap-1.5">
+            {[
+              { label: '홍보', value: promoCount, tone: 'bg-[#F1F1EF] text-[#37352F]' },
+              { label: '상담', value: funnel.consult, tone: 'bg-[#FFF1EC] text-[#FF6C37]' },
+              { label: '입관', value: funnel.enroll, tone: 'bg-[#EDF7F5] text-[#0F7B6C]' },
+            ].map((b, i, arr) => (
+              <span key={b.label} className="flex flex-1 items-center gap-1.5">
+                <div className={`flex-1 rounded-lg px-3 py-3 text-center ${b.tone}`}>
+                  <p className="text-xs">{b.label}</p>
+                  <p className="text-2xl font-bold tabular-nums mt-0.5">{b.value.toLocaleString('ko-KR')}</p>
+                </div>
+                {i < arr.length - 1 && (
+                  <div className="flex flex-col items-center text-[#9B9A97] shrink-0 w-14">
+                    <span className="text-lg leading-none">›</span>
+                    <span className="text-[11px] tabular-nums mt-0.5">{rate(arr[i + 1].value, b.value)}%</span>
+                  </div>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+        <p className="text-xs text-[#787774] mt-3">상담·입관은 상담 관리 데이터에서 자동 집계(최근 {FUNNEL_DAYS}일). 화살표 위 %는 전환율 · 홍보→입관 전체 전환율 {rate(funnel.enroll, promoCount)}%.</p>
       </Card>
 
       {/* 신규 문의 추가 */}

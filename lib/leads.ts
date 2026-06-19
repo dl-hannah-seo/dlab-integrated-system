@@ -24,3 +24,41 @@ export function activeLeads(leads: Lead[]): Lead[] {
 export function newThisWeek(leads: Lead[], weekStart: string): number {
   return leads.filter(l => l.inquiry_date >= weekStart).length;
 }
+
+// ── 홍보 → 상담 → 입관 퍼널 (오늘로부터 N일 롤링) ─────────────
+// 학기 단위가 아닌 트레일링 윈도우로 집계 (회의 2026-06-18 결정).
+
+/** dateStr이 today 기준 최근 days일 이내인지 */
+export function isWithinDays(dateStr: string, today: string, days: number): boolean {
+  const d = new Date(dateStr).getTime();
+  const t = new Date(today).getTime();
+  if (Number.isNaN(d) || Number.isNaN(t)) return false;
+  const diff = (t - d) / 86_400_000;
+  return diff >= 0 && diff <= days;
+}
+
+// 상담이 실제 진행된 단계 (상담완료 이상)
+const CONSULTED_STAGES: LeadStage[] = ['상담완료', '등록', '미등록'];
+
+export interface RollingFunnel {
+  windowDays: number;
+  inquiries: number;  // 문의 건수(참고)
+  consult: number;    // 상담 진행 = 상담완료+등록+미등록
+  enroll: number;     // 입관 = 등록
+}
+
+/** 최근 days일 리드를 문의·상담·입관으로 집계 (홍보 건수는 수동 입력이라 별도) */
+export function rollingFunnel(leads: Lead[], today: string, days = 90): RollingFunnel {
+  const win = leads.filter(l => isWithinDays(l.inquiry_date, today, days));
+  return {
+    windowDays: days,
+    inquiries: win.length,
+    consult: win.filter(l => CONSULTED_STAGES.includes(l.stage)).length,
+    enroll: win.filter(l => l.stage === '등록').length,
+  };
+}
+
+/** 전환율(%) = numer / denom, denom 0이면 0 */
+export function rate(numer: number, denom: number): number {
+  return denom === 0 ? 0 : Math.round((numer / denom) * 1000) / 10;
+}
