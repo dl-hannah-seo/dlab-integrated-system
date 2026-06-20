@@ -36,42 +36,55 @@ export function AuthEntry({
   const showModal = confirmed.length === 4;
 
   return (
-    <div className="rounded-3xl p-7 border" style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
-      <div className="text-center mb-5">
+    <div className="rounded-3xl px-6 pt-5 pb-4 border flex flex-col h-full"
+      style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
+
+      {/* 헤더 */}
+      <div className="text-center mb-3 flex-shrink-0">
         <div className="text-3xl">{icon}</div>
         <div className="text-xl font-extrabold text-white mt-2">{title}</div>
         <div className="text-sm mt-1" style={{ color: 'var(--kiosk-muted)' }}>전화번호 뒤 4자리를 눌러주세요</div>
       </div>
 
-      <div className="rounded-2xl py-6 mb-4 text-center text-3xl font-extrabold tracking-[0.3em]"
+      {/* 숫자 표시 */}
+      <div className="rounded-2xl py-4 mb-3 text-center text-3xl font-extrabold tracking-[0.3em] flex-shrink-0"
         style={{ background: 'var(--kiosk-card)', color: digits ? 'var(--kiosk-orange)' : 'var(--kiosk-muted)' }}>
         {display}
       </div>
 
-      {/* 키패드 영역 — 오버레이 기준점 */}
-      <div className="relative">
-        {/* 키패드 + 확인 버튼 (항상 렌더, 오버레이 시 invisible로 높이 유지) */}
-        <div className={showModal ? 'invisible pointer-events-none' : ''}>
-          <div className="grid grid-cols-3 gap-2.5">
+      {/* 키패드 영역 — 남은 공간을 채움 */}
+      <div className="relative flex-1 min-h-0">
+        {/* 키패드 (항상 렌더, 오버레이 시 invisible) */}
+        <div className={`flex flex-col h-full gap-3${showModal ? ' invisible pointer-events-none' : ''}`}>
+          {/* 숫자 그리드 — flex-1로 늘어남, 각 행 균등 분배 */}
+          <div className="grid grid-cols-3 gap-2 flex-1 auto-rows-fr">
             {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(n => (
               <button key={n} onClick={() => press(n)}
-                className="h-14 rounded-xl text-2xl font-bold transition-all active:scale-95"
+                className="rounded-xl text-2xl font-bold transition-all active:scale-95"
                 style={{ background: 'var(--kiosk-card)', color: 'var(--kiosk-orange)' }}>{n}</button>
             ))}
-            <button onClick={() => press('clear')} className="h-14 rounded-xl text-xl font-bold text-white transition-all active:scale-95" style={{ background: 'var(--kiosk-orange)' }}>C</button>
-            <button onClick={() => press('0')} className="h-14 rounded-xl text-2xl font-bold transition-all active:scale-95" style={{ background: 'var(--kiosk-card)', color: 'var(--kiosk-orange)' }}>0</button>
-            <button onClick={() => press('back')} className="h-14 rounded-xl text-xl font-bold text-white transition-all active:scale-95" style={{ background: 'var(--kiosk-orange)' }}>←</button>
+            <button onClick={() => press('clear')}
+              className="rounded-xl text-xl font-bold text-white transition-all active:scale-95"
+              style={{ background: 'var(--kiosk-orange)' }}>C</button>
+            <button onClick={() => press('0')}
+              className="rounded-xl text-2xl font-bold transition-all active:scale-95"
+              style={{ background: 'var(--kiosk-card)', color: 'var(--kiosk-orange)' }}>0</button>
+            <button onClick={() => press('back')}
+              className="rounded-xl text-xl font-bold text-white transition-all active:scale-95"
+              style={{ background: 'var(--kiosk-orange)' }}>←</button>
           </div>
 
+          {/* 확인 버튼 */}
           <button onClick={confirm} disabled={digits.length !== 4}
-            className="w-full mt-4 py-3.5 rounded-xl text-base font-extrabold transition-all active:scale-95"
+            className="w-full py-3 rounded-xl text-base font-extrabold transition-all active:scale-95 flex-shrink-0"
             style={{
               background: digits.length === 4 ? 'var(--kiosk-orange)' : 'var(--kiosk-border)',
               color: digits.length === 4 ? 'white' : 'var(--kiosk-muted)',
               cursor: digits.length === 4 ? 'pointer' : 'not-allowed',
             }}>확인</button>
 
-          <div className="flex items-center justify-center gap-2 mt-4">
+          {/* 힌트 코드 */}
+          <div className="flex items-center justify-center gap-2 flex-shrink-0">
             {hintCodes.map(code => (
               <span key={code} className="text-sm font-bold px-3 py-1 rounded-md"
                 style={{ background: 'rgba(255,108,55,0.15)', color: 'var(--kiosk-orange)' }}>{code}</span>

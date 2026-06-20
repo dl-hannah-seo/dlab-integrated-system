@@ -103,8 +103,8 @@ export default function KioskPage() {
           </div>
 
           {/* 오른쪽 — 출석 체크 + 포인트 상점 버튼 */}
-          <div className="flex flex-col gap-4 min-h-0 overflow-y-auto">
-            <div className="flex-shrink-0">
+          <div className="flex flex-col gap-4 min-h-0">
+            <div className="flex-1 min-h-0">
               {done
                 ? <AttendanceComplete student={done} onDone={finishAttend} />
                 : <AuthEntry key={authKey} icon="📲" title="출석 체크하기" listSub="이름을 누르면 출석돼요" cta="출석 →" onPick={handleAttend} />
