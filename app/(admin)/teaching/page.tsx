@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   classes, getClassRoster, students, FEEDBACK_PHASES, CURRENT_SEMESTER_ID, TODAY,
@@ -37,6 +37,14 @@ const key = (classId: string, studentId: string) => `${classId}:${studentId}`;
 const mmdd = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
 
 export default function TeachingPage() {
+  return (
+    <Suspense fallback={null}>
+      <TeachingPageInner />
+    </Suspense>
+  );
+}
+
+function TeachingPageInner() {
   const { openRecording, openSms } = useQuickActions();
   const { feedbacks } = useFeedbacks();
   const { requests, requestMakeup, scheduleMakeup, completeMakeup } = useMakeup();
