@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   classes, getClassRoster, students, FEEDBACK_PHASES, CURRENT_SEMESTER_ID, TODAY,
   type Student,
@@ -40,8 +41,12 @@ export default function TeachingPage() {
   const { feedbacks } = useFeedbacks();
   const { requests, requestMakeup, scheduleMakeup, completeMakeup } = useMakeup();
 
+  const searchParams = useSearchParams();
   const myClasses = useMemo(() => classesOfTeacher(DEMO_TEACHER_ID, classes), []);
-  const [selId, setSelId] = useState(myClasses[0]?.id ?? '');
+  const [selId, setSelId] = useState(() => {
+    const qId = searchParams.get('classId');
+    return (qId && myClasses.some(c => c.id === qId)) ? qId : (myClasses[0]?.id ?? '');
+  });
   const [subTab, setSubTab] = useState<SubTab>('att');
   const [attendance, setAttendance] = useState<Record<string, Stat>>({});
   const [mkPick, setMkPick] = useState<Student | null>(null);

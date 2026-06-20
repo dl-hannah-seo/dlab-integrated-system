@@ -32,15 +32,17 @@ const SH = 190;
 const S_PAD_T = 18;
 const S_PAD_B = 12;
 
-function linePath(values: number[]): { pts: { x: number; y: number }[]; d: string } {
+// yBand: [bottom, top] as fraction of innerH (0=bottom, 1=top)
+function linePath(values: number[], yBand: [number, number] = [0, 1]): { pts: { x: number; y: number }[]; d: string } {
   const max = Math.max(...values);
   const min = Math.min(...values);
   const span = max - min || 1;
   const innerH = SH - S_PAD_T - S_PAD_B;
+  const [bandBot, bandTop] = yBand;
   const n = values.length;
   const pts = values.map((v, i) => ({
-    x: ((i + 0.5) / n) * SW, // 각 분기 열의 중앙
-    y: S_PAD_T + innerH - ((v - min) / span) * innerH,
+    x: ((i + 0.5) / n) * SW,
+    y: S_PAD_T + innerH * (1 - (bandBot + ((v - min) / span) * (bandTop - bandBot))),
   }));
   const d = smoothLinePath(pts);
   return { pts, d };
@@ -99,8 +101,8 @@ export function QuarterlyPnlTable() {
   const currentIdx = QUARTERS.indexOf(CURRENT_QUARTER);
   const cur = byQuarter.get(CURRENT_QUARTER)!;
 
-  const S = linePath(QUARTERS.map(q => byQuarter.get(q)!.students));
-  const R = linePath(QUARTERS.map(q => byQuarter.get(q)!.revenue));
+  const S = linePath(QUARTERS.map(q => byQuarter.get(q)!.students), [0.05, 0.52]);
+  const R = linePath(QUARTERS.map(q => byQuarter.get(q)!.revenue), [0.48, 1.0]);
 
   return (
     <section className="rounded-2xl border border-[#EEF1F5] bg-white p-6 shadow-[0_2px_8px_rgba(20,30,55,0.05)]">

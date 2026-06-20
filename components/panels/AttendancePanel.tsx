@@ -182,13 +182,7 @@ export function AttendancePanel() {
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-medium text-[#1A1D29]">{s.name}</span>
-                    <a
-                      href={`tel:${s.parent_phone.replace(/[^0-9]/g, '')}`}
-                      className="flex items-center gap-1 text-xs text-[#2F6BFF] hover:underline shrink-0"
-                      title="보호자에게 전화"
-                    >
-                      📞 {s.parent_phone}
-                    </a>
+                    <span className="text-xs text-[#6B7280] shrink-0">{s.parent_phone}</span>
                   </div>
                   <div className="flex gap-1.5">
                     <button

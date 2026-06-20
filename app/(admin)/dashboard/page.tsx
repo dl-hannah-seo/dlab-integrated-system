@@ -69,6 +69,28 @@ export default function DashboardPage() {
         {/* ③ 홍보 → 상담 → 등록 → 퇴원 전환 흐름 */}
         <ConsultFunnelCard />
 
+        {/* ④ KPI 비교 — 수업당·연구원당 학생 수 */}
+        <div className="grid gap-4 md:grid-cols-2">
+          {[
+            { title: '수업당 학생 수', mine: 3.5, avg: 4.2, unit: '명' },
+            { title: '연구원당 학생 수', mine: 37, avg: 33, unit: '명' },
+          ].map(({ title, mine, avg, unit }) => (
+            <div key={title} className="rounded-2xl border border-[#EEF1F5] bg-white p-5 shadow-[0_2px_8px_rgba(20,30,55,0.05)]">
+              <p className="text-base font-semibold text-[#1A1D29] mb-4">{title}</p>
+              <div className="flex items-end gap-8">
+                <div>
+                  <p className="text-[11px] text-[#6B7280] mb-0.5">캠퍼스</p>
+                  <p className="text-3xl font-bold text-[#1A1D29] tabular-nums">{mine}<span className="text-base font-normal ml-0.5">{unit}</span></p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-[#6B7280] mb-0.5">전체 평균</p>
+                  <p className="text-3xl font-bold text-[#2F6BFF] tabular-nums">{avg}<span className="text-base font-normal ml-0.5">{unit}</span></p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
         {/* ⑤ 관리 항목 — 퇴원 가능성 · 상담 미결 */}
         <div className="grid gap-6 md:grid-cols-2">
           <AtRiskList entries={atRisk} />

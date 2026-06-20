@@ -69,9 +69,9 @@ export function PnlDashboard() {
         </div>
         <div className="space-y-1">
           {rows.map(l => (
-            <div key={l.id} className="flex items-center gap-2">
+            <div key={l.id} className="flex items-center gap-1.5 min-w-0 overflow-hidden">
               {l.auto ? (
-                <span className="flex-1 text-sm text-[#1A1D29]">
+                <span className="flex-1 min-w-0 truncate text-sm text-[#1A1D29]">
                   {l.label}
                   <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-[#EEF1F5] text-[#9CA3AF]">자동</span>
                 </span>
@@ -80,24 +80,21 @@ export function PnlDashboard() {
                   value={l.label}
                   onChange={e => setLabel(l.id, e.target.value)}
                   placeholder="항목명"
-                  className="flex-1 text-sm text-[#1A1D29] bg-white border border-[#E8EBF1] rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#2F6BFF]"
+                  className="flex-1 min-w-0 text-sm text-[#1A1D29] bg-white border border-[#E8EBF1] rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#2F6BFF]"
                 />
               )}
               <TaxToggle line={l} />
               {l.auto ? (
-                <span className="w-32 text-right text-sm text-[#1A1D29] tabular-nums">{fmt(l.amount)}</span>
+                <span className="w-24 shrink-0 text-right text-sm text-[#1A1D29] tabular-nums">{fmt(l.amount)}</span>
               ) : (
-                <div className="flex items-center gap-1">
-                  <input
-                    inputMode="numeric"
-                    value={l.amount ? l.amount.toLocaleString('ko-KR') : ''}
-                    onChange={e => setAmount(l.id, Number(e.target.value.replace(/[^0-9]/g, '')) || 0)}
-                    className="w-32 text-right text-sm text-[#1A1D29] tabular-nums bg-white border border-[#E8EBF1] rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#2F6BFF]"
-                  />
-                  <span className="text-xs text-[#9CA3AF]">원</span>
-                </div>
+                <input
+                  inputMode="numeric"
+                  value={l.amount ? l.amount.toLocaleString('ko-KR') : ''}
+                  onChange={e => setAmount(l.id, Number(e.target.value.replace(/[^0-9]/g, '')) || 0)}
+                  className="w-24 shrink-0 text-right text-sm text-[#1A1D29] tabular-nums bg-white border border-[#E8EBF1] rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#2F6BFF]"
+                />
               )}
-              {l.auto ? <span className="w-8" /> : <DeleteButton onClick={() => remove(l.id)} className="w-8 text-xs">삭제</DeleteButton>}
+              {l.auto ? <span className="w-7 shrink-0" /> : <DeleteButton onClick={() => remove(l.id)} className="w-7 shrink-0 text-xs">삭제</DeleteButton>}
             </div>
           ))}
         </div>
@@ -114,7 +111,7 @@ export function PnlDashboard() {
   return (
     <div>
       <div className="mb-4">
-        <h1 className="text-xl font-bold text-[#1A1D29]">손익 현황 (이번 달)</h1>
+        <h1 className="text-xl font-bold text-[#1A1D29]">손익 현황</h1>
       </div>
 
       {/* 손익 요약 (결론) — 최상단 */}
@@ -152,8 +149,7 @@ export function PnlDashboard() {
       </div>
 
       {/* 월별 손익 추이 (임시 목업) */}
-      <Card title="월별 손익 추이" className="mb-6" action={<span className="text-[11px] text-[#9CA3AF]">임시 목업</span>}>
-        <p className="text-xs text-[#6B7280] -mt-1 mb-4">월별 매출·지출·영업이익 비교 (실제 집계 연동 전 데모)</p>
+      <Card title="월별 손익 추이" className="mb-6">
         {/* 막대 그래프 — 매출/지출 + 영업이익 */}
         <div className="flex items-end justify-between gap-3 mb-5" style={{ height: 160 }}>
           {MONTHLY_PNL.map((m, mi) => {

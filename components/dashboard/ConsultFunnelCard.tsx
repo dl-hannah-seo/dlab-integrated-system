@@ -26,10 +26,10 @@ export function ConsultFunnelCard() {
   const withdrawDemo = 1;
 
   const steps = [
-    { label: '홍보', value: promo,        tone: 'bg-[#EAF1FF] text-[#2F6BFF]' },  // Primary
-    { label: '상담', value: f.consult,    tone: 'bg-[#EEF1F5] text-[#4B5563]' },  // Gray
-    { label: '등록', value: f.enroll,     tone: 'bg-[#E6F9EF] text-[#1FA85C]' },  // Green
-    { label: '퇴원', value: withdrawDemo, tone: 'bg-[#FEE9EA] text-[#F2474B]' },  // Secondary
+    { label: '홍보', value: promo,        avg: 145, tone: 'bg-[#EAF1FF] text-[#2F6BFF]' },
+    { label: '상담', value: f.consult,    avg: 10,  tone: 'bg-[#EEF1F5] text-[#4B5563]' },
+    { label: '등록', value: f.enroll,     avg: 5,   tone: 'bg-[#E6F9EF] text-[#1FA85C]' },
+    { label: '퇴원', value: withdrawDemo, avg: 2,   tone: 'bg-[#FEE9EA] text-[#F2474B]' },
   ];
 
   return (
@@ -46,6 +46,7 @@ export function ConsultFunnelCard() {
             <div className={`flex-1 basis-0 min-w-0 rounded-lg px-3 py-3 text-center ${b.tone}`}>
               <p className="text-xs">{b.label}</p>
               <p className="mt-0.5 text-2xl font-bold tabular-nums">{b.value.toLocaleString('ko-KR')}</p>
+              <p className="mt-1 text-[10px] opacity-60">평균 {b.avg}</p>
             </div>
             {i < arr.length - 1 && (
               <div className="flex shrink-0 flex-col items-center justify-center px-1">

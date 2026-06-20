@@ -86,7 +86,6 @@ export function WithdrawAnalysisCard() {
               </p>
               <p className="mt-1 text-[#1A1D29]">→ {ACTION[top.reason] ?? '사유 패턴을 추가 분석하세요.'}</p>
             </div>
-            <p className="text-[11px] text-[#AEB4C0] mt-2">원생관리에 기입된 퇴원 사유 기반 · 데이터 축적 후 Claude API 예측으로 확장 예정</p>
           </div>
         </div>
       )}

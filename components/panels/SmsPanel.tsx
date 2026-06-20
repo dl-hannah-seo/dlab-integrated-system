@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { SlidePanel } from '@/components/panels/SlidePanel';
 import { useQuickActions, SmsRecipient, SmsTemplate } from '@/components/panels/QuickActionsContext';
 import { Button } from '@/components/ui/Button';
+import { students } from '@/lib/mock-data';
 
 const TEMPLATES: Record<SmsTemplate, string> = {
   absence: '[D.LAB 판교] 안녕하세요. 오늘 수업에 미도착/결석 처리되었습니다. 문의: 031-000-0000',
@@ -28,6 +29,8 @@ export function SmsPanel() {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [search, setSearch] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open && smsConfig) {
@@ -36,8 +39,23 @@ export function SmsPanel() {
       setMessage(smsConfig.message ?? TEMPLATES[smsConfig.template]);
       setSent(false);
     }
-    if (!open) setSent(false);
+    if (!open) { setSent(false); setSearch(''); }
   }, [open, smsConfig]);
+
+  const searchResults = search.trim().length > 0
+    ? students
+        .filter(s =>
+          !recipients.some(r => r.studentId === s.id) &&
+          (s.name.includes(search) || s.parent_phone.includes(search))
+        )
+        .slice(0, 6)
+    : [];
+
+  function addRecipient(s: typeof students[number]) {
+    setRecipients(prev => [...prev, { studentId: s.id, name: s.name, phone: s.parent_phone }]);
+    setSearch('');
+    searchRef.current?.focus();
+  }
 
   function handleTemplateChange(t: SmsTemplate) {
     setTemplate(t);
@@ -65,8 +83,8 @@ export function SmsPanel() {
         <div>
           <p className="text-xs font-semibold text-[#6B7280] mb-2">수신자</p>
           <div className="flex flex-wrap gap-1.5 p-3 bg-[#F4F6FA] rounded-lg min-h-[48px]">
-            {recipients.length === 0 && (
-              <span className="text-xs text-[#6B7280]">수신자를 선택하세요</span>
+            {recipients.length === 0 && search.trim() === '' && (
+              <span className="text-xs text-[#AEB4C0]">아래에서 학생을 검색해 추가하세요</span>
             )}
             {recipients.map(r => (
               <span
@@ -82,6 +100,37 @@ export function SmsPanel() {
                 </button>
               </span>
             ))}
+          </div>
+
+          {/* 학생 검색 */}
+          <div className="relative mt-2">
+            <input
+              ref={searchRef}
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="학생 이름 또는 연락처 검색"
+              className="w-full px-3 py-2 text-sm text-[#1A1D29] bg-white border border-[#E8EBF1] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#2F6BFF] focus:border-[#2F6BFF]"
+            />
+            {searchResults.length > 0 && (
+              <ul className="absolute z-10 mt-1 w-full bg-white border border-[#E8EBF1] rounded-lg shadow-lg overflow-hidden">
+                {searchResults.map(s => (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      onClick={() => addRecipient(s)}
+                      className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-[#F4F6FA] transition-colors text-left"
+                    >
+                      <span className="font-medium text-[#1A1D29]">{s.name}</span>
+                      <span className="text-xs text-[#6B7280]">{s.parent_phone}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {search.trim().length > 0 && searchResults.length === 0 && (
+              <p className="mt-1.5 text-xs text-[#AEB4C0] px-1">검색 결과가 없습니다</p>
+            )}
           </div>
         </div>
 

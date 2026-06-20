@@ -98,11 +98,6 @@ export function RecordingPanel() {
   return (
     <SlidePanel open={open} onClose={handleClose} title="AI 녹음">
       <div className="px-5 py-4 space-y-5">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-[#2F6BFF]/40 bg-[#EAF1FF]">
-          <span className="text-[10px] font-semibold text-[#2F6BFF] uppercase tracking-wider">DEMO</span>
-          <span className="text-xs text-[#6B7280]">실제 녹음 없이 흐름을 시연하는 목업입니다.</span>
-        </div>
-
         {/* 모드 토글 — idle에서만 */}
         <div className="inline-flex w-full rounded-lg border border-[#E8EBF1] bg-white p-0.5">
           {([['class', '수업 녹음'], ['consult', '신규 상담 녹음']] as [RecordMode, string][]).map(([m, label]) => (

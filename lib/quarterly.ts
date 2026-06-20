@@ -113,12 +113,13 @@ const pnl = (quarter: string, revenue: number, expense: number, students: number
 });
 
 // QUARTERS = [Q2'25, Q3'25, Q4'25, Q1'26, Q2'26(진행중)]
+// 매출 = 학생수 × 63만, 영업이익 = 학생수 × 11만, 지출 = 매출 - 영업이익
 export const myPnlSeries: QuarterPnl[] = [
-  pnl(QUARTERS[0], 33_600_000, 32_400_000, 60),
-  pnl(QUARTERS[1], 35_400_000, 33_000_000, 64),
-  pnl(QUARTERS[2], 38_700_000, 34_200_000, 68),
-  pnl(QUARTERS[3], 40_500_000, 34_800_000, 73),
-  pnl(QUARTERS[4], 37_400_000, 31_000_000, 78), // 진행 중 · 경과분
+  pnl(QUARTERS[0], 37_800_000, 31_200_000, 60),
+  pnl(QUARTERS[1], 40_320_000, 33_280_000, 64),
+  pnl(QUARTERS[2], 42_840_000, 35_360_000, 68),
+  pnl(QUARTERS[3], 45_990_000, 37_960_000, 73),
+  pnl(QUARTERS[4], 49_140_000, 40_560_000, 78),
 ];
 
 export function pnlForQuarter(quarter: string): QuarterPnl | undefined {

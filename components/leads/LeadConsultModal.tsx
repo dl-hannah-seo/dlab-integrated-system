@@ -89,10 +89,6 @@ export function LeadConsultModal({
       <div className="pt-4">
         {activeSeq === 'new' ? (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 rounded-md border border-dashed border-[#DCE7FF] bg-[#EAF1FF] px-3 py-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#2F6BFF]">구현 예정</span>
-              <span className="text-xs text-[#6B7280]">녹음·AI 요약은 추후 자동으로 이 메모에 채워집니다.</span>
-            </div>
             <Input label="상담일" type="date" value={newDate} onChange={e => setNewDate(e.target.value)} />
             <Textarea
               label="상담 내용"

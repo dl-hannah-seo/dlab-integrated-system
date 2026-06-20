@@ -46,7 +46,7 @@ export function StudentQuickPanel({
   function send() {
     if (!message.trim()) return;
     logConsultation(student.id, message.trim(), TODAY);
-    onToast(`${student.name} 학부모님께 미납 안내 문자를 보냈습니다. (상담이력 기록됨)`);
+    onToast(`${student.name} 학부모님께 미납 안내 문자를 보냈습니다.`);
     onClose();
   }
 
@@ -89,7 +89,6 @@ export function StudentQuickPanel({
         <div className="space-y-2">
           <p className="text-xs text-[#6B7280]">미납 안내 문자 (편집 가능)</p>
           <Textarea value={message} onChange={e => setMessage(e.target.value)} rows={5} />
-          <p className="text-[11px] text-[#9CA3AF]">발송 시 상담이력에 기록됩니다(데모).</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -111,7 +110,6 @@ export function StudentQuickPanel({
                     <span className="w-8 text-[#6B7280]">{c.relation}</span>
                     <span className="text-[#1A1D29] tabular-nums">{c.phone}</span>
                     <button onClick={() => copyPhone(c.phone)} className="ml-auto text-xs text-[#6B7280] hover:text-[#1A1D29] border border-[#E8EBF1] rounded px-1.5 py-0.5">복사</button>
-                    <a href={`tel:${c.phone.replace(/[^0-9]/g, '')}`} className="text-xs text-[#2F6BFF] hover:underline border border-[#C9DBFF] rounded px-1.5 py-0.5">전화</a>
                   </li>
                 ))}
               </ul>

@@ -2,12 +2,18 @@
 
 import { classes, type Student } from '@/lib/mock-data';
 import { levelOf } from '@/lib/kiosk';
+import { TITLES, TIER_ORDER, earnedTitleIds } from '@/lib/titles';
 
 const ATTEND_POINTS = 30;
 
 export function AttendanceComplete({ student, onDone }: { student: Student; onDone: () => void }) {
   const cls = classes.find(c => c.id === student.class_id);
   const room = cls?.room || '강의실';
+
+  const earned = earnedTitleIds(student);
+  const displayTitle = TITLES
+    .filter(t => earned.has(t.id))
+    .sort((a, b) => TIER_ORDER.indexOf(b.tier) - TIER_ORDER.indexOf(a.tier))[0]?.name ?? '새내기';
 
   return (
     <div className="rounded-3xl p-8 border text-center" style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>
@@ -42,7 +48,7 @@ export function AttendanceComplete({ student, onDone }: { student: Student; onDo
         </div>
         <div className="rounded-2xl p-4" style={{ background: 'var(--kiosk-card)' }}>
           <div className="text-xs" style={{ color: 'var(--kiosk-muted)' }}>칭호</div>
-          <div className="text-sm font-extrabold" style={{ color: 'var(--kiosk-orange)' }}>{student.title || '새내기'}</div>
+          <div className="text-sm font-extrabold" style={{ color: 'var(--kiosk-orange)' }}>{displayTitle}</div>
         </div>
       </div>
 

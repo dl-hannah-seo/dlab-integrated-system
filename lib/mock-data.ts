@@ -372,7 +372,7 @@ export const students: Student[] = [
   { id: 's-31', campus_id: 'campus-001', name: '라지후', grade: '중1', school: '개원중', parent_phone: '010-1357-0246', student_phone: '010-1357-0005', status: '재원', first_enrolled_at: '2025-01-10', source: '학교안내', points: 1340, class_id: 'cl-03', streak: 11, title: '스트릭 마스터' },
   { id: 's-32', campus_id: 'campus-001', name: '명서진', grade: '초6', school: '수서초', parent_phone: '010-2468-1357', student_phone: '', status: '재원', first_enrolled_at: '2025-07-20', source: '현수막', points: 760, class_id: 'cl-03', streak: 6, title: '열정 코더' },
   { id: 's-33', campus_id: 'campus-001', name: '온유빈', grade: '초5', school: '강남초', parent_phone: '010-3579-2468', student_phone: '', status: '재원', first_enrolled_at: '2026-01-15', source: '인스타그램', points: 500, class_id: 'cl-03', streak: 4, title: '꾸준한 학습자' },
-  { id: 's-34', campus_id: 'campus-001', name: '주현서', grade: '중2', school: '역삼중', parent_phone: '010-4680-3579', student_phone: '010-4680-0006', status: '재원', first_enrolled_at: '2024-07-15', source: '블로그', points: 1900, class_id: 'cl-03', streak: 16, title: '출석왕' },
+  { id: 's-34', campus_id: 'campus-001', name: '오하은', grade: '중2', school: '역삼중', parent_phone: '010-4680-3579', student_phone: '010-4680-0006', status: '재원', first_enrolled_at: '2024-07-15', source: '블로그', points: 1900, class_id: 'cl-03', streak: 16, title: '출석왕' },
   { id: 's-35', campus_id: 'campus-001', name: '채나경', grade: '초4', school: '개포초', parent_phone: '010-5791-4680', student_phone: '', status: '재원', first_enrolled_at: '2025-03-02', source: '지인소개', points: 840, class_id: 'cl-03', streak: 7, title: '성실한 예비 모험가' },
   { id: 's-36', campus_id: 'campus-001', name: '편지원', grade: '초6', school: '역삼초', parent_phone: '010-6802-5791', student_phone: '', status: '재원', first_enrolled_at: '2025-07-20', source: '네이버카페', points: 620, class_id: 'cl-03', streak: 5, title: '꾸준한 학습자' },
   { id: 's-37', campus_id: 'campus-001', name: '허승민', grade: '초5', school: '도곡초', parent_phone: '010-7913-6802', student_phone: '', status: '재원', first_enrolled_at: '2026-03-05', source: '학교안내', points: 260, class_id: 'cl-03', streak: 2, title: '초보 코더' },
@@ -381,7 +381,7 @@ export const students: Student[] = [
   { id: 's-40', campus_id: 'campus-001', name: '고은솔', grade: '초5', school: '수서초', parent_phone: '010-0246-9135', student_phone: '', status: '재원', first_enrolled_at: '2026-01-15', source: '지인소개', points: 380, class_id: 'cl-03', streak: 3, title: '초보 코더' },
 
   // ── 화목 16:00반 (cl-04) 18명 ──
-  { id: 's-41', campus_id: 'campus-001', name: '기도원', grade: '중2', school: '개원중', parent_phone: '010-1111-2222', student_phone: '010-1111-0008', status: '재원', first_enrolled_at: '2024-07-15', source: '지인소개', points: 2400, class_id: 'cl-04', streak: 20, title: '출석왕' },
+  { id: 's-41', campus_id: 'campus-001', name: '이찬우', grade: '중2', school: '개원중', parent_phone: '010-1111-2222', student_phone: '010-1111-0008', status: '재원', first_enrolled_at: '2024-07-15', source: '지인소개', points: 2400, class_id: 'cl-04', streak: 20, title: '출석왕' },
   { id: 's-42', campus_id: 'campus-001', name: '나하준', grade: '초6', school: '대치초', parent_phone: '010-2222-3333', student_phone: '', status: '재원', first_enrolled_at: '2025-03-02', source: '블로그', points: 960, class_id: 'cl-04', streak: 8, title: '열정 코더' },
   { id: 's-43', campus_id: 'campus-001', name: '다온유', grade: '초5', school: '강남초', parent_phone: '010-3333-4444', student_phone: '', status: '재원', first_enrolled_at: '2025-07-20', source: '네이버카페', points: 720, class_id: 'cl-04', streak: 6, title: '꾸준한 학습자' },
   { id: 's-44', campus_id: 'campus-001', name: '라하린', grade: '초4', school: '수서초', parent_phone: '010-4444-5555', student_phone: '', status: '재원', first_enrolled_at: '2026-01-15', source: '인스타그램', points: 480, class_id: 'cl-04', streak: 4, title: '꾸준한 학습자' },
@@ -922,9 +922,11 @@ export interface KioskPoster {
   desc: string;
   emoji: string;
   bg: string;   // 그라데이션 배경
+  hallOfFame?: boolean;
 }
 
 export const kioskPosters: KioskPoster[] = [
+  { id: 'poster-hof', title: '포인트 명예의 전당', desc: '이달 최다 포인트 TOP 3', emoji: '🏆', bg: 'linear-gradient(135deg,#7B4FBE,#A97BE5)', hallOfFame: true },
   { id: 'poster-1', title: '여름방학 코딩 캠프 모집', desc: '7/21 ~ 8/1 · 파이썬·아두이노 집중반', emoji: '🏕️', bg: 'linear-gradient(135deg,#FF6C37,#FF8C5A)' },
   { id: 'poster-2', title: '디랩 코딩 대회 D-7', desc: '8월 둘째 주 · 전 캠퍼스 통합 대회', emoji: '🏆', bg: 'linear-gradient(135deg,#1A73E8,#5FA8FF)' },
   { id: 'poster-3', title: '신규 친구 추천 이벤트', desc: '친구와 함께 등록 시 포인트 2배!', emoji: '🎁', bg: 'linear-gradient(135deg,#0F7B6C,#34C7A8)' },

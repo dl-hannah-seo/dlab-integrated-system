@@ -44,7 +44,7 @@ export function SmsComposeModal({ student, cls, session, onClose, onSent }: SmsC
 
   function send() {
     logConsultation(student.id, message.trim(), TODAY);
-    onSent(`${student.name} 학부모님께 문자를 보냈습니다. (상담이력 기록됨)`);
+    onSent(`${student.name} 학부모님께 문자를 보냈습니다.`);
     onClose();
   }
 
@@ -88,7 +88,6 @@ export function SmsComposeModal({ student, cls, session, onClose, onSent }: SmsC
           onChange={e => setMessage(e.target.value)}
           rows={5}
         />
-        <p className="text-xs text-[#AEB4C0]">데모 환경입니다 — 실제 발송 대신 전송 확인 후 상담이력(문자·카톡)에 기록됩니다.</p>
       </div>
     </Modal>
   );

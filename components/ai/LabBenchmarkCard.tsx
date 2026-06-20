@@ -137,7 +137,6 @@ export function LabBenchmarkCard() {
                 );
               })}
             </div>
-            <p className="text-[11px] text-[#AEB4C0] mt-2">규칙 기반 분석 · 데이터 축적 후 Claude API 실시간 인사이트로 확장 예정</p>
           </div>
         </div>
       )}

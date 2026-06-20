@@ -8,7 +8,7 @@ import {
 import { levelOf, baseBalance, toNextLevel, levelPct, purchasesOf } from '@/lib/kiosk';
 import { TITLES, TIER_ORDER, TIER_STYLE, earnedTitleIds, titleByName, type TitleCategory } from '@/lib/titles';
 
-const TABS = ['내 수업', '포인트 상점', '구매 이력', '마이페이지'] as const;
+const TABS = ['포인트 상점', '구매 이력', '내 수업', '마이페이지'] as const;
 type Tab = typeof TABS[number];
 const CATEGORIES: TitleCategory[] = ['출석', '질문', '수상'];
 
@@ -18,7 +18,7 @@ let purSeq = 0;
 
 export function StudentDashboard({ student, onLogout, mode = 'mobile' }: { student: Student; onLogout: () => void; mode?: 'mobile' | 'web' }) {
   const isWeb = mode === 'web';
-  const [tab, setTab] = useState<Tab>('내 수업');
+  const [tab, setTab] = useState<Tab>('포인트 상점');
   const [balance, setBalance] = useState(baseBalance(student));
   const [sessionPurchases, setSessionPurchases] = useState<Purchase[]>([]);
   const [toast, setToast] = useState('');

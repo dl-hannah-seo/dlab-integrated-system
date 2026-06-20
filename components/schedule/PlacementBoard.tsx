@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   classes as mockClasses, classGroups, students, enrollments as mockEnrollments,
   invoices, dashboardData, TODAY, CURRENT_SEMESTER_ID, Class, Enrollment, InvoiceStatus, Student,
@@ -47,6 +48,7 @@ const LEGEND: { status: InvoiceStatus | null; label: string }[] = [
 type PendingMove = { studentId: string; studentName: string; from: Class; to: Class };
 
 export function PlacementBoard() {
+  const router = useRouter();
   const billingMonth = dashboardData.billing_month;
   const { feedbacks } = useFeedbacks();
   const [localEnrollments, setLocalEnrollments] = useState<Enrollment[]>(mockEnrollments);
@@ -174,8 +176,11 @@ export function PlacementBoard() {
               return (
                 <Fragment key={row.key}>
                   {newDay && (
-                    <div className="bg-[#EAF1FF] border-b border-[#DCE7FF]">
-                      <span className="sticky left-0 inline-block px-3 py-1 text-xs font-bold text-[#2F6BFF]">
+                    <div
+                      className="grid bg-[#EAF1FF] border-b border-[#DCE7FF]"
+                      style={{ gridTemplateColumns: gridCols }}
+                    >
+                      <span className="sticky left-0 z-10 px-3 py-1 text-xs font-bold text-[#2F6BFF] bg-[#EAF1FF]">
                         {DAY_NAME[row.dayGroup] ?? row.dayGroup}
                       </span>
                     </div>
@@ -207,6 +212,7 @@ export function PlacementBoard() {
                               onDragLeaveCard={() => setDragOverClassId(prev => (prev === cell.cls.id ? null : prev))}
                               onDropCard={() => handleDrop(cell.cls)}
                               onChipClick={setQuickStudent}
+                              onTitleClick={() => router.push(`/classes?selected=${cell.cls.id}`)}
                             />
                           ))}
                         </div>
@@ -265,7 +271,7 @@ export function PlacementBoard() {
 // ── 반 카드 ─────────────────────────────────────────────────────
 function ClassCard({
   cls, roster, count, phaseRates, isDragOver,
-  onChipDragStart, onChipDragEnd, onDragEnterCard, onDragLeaveCard, onDropCard, onChipClick,
+  onChipDragStart, onChipDragEnd, onDragEnterCard, onDragLeaveCard, onDropCard, onChipClick, onTitleClick,
 }: {
   cls: Class;
   roster: RosterEntry[];
@@ -278,6 +284,7 @@ function ClassCard({
   onDragLeaveCard: () => void;
   onDropCard: () => void;
   onChipClick: (student: Student) => void;
+  onTitleClick: () => void;
 }) {
   const full = count >= cls.capacity;
   const twoCol = roster.length > TWO_COL_THRESHOLD;
@@ -287,14 +294,19 @@ function ClassCard({
       onDragEnter={onDragEnterCard}
       onDragLeave={onDragLeaveCard}
       onDrop={onDropCard}
-      className={`rounded-lg border transition-colors ${
-        isDragOver ? 'border-[#2F6BFF] bg-[#EAF1FF]' : 'border-[#E8EBF1] bg-white'
+      className={`rounded-lg border bg-white transition-colors ${
+        isDragOver ? 'border-[#2F6BFF]' : 'border-[#E8EBF1]'
       }`}
     >
-      {/* 카드 헤더 */}
-      <div className="px-2 py-1.5 border-b border-[#E8EBF1]">
+      {/* 카드 헤더 — 클릭 시 수업 구성으로 이동 */}
+      <div
+        onClick={onTitleClick}
+        className="px-2 py-1.5 border-b border-[#E8EBF1] cursor-pointer hover:bg-[#EAF1FF] transition-colors rounded-t-lg"
+      >
         <div className="flex items-center justify-between gap-1">
-          <span className="text-xs font-semibold text-[#1A1D29] truncate">{cls.course}</span>
+          <span className="text-xs font-semibold text-[#2F6BFF] truncate">
+            {cls.course}
+          </span>
           <span className={`text-[10px] tabular-nums flex-shrink-0 ${full ? 'text-[#F2474B] font-medium' : 'text-[#6B7280]'}`}>
             {count}/{cls.capacity}
           </span>
