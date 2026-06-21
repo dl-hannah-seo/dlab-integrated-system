@@ -52,7 +52,7 @@ export function ConsultFunnelCard() {
               <div className="flex shrink-0 flex-col items-center justify-center gap-1 px-1">
                 <span className="text-lg leading-none text-[#C7CDD6]">›</span>
                 <span className="rounded-full bg-[#EAF1FF] px-2 py-0.5 text-xs font-bold tabular-nums text-[#2F6BFF]">{rate(arr[i + 1].value, b.value)}%</span>
-                <span className="text-[10px] tabular-nums text-[#9CA3AF]">평균 {rate(arr[i + 1].avg, b.avg)}%</span>
+                <span className="text-xs tabular-nums text-[#9CA3AF]">평균 {rate(arr[i + 1].avg, b.avg)}%</span>
               </div>
             )}
           </Fragment>
