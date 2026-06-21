@@ -2,34 +2,34 @@
 
 import { Fragment } from 'react';
 import Link from 'next/link';
-import { leads, TODAY } from '@/lib/mock-data';
+import { TODAY } from '@/lib/mock-data';
 import {
   currentQuarter,
   quarterLabel,
-  quarterFunnel,
   promoSum,
   usePromoStore,
   getQuarter,
   rate,
 } from '@/lib/promotion';
 
-/** 대시보드 — 홍보→상담→등록 퍼널 (현재 분기). 상담·등록 자동 집계, 홍보는 채널 입력 합산. */
+/** 대시보드 — 홍보→상담→등록 퍼널 (현재 분기). 홍보는 채널 입력 합산, 나머지는 데모값. */
 export function ConsultFunnelCard() {
   const cur = currentQuarter(TODAY);
-  const f = quarterFunnel(leads, cur);
 
   // 홍보 값 = 현재 분기 채널 입력 합산 (localStorage 구독, SSR은 시드값).
   const store = usePromoStore();
   const promo = promoSum(getQuarter(store, cur, TODAY));
 
-  // 퇴원 — 데모 데이터(퇴원 집계 연동 전 임시값)
-  const withdrawDemo = 1;
+  // 상담·등록·퇴원 — 데모 데이터(집계 연동 전 임시값)
+  const consultDemo = 52;
+  const enrollDemo = 23;
+  const withdrawDemo = 15;
 
   const steps = [
     { label: '홍보', value: promo,        avg: 145, tone: 'bg-[#EAF1FF] text-[#2F6BFF]' },
-    { label: '상담', value: f.consult,    avg: 10,  tone: 'bg-[#EEF1F5] text-[#4B5563]' },
-    { label: '등록', value: f.enroll,     avg: 5,   tone: 'bg-[#E6F9EF] text-[#1FA85C]' },
-    { label: '퇴원', value: withdrawDemo, avg: 2,   tone: 'bg-[#FEE9EA] text-[#F2474B]' },
+    { label: '상담', value: consultDemo,  avg: 35,  tone: 'bg-[#EEF1F5] text-[#4B5563]' },
+    { label: '등록', value: enrollDemo,   avg: 15,  tone: 'bg-[#E6F9EF] text-[#1FA85C]' },
+    { label: '퇴원', value: withdrawDemo, avg: 18,  tone: 'bg-[#FEE9EA] text-[#F2474B]' },
   ];
 
   return (
