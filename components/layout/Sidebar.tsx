@@ -179,7 +179,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-60 bg-[#1C1E26] flex flex-col z-10">
+    <aside className="fixed left-0 top-0 h-screen w-60 bg-[#1C1E26] flex flex-col z-30">
       {/* 로고 */}
       <div className="flex items-center h-14 px-5 border-b border-white/10">
         {/* 다크 사이드바 위라 검정 로고를 흰색으로 반전 */}
