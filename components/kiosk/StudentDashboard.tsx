@@ -200,7 +200,7 @@ export function StudentDashboard({ student, onLogout, mode = 'mobile' }: { stude
   );
 
   return (
-    <div className="mx-auto" style={{ maxWidth: isWeb ? 1080 : 560 }}>
+    <div className={isWeb ? 'w-full' : 'mx-auto'} style={isWeb ? {} : { maxWidth: 560 }}>
       {headerEl}
       {isWeb ? (
         <div className="grid gap-4 items-start" style={{ gridTemplateColumns: '200px minmax(0, 1fr)' }}>
