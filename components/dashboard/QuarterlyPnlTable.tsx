@@ -27,13 +27,13 @@ const ROWS: Row[] = [
 // ── 추이 그래프 (표 분기 열과 동일 축 공유, 점은 각 열 중앙) ──
 const STUDENT = '#28C76F'; // 학생수
 const REVENUE = '#2F6BFF'; // 총매출
-const SW = 500;
+const DEFAULT_W = 500;
 const SH = 190;
 const S_PAD_T = 18;
 const S_PAD_B = 12;
 
 // yBand: [bottom, top] as fraction of innerH (0=bottom, 1=top)
-function linePath(values: number[], yBand: [number, number] = [0, 1]): { pts: { x: number; y: number }[]; d: string } {
+function linePath(values: number[], yBand: [number, number] = [0, 1], w = DEFAULT_W): { pts: { x: number; y: number }[]; d: string } {
   const max = Math.max(...values);
   const min = Math.min(...values);
   const span = max - min || 1;
@@ -41,14 +41,14 @@ function linePath(values: number[], yBand: [number, number] = [0, 1]): { pts: { 
   const [bandBot, bandTop] = yBand;
   const n = values.length;
   const pts = values.map((v, i) => ({
-    x: ((i + 0.5) / n) * SW,
+    x: ((i + 0.5) / n) * w,
     y: S_PAD_T + innerH * (1 - (bandBot + ((v - min) / span) * (bandTop - bandBot))),
   }));
   const d = smoothLinePath(pts);
   return { pts, d };
 }
 
-function areaPath(pts: { x: number; y: number }[]): string {
+function areaPath(pts: { x: number; y: number }[], w: number): string {
   if (pts.length === 0) return '';
   const first = pts[0];
   const last = pts[pts.length - 1];
@@ -69,25 +69,21 @@ const lineStyle = (play: boolean): CSSProperties => ({
   transition: 'stroke-dashoffset 1.15s cubic-bezier(0.45,0,0.25,1)',
 });
 
-function Dots({ pts, color, currentIdx, play, xScale }: { pts: { x: number; y: number }[]; color: string; currentIdx: number; play: boolean; xScale: number }) {
+function Dots({ pts, color, currentIdx, play }: { pts: { x: number; y: number }[]; color: string; currentIdx: number; play: boolean }) {
   return (
     <>
-      {pts.map((p, i) => {
-        const r = i === currentIdx ? 6 : 5;
-        return (
-          <ellipse
-            key={i}
-            cx={p.x}
-            cy={p.y}
-            rx={r / xScale}
-            ry={r}
-            fill={color}
-            stroke="#fff"
-            strokeWidth={1.5}
-            style={{ opacity: play ? 1 : 0, transition: `opacity 0.4s ease ${0.5 + i * 0.08}s` }}
-          />
-        );
-      })}
+      {pts.map((p, i) => (
+        <circle
+          key={i}
+          cx={p.x}
+          cy={p.y}
+          r={i === currentIdx ? 6 : 5}
+          fill={color}
+          stroke="#fff"
+          strokeWidth={1.5}
+          style={{ opacity: play ? 1 : 0, transition: `opacity 0.4s ease ${0.5 + i * 0.08}s` }}
+        />
+      ))}
     </>
   );
 }
@@ -101,13 +97,13 @@ export function QuarterlyPnlTable() {
   }, []);
 
   const svgRef = useRef<SVGSVGElement>(null);
-  const [xScale, setXScale] = useState(1);
+  const [svgWidth, setSvgWidth] = useState(DEFAULT_W);
   useEffect(() => {
     const el = svgRef.current;
     if (!el) return;
     const update = () => {
       const w = el.getBoundingClientRect().width;
-      if (w > 0) setXScale(w / SW);
+      if (w > 0) setSvgWidth(w);
     };
     update();
     const ro = new ResizeObserver(update);
@@ -120,8 +116,8 @@ export function QuarterlyPnlTable() {
   const currentIdx = QUARTERS.indexOf(CURRENT_QUARTER);
   const cur = byQuarter.get(CURRENT_QUARTER)!;
 
-  const S = linePath(QUARTERS.map(q => byQuarter.get(q)!.students), [0.05, 0.52]);
-  const R = linePath(QUARTERS.map(q => byQuarter.get(q)!.revenue), [0.48, 1.0]);
+  const S = linePath(QUARTERS.map(q => byQuarter.get(q)!.students), [0.05, 0.52], svgWidth);
+  const R = linePath(QUARTERS.map(q => byQuarter.get(q)!.revenue), [0.48, 1.0], svgWidth);
 
   return (
     <section className="rounded-2xl border border-[#EEF1F5] bg-white p-6 shadow-[0_2px_8px_rgba(20,30,55,0.05)]">
@@ -147,7 +143,7 @@ export function QuarterlyPnlTable() {
           {/* ① 추이 그래프 — 분기 열 위에 정렬 */}
           <div />
           <div style={{ gridColumn: 'span 5' }}>
-            <svg ref={svgRef} viewBox={`0 0 ${SW} ${SH}`} className="w-full" style={{ height: SH }} preserveAspectRatio="none">
+            <svg ref={svgRef} viewBox={`0 0 ${svgWidth} ${SH}`} className="w-full" style={{ height: SH }} preserveAspectRatio="none">
               <defs>
                 <linearGradient id="qpnl-rev" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={REVENUE} stopOpacity={0.26} />
@@ -158,12 +154,12 @@ export function QuarterlyPnlTable() {
                   <stop offset="100%" stopColor={STUDENT} stopOpacity={0.02} />
                 </linearGradient>
               </defs>
-              <path d={areaPath(R.pts)} fill="url(#qpnl-rev)" style={areaStyle(play)} />
-              <path d={areaPath(S.pts)} fill="url(#qpnl-stu)" style={areaStyle(play)} />
+              <path d={areaPath(R.pts, svgWidth)} fill="url(#qpnl-rev)" style={areaStyle(play)} />
+              <path d={areaPath(S.pts, svgWidth)} fill="url(#qpnl-stu)" style={areaStyle(play)} />
               <path d={S.d} fill="none" stroke={STUDENT} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" pathLength={1} style={lineStyle(play)} />
               <path d={R.d} fill="none" stroke={REVENUE} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" pathLength={1} style={lineStyle(play)} />
-              <Dots pts={S.pts} color={STUDENT} currentIdx={currentIdx} play={play} xScale={xScale} />
-              <Dots pts={R.pts} color={REVENUE} currentIdx={currentIdx} play={play} xScale={xScale} />
+              <Dots pts={S.pts} color={STUDENT} currentIdx={currentIdx} play={play} />
+              <Dots pts={R.pts} color={REVENUE} currentIdx={currentIdx} play={play} />
             </svg>
           </div>
 
