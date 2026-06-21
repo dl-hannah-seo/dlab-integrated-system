@@ -23,7 +23,7 @@ export default function KioskPage() {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const t = setInterval(() => setPosterIdx(i => (i + 1) % kioskPosters.length), 5000);
+    const t = setInterval(() => setPosterIdx(i => (i + 1) % kioskPosters.length), 3000);
     return () => clearInterval(t);
   }, []);
 
