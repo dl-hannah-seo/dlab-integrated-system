@@ -46,12 +46,13 @@ export function ConsultFunnelCard() {
             <div className={`flex-1 basis-0 min-w-0 rounded-lg px-3 py-3 text-center ${b.tone}`}>
               <p className="text-xs">{b.label}</p>
               <p className="mt-0.5 text-2xl font-bold tabular-nums">{b.value.toLocaleString('ko-KR')}</p>
-              <p className="mt-1 text-[10px] opacity-60">평균 {b.avg}</p>
+              <p className="mt-1 text-xs font-medium opacity-60">평균 {b.avg}</p>
             </div>
             {i < arr.length - 1 && (
-              <div className="flex shrink-0 flex-col items-center justify-center px-1">
+              <div className="flex shrink-0 flex-col items-center justify-center gap-1 px-1">
                 <span className="text-lg leading-none text-[#C7CDD6]">›</span>
-                <span className="mt-1 rounded-full bg-[#EAF1FF] px-2 py-0.5 text-xs font-bold tabular-nums text-[#2F6BFF]">{rate(arr[i + 1].value, b.value)}%</span>
+                <span className="rounded-full bg-[#EAF1FF] px-2 py-0.5 text-xs font-bold tabular-nums text-[#2F6BFF]">{rate(arr[i + 1].value, b.value)}%</span>
+                <span className="text-[10px] tabular-nums text-[#9CA3AF]">평균 {rate(arr[i + 1].avg, b.avg)}%</span>
               </div>
             )}
           </Fragment>
