@@ -88,7 +88,7 @@ function TeachingPageInner() {
       <div className="mb-6 flex items-start justify-between">
         <h1 className="text-xl font-bold text-[#1A1D29]">수업관리</h1>
         <button
-          onClick={openRecording}
+          onClick={() => openRecording()}
           className="px-3 py-1.5 text-sm rounded-md bg-[#2F6BFF] text-white hover:bg-[#1F57E6] transition-colors"
         >
           🎙 녹음 시작

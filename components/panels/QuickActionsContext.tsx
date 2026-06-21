@@ -23,7 +23,8 @@ interface QuickActionsCtx {
   activePanel: 'attendance' | 'sms' | 'recording' | null;
   openAttendance: () => void;
   openSms: (config?: SmsConfig) => void;
-  openRecording: () => void;
+  openRecording: (mode?: 'class' | 'consult') => void;
+  recordingMode: 'class' | 'consult';
   close: () => void;
   smsConfig: SmsConfig | null;
   attendanceOverrides: Record<string, AttendanceOverride>;
@@ -36,6 +37,7 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
   const [activePanel, setActivePanel] = useState<'attendance' | 'sms' | 'recording' | null>(null);
   const [smsConfig, setSmsConfig] = useState<SmsConfig | null>(null);
   const [attendanceOverrides, setAttendanceOverrides] = useState<Record<string, AttendanceOverride>>({});
+  const [recordingMode, setRecordingMode] = useState<'class' | 'consult'>('class');
 
   const openAttendance = useCallback(() => setActivePanel('attendance'), []);
 
@@ -44,7 +46,10 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
     setActivePanel('sms');
   }, []);
 
-  const openRecording = useCallback(() => setActivePanel('recording'), []);
+  const openRecording = useCallback((mode: 'class' | 'consult' = 'class') => {
+    setRecordingMode(mode);
+    setActivePanel('recording');
+  }, []);
 
   const close = useCallback(() => setActivePanel(null), []);
 
@@ -54,7 +59,7 @@ export function QuickActionsProvider({ children }: { children: React.ReactNode }
 
   return (
     <QuickActionsContext.Provider value={{
-      activePanel, openAttendance, openSms, openRecording, close,
+      activePanel, openAttendance, openSms, openRecording, recordingMode, close,
       smsConfig, attendanceOverrides, setOverride,
     }}>
       {children}

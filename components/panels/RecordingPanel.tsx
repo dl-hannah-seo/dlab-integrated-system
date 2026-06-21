@@ -32,7 +32,7 @@ const MOCK_CONSULT_TRANSCRIPT =
   '안녕하세요, 아이가 코딩에 관심이 많아서 문의드려요. 학교에서 스크래치를 해봤는데 더 배우고 싶어 해요. 토요일 오전반이 있을까요? 형이 거기 다니고 있어서 추천을 받았어요.';
 
 export function RecordingPanel() {
-  const { activePanel, close } = useQuickActions();
+  const { activePanel, close, recordingMode } = useQuickActions();
   const { addLead } = useLeads();
   const open = activePanel === 'recording';
 
@@ -64,6 +64,7 @@ export function RecordingPanel() {
   function handleClose() { reset(); close(); }
 
   useEffect(() => { if (!open) clearTimers(); return clearTimers; }, [open]);
+  useEffect(() => { if (open) { reset(); setMode(recordingMode); } }, [open, recordingMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function startRecording() {
     setStage('recording'); setElapsed(0);
@@ -115,9 +116,6 @@ export function RecordingPanel() {
           <Select label="녹음할 수업" value={selectedClassId} onChange={e => setSelectedClassId(e.target.value)}
             disabled={stage !== 'idle'}
             options={recordableClasses.map(c => ({ value: c.id, label: `${c.schedule} ${c.course}` }))} />
-        )}
-        {mode === 'consult' && stage === 'idle' && (
-          <p className="text-xs text-[#6B7280]">신규 상담은 녹음·요약 후 마지막에 학생 정보를 입력해 예비원생으로 등록합니다. (재원생 상담은 보통 전화로 진행)</p>
         )}
 
         {/* [1] idle */}

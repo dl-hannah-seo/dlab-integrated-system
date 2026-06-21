@@ -242,7 +242,7 @@ export function Sidebar() {
             문자 발송
           </button>
           <button
-            onClick={openRecording}
+            onClick={() => openRecording()}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-white hover:bg-white/5 hover:text-white transition-colors group"
           >
             <span className="text-[#9CA3AF] group-hover:text-white">
