@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useState, type CSSProperties } from 'react';
+import { Fragment, useEffect, useRef, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import {
   myPnlSeries, QUARTERS, quarterShort, quarterElapsedPct, fmtMan,
@@ -69,21 +69,25 @@ const lineStyle = (play: boolean): CSSProperties => ({
   transition: 'stroke-dashoffset 1.15s cubic-bezier(0.45,0,0.25,1)',
 });
 
-function Dots({ pts, color, currentIdx, play }: { pts: { x: number; y: number }[]; color: string; currentIdx: number; play: boolean }) {
+function Dots({ pts, color, currentIdx, play, xScale }: { pts: { x: number; y: number }[]; color: string; currentIdx: number; play: boolean; xScale: number }) {
   return (
     <>
-      {pts.map((p, i) => (
-        <circle
-          key={i}
-          cx={p.x}
-          cy={p.y}
-          r={i === currentIdx ? 4 : 3}
-          fill={color}
-          stroke="#fff"
-          strokeWidth={1.5}
-          style={{ opacity: play ? 1 : 0, transition: `opacity 0.4s ease ${0.5 + i * 0.08}s` }}
-        />
-      ))}
+      {pts.map((p, i) => {
+        const r = i === currentIdx ? 6 : 5;
+        return (
+          <ellipse
+            key={i}
+            cx={p.x}
+            cy={p.y}
+            rx={r / xScale}
+            ry={r}
+            fill={color}
+            stroke="#fff"
+            strokeWidth={1.5}
+            style={{ opacity: play ? 1 : 0, transition: `opacity 0.4s ease ${0.5 + i * 0.08}s` }}
+          />
+        );
+      })}
     </>
   );
 }
@@ -94,6 +98,21 @@ export function QuarterlyPnlTable() {
   useEffect(() => {
     const r = requestAnimationFrame(() => setPlay(true));
     return () => cancelAnimationFrame(r);
+  }, []);
+
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [xScale, setXScale] = useState(1);
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    const update = () => {
+      const w = el.getBoundingClientRect().width;
+      if (w > 0) setXScale(w / SW);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
 
   const byQuarter = new Map(myPnlSeries.map(p => [p.quarter, p]));
@@ -128,7 +147,7 @@ export function QuarterlyPnlTable() {
           {/* ① 추이 그래프 — 분기 열 위에 정렬 */}
           <div />
           <div style={{ gridColumn: 'span 5' }}>
-            <svg viewBox={`0 0 ${SW} ${SH}`} className="w-full" style={{ height: SH }} preserveAspectRatio="none">
+            <svg ref={svgRef} viewBox={`0 0 ${SW} ${SH}`} className="w-full" style={{ height: SH }} preserveAspectRatio="none">
               <defs>
                 <linearGradient id="qpnl-rev" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={REVENUE} stopOpacity={0.26} />
@@ -143,8 +162,8 @@ export function QuarterlyPnlTable() {
               <path d={areaPath(S.pts)} fill="url(#qpnl-stu)" style={areaStyle(play)} />
               <path d={S.d} fill="none" stroke={STUDENT} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" pathLength={1} style={lineStyle(play)} />
               <path d={R.d} fill="none" stroke={REVENUE} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" pathLength={1} style={lineStyle(play)} />
-              <Dots pts={S.pts} color={STUDENT} currentIdx={currentIdx} play={play} />
-              <Dots pts={R.pts} color={REVENUE} currentIdx={currentIdx} play={play} />
+              <Dots pts={S.pts} color={STUDENT} currentIdx={currentIdx} play={play} xScale={xScale} />
+              <Dots pts={R.pts} color={REVENUE} currentIdx={currentIdx} play={play} xScale={xScale} />
             </svg>
           </div>
 

@@ -20,7 +20,7 @@ const TODAY = '2026-06-16';
 const TAB_DEFS: { key: TabKey; label: string }[] = [
   { key: '미납', label: '미납 현황' },
   { key: '완납', label: '완납 현황' },
-  { key: '예정', label: '납부·예정' },
+  { key: '예정', label: '납부 예정' },
 ];
 
 export default function PaymentsPage() {
