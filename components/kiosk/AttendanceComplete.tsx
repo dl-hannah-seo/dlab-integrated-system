@@ -2,7 +2,6 @@
 
 import { classes, type Student } from '@/lib/mock-data';
 import { levelOf } from '@/lib/kiosk';
-import { TITLES, TIER_ORDER, earnedTitleIds } from '@/lib/titles';
 
 const ATTEND_POINTS = 30;
 
@@ -10,10 +9,7 @@ export function AttendanceComplete({ student, onDone }: { student: Student; onDo
   const cls = classes.find(c => c.id === student.class_id);
   const room = cls?.room || '강의실';
 
-  const earned = earnedTitleIds(student);
-  const displayTitle = TITLES
-    .filter(t => earned.has(t.id))
-    .sort((a, b) => TIER_ORDER.indexOf(b.tier) - TIER_ORDER.indexOf(a.tier))[0]?.name ?? '새내기';
+  const displayTitle = student.title || '새내기';
 
   return (
     <div className="rounded-3xl p-8 border text-center" style={{ background: 'var(--kiosk-surface)', borderColor: 'var(--kiosk-border)' }}>

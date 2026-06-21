@@ -128,14 +128,18 @@ export default function KioskPage() {
 
   // ── 포인트 상점 · 마이페이지 ──
   return (
-    <div className="px-6 py-8 min-h-screen">
+    <div className="h-screen overflow-hidden flex flex-col px-6 py-6">
       {backBtn('← 홈', goHome)}
       {!shopStudent ? (
-        <div className="mx-auto" style={{ maxWidth: 520, marginTop: '2vh' }}>
-          <AuthEntry key={authKey} icon="🛍️" title="포인트 상점 · 마이페이지" listSub="이름을 누르면 들어가요" cta="입장 →" onPick={setShopStudent} />
+        <div className="flex-1 min-h-0 flex justify-center pt-8">
+          <div className="w-full max-w-xl h-full">
+            <AuthEntry key={authKey} icon="🛍️" title="포인트 상점 · 마이페이지" listSub="이름을 누르면 들어가요" cta="입장 →" onPick={setShopStudent} />
+          </div>
         </div>
       ) : (
-        <StudentDashboard student={shopStudent} onLogout={goHome} mode="web" />
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <StudentDashboard student={shopStudent} onLogout={goHome} mode="web" />
+        </div>
       )}
     </div>
   );
